@@ -1,0 +1,42 @@
+{
+  "pages": [
+    { "path": "pages/index/index", "style": { "navigationBarTitleText": "生产追踪" } },
+    { "path": "pages/progress/entry", "style": { "navigationBarTitleText": "进度录入" } },
+    { "path": "pages/progress/history", "style": { "navigationBarTitleText": "录入记录" } },
+    { "path": "pages/batch/list", "style": { "navigationBarTitleText": "批次管理" } },
+    { "path": "pages/batch/detail", "style": { "navigationBarTitleText": "批次详情" } },
+    { "path": "pages/batch/create", "style": { "navigationBarTitleText": "新建批次" } },
+    { "path": "pages/stats/index", "style": { "navigationBarTitleText": "统计分析" } },
+    { "path": "pages/profile/index", "style": { "navigationBarTitleText": "个人中心" } }
+  ],
+  "subPackages": [
+    {
+      "root": "pages-admin",
+      "pages": [
+        { "path": "users/index", "style": { "navigationBarTitleText": "用户管理" } },
+        { "path": "products/index", "style": { "navigationBarTitleText": "产品管理" } },
+        { "path": "settings/index", "style": { "navigationBarTitleText": "系统设置" } },
+        { "path": "audit/index", "style": { "navigationBarTitleText": "审计日志" } }
+      ]
+    }
+  ],
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#0083FF",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "首页" },
+      { "pagePath": "pages/progress/entry", "text": "录入" },
+      { "pagePath": "pages/batch/list", "text": "批次" },
+      { "pagePath": "pages/stats/index", "text": "统计" },
+      { "pagePath": "pages/profile/index", "text": "我的" }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "生产追踪",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f5f5f5"
+  }
+}
