@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  wwUserId    String   @unique(map: "ww_user_id") @map("ww_user_id")
+  name        String
+  department  String?
+  role        String   @default("worker") // admin, supervisor, worker
+  avatarUrl   String?  @map("avatar_url")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  batchesCreated   Batch[]           @relation("BatchCreator")
+  progressRecords  ProgressRecord[]  @relation("ProgressOperator")
+  auditLogs        AuditLog[]
+
+  @@map("users")
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  model       String
+  name        String?
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  batches Batch[]
+
+  @@map("products")
+}
+
+model Batch {
+  id         Int      @id @default(autoincrement())
+  batchNo    String   @unique(map: "batch_no") @map("batch_no")
+  productId  Int      @map("product_id")
+  quantity   Int
+  status     String   @default("active") // active, completed, archived
+  priority   String   @default("normal") // normal, urgent
+  notes      String?
+  createdBy  Int?     @map("created_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  product         Product          @relation(fields: [productId], references: [id])
+  creator         User?            @relation("BatchCreator", fields: [createdBy], references: [id])
+  progressRecords ProgressRecord[]
+
+  @@map("batches")
+}
+
+model ProcessStage {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  name        String
+  stageOrder  Int       @unique(map: "stage_order") @map("stage_order")
+  isQcStage   Boolean   @default(false) @map("is_qc_stage")
+  description String?
+
+  progressRecords ProgressRecord[]
+
+  @@map("process_stages")
+}
+
+model ProgressRecord {
+  id              Int       @id @default(autoincrement())
+  batchId         Int       @map("batch_id")
+  stageId         Int       @map("stage_id")
+  operatorId      Int       @map("operator_id")
+  inputQuantity   Int?      @map("input_quantity")
+  outputQuantity  Int?      @map("output_quantity")
+  defectQuantity  Int       @default(0) @map("defect_quantity")
+  defectType      String?   @map("defect_type")
+  defectNotes     String?   @map("defect_notes")
+  status          String    @default("completed") // completed, in_progress
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  durationMinutes Int?      @map("duration_minutes")
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  batch    Batch        @relation(fields: [batchId], references: [id])
+  stage    ProcessStage @relation(fields: [stageId], references: [id])
+  operator User         @relation("ProgressOperator", fields: [operatorId], references: [id])
+
+  @@unique([batchId, stageId], map: "batch_stage_unique")
+  @@map("progress_records")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  action    String                     // create, update, delete, login...
+  entity    String                     // batch, progress, user, stage...
+  entityId  Int?     @map("entity_id")
+  detail    String?                    // JSON
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
