@@ -12,7 +12,7 @@ model User {
   wwUserId    String   @unique(map: "ww_user_id") @map("ww_user_id")
   name        String
   department  String?
-  role        String   @default("worker") // admin, supervisor, worker
+  role        String   @default("worker") // admin, worker
   avatarUrl   String?  @map("avatar_url")
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
@@ -27,7 +27,7 @@ model User {
 
 model Product {
   id          Int      @id @default(autoincrement())
-  model       String
+  model       String   @unique
   name        String?
   description String?
   isActive    Boolean  @default(true) @map("is_active")
@@ -42,18 +42,25 @@ model Product {
 model Batch {
   id         Int      @id @default(autoincrement())
   batchNo    String   @unique(map: "batch_no") @map("batch_no")
-  productId  Int      @map("product_id")
-  quantity   Int
+  batchType  String   @default("product") @map("batch_type") // product, trial
+  productId  Int?     @map("product_id")
+  quantity   Int      @default(0)
   status     String   @default("active") // active, completed, archived
   priority   String   @default("normal") // normal, urgent
-  notes      String?
-  createdBy  Int?     @map("created_by")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  customerCode     String?   @map("customer_code")
+  orderNo          String?   @map("order_no")
+  packageType      String?   @map("package_type")
+  expectedDelivery DateTime? @map("expected_delivery")
+  trialContent     String?   @map("trial_content")
+  notes            String?
+  createdBy        Int?      @map("created_by")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  product         Product          @relation(fields: [productId], references: [id])
+  product         Product?         @relation(fields: [productId], references: [id])
   creator         User?            @relation("BatchCreator", fields: [createdBy], references: [id])
   progressRecords ProgressRecord[]
+  scheduleOrders  ScheduleOrder[]
 
   @@map("batches")
 }
@@ -67,6 +74,7 @@ model ProcessStage {
   description String?
 
   progressRecords ProgressRecord[]
+  scheduleOrders  ScheduleOrder[]
 
   @@map("process_stages")
 }
@@ -82,9 +90,6 @@ model ProgressRecord {
   defectType      String?   @map("defect_type")
   defectNotes     String?   @map("defect_notes")
   status          String    @default("completed") // completed, in_progress
-  startedAt       DateTime? @map("started_at")
-  completedAt     DateTime? @map("completed_at")
-  durationMinutes Int?      @map("duration_minutes")
   notes           String?
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -95,6 +100,16 @@ model ProgressRecord {
 
   @@unique([batchId, stageId], map: "batch_stage_unique")
   @@map("progress_records")
+}
+
+model PackageType {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  category  String
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("package_types")
 }
 
 model AuditLog {
@@ -110,4 +125,17 @@ model AuditLog {
   user User @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
+}
+
+model ScheduleOrder {
+  id       Int @id @default(autoincrement())
+  stageId  Int @map("stage_id")
+  batchId  Int @map("batch_id")
+  orderNum Int @map("order_num")
+
+  stage ProcessStage @relation(fields: [stageId], references: [id])
+  batch Batch        @relation(fields: [batchId], references: [id])
+
+  @@unique([stageId, batchId], map: "schedule_stage_batch_unique")
+  @@map("schedule_orders")
 }

@@ -8,7 +8,7 @@ import { auditLog } from "../middleware/audit.js";
 const router = Router();
 
 const updateSchema = z.object({
-  role: z.enum(["admin", "supervisor", "worker"]).optional(),
+  role: z.enum(["admin", "worker"]).optional(),
   department: z.string().optional(),
   isActive: z.boolean().optional(),
 });

@@ -47,17 +47,18 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
 import { auditApi } from "../../api/modules";
+import { formatTime } from "../../utils/format";
 import type { AuditLog } from "../../types";
 
 const logs = ref<AuditLog[]>([]);
 const page = ref(1);
 const hasMore = ref(false);
-const expandedIds = reactive(new Set<number>());
+const expandedIds = ref(new Set<number>());
 
 const actionOptions = ["全部", "创建", "更新", "删除", "录入", "解决", "登录"];
 const actionValues = ["", "create", "update", "delete", "upsert", "resolve", "login"];
-const entityOptions = ["全部", "批次", "进度", "缺陷", "返工", "用户", "工序", "认证"];
-const entityValues = ["", "batch", "progress", "defect", "rework", "user", "stage", "auth"];
+const entityOptions = ["全部", "批次", "进度", "返工", "用户", "工序", "认证"];
+const entityValues = ["", "batch", "progress", "rework", "user", "stage", "auth"];
 
 const filters = reactive({
   action: "",
@@ -70,13 +71,8 @@ function actionLabel(action: string): string {
 }
 
 function entityLabel(entity: string): string {
-  const map: Record<string, string> = { batch: "批次", progress: "进度", defect: "缺陷", rework: "返工", user: "用户", stage: "工序", auth: "认证" };
+  const map: Record<string, string> = { batch: "批次", progress: "进度", rework: "返工", user: "用户", stage: "工序", auth: "认证" };
   return map[entity] ?? entity;
-}
-
-function formatTime(dateStr: string): string {
-  const d = new Date(dateStr);
-  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function formatDetail(detail: string): string {
@@ -89,11 +85,13 @@ function formatDetail(detail: string): string {
 }
 
 function toggleDetail(id: number) {
-  if (expandedIds.has(id)) {
-    expandedIds.delete(id);
+  const next = new Set(expandedIds.value);
+  if (next.has(id)) {
+    next.delete(id);
   } else {
-    expandedIds.add(id);
+    next.add(id);
   }
+  expandedIds.value = next;
 }
 
 async function loadLogs() {

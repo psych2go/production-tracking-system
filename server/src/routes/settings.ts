@@ -3,8 +3,7 @@ import { z } from "zod";
 import { authGuard, roleGuard } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
-import { getStages } from "../services/progress.js";
-import { createStage, updateStage, deleteStage } from "../services/settings.js";
+import { createStage, updateStage, deleteStage, listPackageTypes, createPackageType, deletePackageType } from "../services/settings.js";
 
 export const settingsRoutes = Router();
 
@@ -21,16 +20,6 @@ const updateStageSchema = z.object({
   stageOrder: z.number().int().positive().optional(),
   isQcStage: z.boolean().optional(),
   description: z.string().nullable().optional(),
-});
-
-// List stages (reuse existing)
-settingsRoutes.get("/stages", authGuard, async (_req, res, next) => {
-  try {
-    const stages = await getStages();
-    res.json(stages);
-  } catch (err) {
-    next(err);
-  }
 });
 
 // Create stage
@@ -77,6 +66,61 @@ settingsRoutes.delete(
     try {
       const stage = await deleteStage(parseInt(req.params.id as string));
       res.json(stage);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ===== Package Type Routes =====
+
+const createPackageTypeSchema = z.object({
+  name: z.string().min(1, "封装形式名称不能为空"),
+  category: z.string().optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+// List package types
+settingsRoutes.get(
+  "/package-types",
+  authGuard,
+  async (_req, res, next) => {
+    try {
+      const types = await listPackageTypes();
+      res.json(types);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Create package type
+settingsRoutes.post(
+  "/package-types",
+  authGuard,
+  roleGuard("admin"),
+  auditLog("create", "package_type"),
+  validate(createPackageTypeSchema),
+  async (req, res, next) => {
+    try {
+      const pt = await createPackageType(req.body);
+      res.status(201).json(pt);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Delete package type
+settingsRoutes.delete(
+  "/package-types/:id",
+  authGuard,
+  roleGuard("admin"),
+  auditLog("delete", "package_type"),
+  async (req, res, next) => {
+    try {
+      const pt = await deletePackageType(parseInt(req.params.id as string));
+      res.json(pt);
     } catch (err) {
       next(err);
     }

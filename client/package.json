@@ -16,8 +16,7 @@
     "@dcloudio/uni-mp-weixin": "3.0.0-5000720260408001",
     "@qiun/ucharts": "^2.5.0-20230101",
     "pinia": "^2.3.1",
-    "vue": "^3.5.13",
-    "wot-design-uni": "^1.9.2"
+    "vue": "^3.5.13"
   },
   "devDependencies": {
     "@dcloudio/types": "^3.4.14",

@@ -4,6 +4,7 @@ import { handleWwCallback, getMe } from "../services/auth.js";
 import { authGuard, AuthRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
+import { config } from "../config/index.js";
 
 const router = Router();
 
@@ -37,6 +38,10 @@ router.get("/me", authGuard, async (req: AuthRequest, res, next) => {
 
 // Dev login (development only)
 router.post("/dev-login", async (_req, res, next) => {
+  if (config.nodeEnv !== "development") {
+    res.status(403).json({ error: "开发登录仅在开发环境可用" });
+    return;
+  }
   try {
     const { token, user } = await handleWwCallback("dev_code");
     res.json({ token, user });

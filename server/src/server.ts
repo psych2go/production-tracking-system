@@ -1,8 +1,6 @@
 import { config } from "./config/index.js";
 import { app } from "./app.js";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "./config/database.js";
 
 async function main() {
   await prisma.$connect();

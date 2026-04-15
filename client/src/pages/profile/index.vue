@@ -6,7 +6,7 @@
       </view>
       <text class="text-lg text-bold mt-md">{{ userStore.userInfo?.name || '未登录' }}</text>
       <text class="text-secondary text-sm mt-sm">
-        {{ roleLabel }} · {{ userStore.userInfo?.department || '' }}
+        {{ roleLabel }} · {{ userStore.userInfo?.department || '未分配部门' }}
       </text>
     </view>
 
@@ -14,31 +14,27 @@
       <text class="menu-section-title">常用功能</text>
       <view class="menu-item" @click="go('/pages/progress/history')">
         <text>我的录入记录</text>
-        <text class="text-secondary">></text>
-      </view>
-      <view class="menu-item" @click="go('/pages/stats/index')" v-if="userStore.isAdmin()">
-        <text>统计分析</text>
-        <text class="text-secondary">></text>
+        <text class="menu-arrow">></text>
       </view>
     </view>
 
     <view class="card mt-md" v-if="userStore.isAdmin()">
       <text class="menu-section-title">系统管理</text>
-      <view class="menu-item" @click="go('/pages-admin/products/index')">
-        <text>产品管理</text>
-        <text class="text-secondary">></text>
+      <view class="menu-item" @click="go('/pages-admin/settings/index')">
+        <text>工序管理</text>
+        <text class="menu-arrow">></text>
+      </view>
+      <view class="menu-item" @click="go('/pages-admin/package-types/index')">
+        <text>封装形式管理</text>
+        <text class="menu-arrow">></text>
       </view>
       <view class="menu-item" @click="go('/pages-admin/users/index')">
         <text>用户管理</text>
-        <text class="text-secondary">></text>
-      </view>
-      <view class="menu-item" @click="go('/pages-admin/settings/index')">
-        <text>系统设置</text>
-        <text class="text-secondary">></text>
+        <text class="menu-arrow">></text>
       </view>
       <view class="menu-item" @click="go('/pages-admin/audit/index')">
         <text>审计日志</text>
-        <text class="text-secondary">></text>
+        <text class="menu-arrow">></text>
       </view>
     </view>
 
@@ -49,13 +45,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useUserStore } from "../../store/user";
+import { ROLE_LABELS } from "../../utils/constants";
 
 const userStore = useUserStore();
 
-const roleLabel = computed(() => {
-  const labels: Record<string, string> = { admin: "管理员", supervisor: "主管", worker: "操作员" };
-  return labels[userStore.userInfo?.role ?? ""] || userStore.userInfo?.role || "";
-});
+const roleLabel = computed(() => ROLE_LABELS[userStore.userInfo?.role ?? ""] || userStore.userInfo?.role || "");
 
 function go(url: string) {
   uni.navigateTo({ url });
@@ -97,17 +91,20 @@ function handleLogout() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 28rpx 0;
+  padding: 32rpx 0;
   border-bottom: 1rpx solid #f0f0f0;
+  min-height: 88rpx;
   &:last-child { border-bottom: none; }
 }
+.menu-arrow { color: #ccc; font-size: 28rpx; }
 .logout-btn {
   background: #fff;
   color: #fa5151;
   border: 2rpx solid #fa5151;
   border-radius: 12rpx;
-  padding: 20rpx 0;
+  padding: 24rpx 0;
   font-size: 30rpx;
   text-align: center;
+  min-height: 88rpx;
 }
 </style>

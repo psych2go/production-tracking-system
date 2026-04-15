@@ -1,50 +1,57 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../config/database.js";
 import { getAnomalies } from "./statistics.js";
-
-const prisma = new PrismaClient();
 
 export async function upsertProgress(data: {
   batchId: number;
   stageId: number;
   operatorId: number;
-  inputQuantity?: number;
-  outputQuantity?: number;
-  defectQuantity?: number;
-  defectType?: string;
-  defectNotes?: string;
   status?: string;
   notes?: string;
 }) {
-  return prisma.progressRecord.upsert({
-    where: {
-      batchId_stageId: { batchId: data.batchId, stageId: data.stageId },
-    },
-    update: {
-      operatorId: data.operatorId,
-      inputQuantity: data.inputQuantity,
-      outputQuantity: data.outputQuantity,
-      defectQuantity: data.defectQuantity ?? 0,
-      defectType: data.defectType,
-      defectNotes: data.defectNotes,
-      status: data.status ?? "completed",
-      notes: data.notes,
-      completedAt: data.status === "completed" ? new Date() : undefined,
-    },
-    create: {
-      batchId: data.batchId,
-      stageId: data.stageId,
-      operatorId: data.operatorId,
-      inputQuantity: data.inputQuantity,
-      outputQuantity: data.outputQuantity,
-      defectQuantity: data.defectQuantity ?? 0,
-      defectType: data.defectType,
-      defectNotes: data.defectNotes,
-      status: data.status ?? "completed",
-      startedAt: new Date(),
-      completedAt: data.status === "completed" ? new Date() : undefined,
-      notes: data.notes,
-    },
-    include: { stage: true, operator: { select: { id: true, name: true } } },
+  return prisma.$transaction(async (tx) => {
+    const record = await tx.progressRecord.upsert({
+      where: {
+        batchId_stageId: { batchId: data.batchId, stageId: data.stageId },
+      },
+      update: {
+        operatorId: data.operatorId,
+        status: data.status ?? "completed",
+        notes: data.notes,
+      },
+      create: {
+        batchId: data.batchId,
+        stageId: data.stageId,
+        operatorId: data.operatorId,
+        status: data.status ?? "completed",
+        notes: data.notes,
+      },
+      include: { stage: true, operator: { select: { id: true, name: true } } },
+    });
+
+    // Auto-complete batch when reaching "packaging" or "completed" stage
+    const currentStage = await tx.processStage.findUnique({ where: { id: data.stageId } });
+    if (currentStage?.code === "packaging") {
+      // Flow to packaging: auto-create "completed" stage record + complete batch
+      const completedStage = await tx.processStage.findUnique({ where: { code: "completed" } });
+      if (completedStage) {
+        await tx.progressRecord.upsert({
+          where: { batchId_stageId: { batchId: data.batchId, stageId: completedStage.id } },
+          update: { operatorId: data.operatorId, status: "completed" },
+          create: {
+            batchId: data.batchId,
+            stageId: completedStage.id,
+            operatorId: data.operatorId,
+            status: "completed",
+          },
+        });
+      }
+      await tx.batch.update({ where: { id: data.batchId }, data: { status: "completed" } });
+    } else if (currentStage?.code === "completed") {
+      // Directly flow to "completed" stage
+      await tx.batch.update({ where: { id: data.batchId }, data: { status: "completed" } });
+    }
+
+    return record;
   });
 }
 
@@ -52,7 +59,6 @@ export async function listProgress(filters: {
   batchId?: number;
   stageId?: number;
   operatorId?: number;
-  date?: string;
   page?: number;
   pageSize?: number;
 }) {
@@ -85,10 +91,10 @@ export async function getDashboardData() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [activeBatches, todayRecords, totalBatches] = await Promise.all([
-    prisma.batch.count({ where: { status: "active" } }),
-    prisma.progressRecord.count({ where: { createdAt: { gte: today } } }),
-    prisma.batch.count(),
+  const [activeProductBatches, activeProductQuantity, totalTrialBatches] = await Promise.all([
+    prisma.batch.count({ where: { status: "active", batchType: "product" } }),
+    prisma.batch.aggregate({ where: { status: "active", batchType: "product" }, _sum: { quantity: true } }),
+    prisma.batch.count({ where: { batchType: "trial" } }),
   ]);
 
   // Recent activity (last 10 records)
@@ -127,7 +133,7 @@ export async function getDashboardData() {
   }
 
   return {
-    stats: { activeBatches, todayRecords, totalBatches },
+    stats: { activeProductBatches, activeProductQuantity: activeProductQuantity._sum.quantity ?? 0, totalTrialBatches },
     recentActivity,
     activeBatchList,
     anomalies,

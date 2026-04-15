@@ -22,8 +22,10 @@ function request<T>({ url, method = "GET", data }: RequestOptions): Promise<T> {
       },
       success: (res) => {
         if (res.statusCode === 401) {
-          userStore.logout();
-          uni.reLaunch({ url: "/pages/index/index" });
+          if (userStore.isLoggedIn) {
+            userStore.logout();
+            uni.reLaunch({ url: "/pages/index/index" });
+          }
           reject(new Error("登录已过期，请重新登录"));
           return;
         }

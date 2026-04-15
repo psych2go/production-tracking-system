@@ -1,23 +1,19 @@
 <template>
   <view class="container">
     <view v-if="stageName" class="card">
-      <text class="text-lg text-bold">{{ stageName }} - 产品列表</text>
+      <text class="text-lg text-bold">{{ stageName }} - 产品列表（{{ productCount }}批产品，{{ trialCount }}批试验）</text>
     </view>
-    <view v-for="record in records" :key="record.id" class="card">
+    <view v-for="record in records" :key="record.id" class="card record-card" @click="goBatchDetail(record.batchId)">
       <view class="flex-between">
-        <text class="text-bold">{{ record.batch?.batchNo }}</text>
+        <view class="flex-center">
+          <text class="text-bold">{{ record.batch?.batchNo }} {{ record.batch?.product?.model || '' }}</text>
+          <view v-if="record.batch?.priority === 'urgent'" class="urgent-tag">急</view>
+        </view>
         <text class="text-secondary text-sm">{{ formatTime(record.createdAt) }}</text>
       </view>
-      <view class="mt-sm">
-        <text class="text-secondary">{{ record.batch?.product?.model }}</text>
-        <text class="text-secondary ml-sm">数量: {{ record.batch?.quantity }}</text>
-      </view>
-      <view class="mt-sm">
-        <text>投入: {{ record.inputQuantity ?? '-' }} | 产出: {{ record.outputQuantity ?? '-' }}</text>
-        <text v-if="record.defectQuantity" class="text-danger ml-sm">不良: {{ record.defectQuantity }}</text>
-      </view>
-      <view class="mt-sm">
-        <text class="text-secondary text-sm">操作员: {{ record.operator?.name }}</text>
+      <view class="flex-between mt-sm">
+        <text class="text-sm">流转到 {{ record.stage?.name }} <text class="text-secondary ml-sm">{{ record.operator?.name }}</text></text>
+        <text class="text-primary text-sm">查看详情 ></text>
       </view>
     </view>
     <view v-if="!records.length" class="card text-center">
@@ -27,19 +23,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 import { progressApi } from "../../api/modules";
+import { formatTime } from "../../utils/format";
 import type { ProgressRecord } from "../../types";
 
 const records = ref<ProgressRecord[]>([]);
 const stageId = ref(0);
 const stageName = ref("");
 
-function formatTime(dateStr: string): string {
-  const d = new Date(dateStr);
-  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
+const productCount = computed(() => records.value.filter((r) => r.batch?.batchType !== "trial").length);
+const trialCount = computed(() => records.value.filter((r) => r.batch?.batchType === "trial").length);
 
 onLoad((query) => {
   if (query?.stageId) {
@@ -49,23 +44,22 @@ onLoad((query) => {
 });
 
 onMounted(async () => {
-  if (stageId.value) {
-    try {
+  try {
+    if (stageId.value) {
       records.value = await progressApi.stageProducts(stageId.value);
-    } catch (e: unknown) {
-      uni.showToast({ title: (e as Error).message, icon: "none" });
+    } else {
+      records.value = (await progressApi.list()).items;
     }
-  } else {
-    // Load my history
-    try {
-      const res = await progressApi.list();
-      records.value = res.items;
-    } catch (e: unknown) {
-      uni.showToast({ title: (e as Error).message, icon: "none" });
-    }
+  } catch (e: unknown) {
+    uni.showToast({ title: (e as Error).message, icon: "none" });
   }
 });
+
+function goBatchDetail(batchId: number) {
+  uni.navigateTo({ url: `/pages/batch/detail?id=${batchId}` });
+}
 </script>
 
 <style scoped lang="scss">
+.record-card { padding: 24rpx; }
 </style>

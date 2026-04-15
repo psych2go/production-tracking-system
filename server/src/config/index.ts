@@ -11,7 +11,6 @@ export const config = {
   },
   wechatWork: {
     corpId: process.env.WW_CORP_ID || "",
-    agentId: process.env.WW_AGENT_ID || "",
     corpSecret: process.env.WW_CORP_SECRET || "",
   },
   cors: {

@@ -1,7 +1,7 @@
 <template>
   <view class="stage-timeline">
     <view
-      v-for="stage in stages"
+      v-for="(stage, index) in stages"
       :key="stage.id"
       class="stage-item"
       :class="{ 'stage-done': isStageDone(stage.id), 'stage-current': isStageCurrent(stage.id) }"
@@ -13,22 +13,20 @@
       <view class="stage-info">
         <view class="stage-row">
           <text class="stage-name">{{ stage.name }}</text>
-          <text v-if="getProgressRecord(stage.id)" class="stage-qty">
-            {{ getProgressRecord(stage.id)?.outputQuantity ?? '-' }}/{{ getProgressRecord(stage.id)?.inputQuantity ?? '-' }}
-          </text>
-          <text v-if="getProgressRecord(stage.id)?.defectQuantity" class="stage-defect">
-            不良: {{ getProgressRecord(stage.id)?.defectQuantity }}
-          </text>
         </view>
-        <text v-if="getDate(stage.id)" class="stage-date">{{ getDate(stage.id) }}</text>
+        <view class="stage-meta">
+          <text v-if="getDate(stage.id)" class="stage-date">{{ getDate(stage.id) }}</text>
+          <text v-if="getDuration(stage.id)" class="stage-duration">{{ getDuration(stage.id) }}</text>
+        </view>
       </view>
-      <view v-if="stage.stageOrder < stages.length" class="stage-line"></view>
+      <view v-if="index < stages.length - 1" class="stage-line"></view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import type { ProcessStage, ProgressRecord } from "../types";
+import { formatTime } from "../utils/format";
 
 const props = defineProps<{
   stages: ProcessStage[];
@@ -40,20 +38,35 @@ function getProgressRecord(stageId: number): ProgressRecord | undefined {
 }
 
 function isStageDone(stageId: number): boolean {
-  const record = getProgressRecord(stageId);
-  return record?.status === "completed";
+  return getProgressRecord(stageId)?.status === "completed";
 }
 
 function isStageCurrent(stageId: number): boolean {
-  const record = getProgressRecord(stageId);
-  return record?.status === "in_progress";
+  return getProgressRecord(stageId)?.status === "in_progress";
 }
 
 function getDate(stageId: number): string {
   const record = getProgressRecord(stageId);
-  if (!record?.completedAt && !record?.createdAt) return "";
-  const d = new Date(record.completedAt || record.createdAt);
-  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return record?.createdAt ? formatTime(record.createdAt) : "";
+}
+
+function getDuration(stageId: number): string {
+  const record = getProgressRecord(stageId);
+  if (!record?.createdAt) return "";
+  // 找到前一道已完成工序的 createdAt，计算时间差
+  const currentOrder = props.stages.find((s) => s.id === stageId)?.stageOrder;
+  if (currentOrder === undefined) return "";
+  const prevStages = props.stages.filter((s) => s.stageOrder < currentOrder);
+  for (let i = prevStages.length - 1; i >= 0; i--) {
+    const prevRecord = getProgressRecord(prevStages[i].id);
+    if (prevRecord?.createdAt) {
+      const ms = new Date(record.createdAt).getTime() - new Date(prevRecord.createdAt).getTime();
+      if (ms <= 0) return "";
+      const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+      return days > 0 ? `${days}天` : "";
+    }
+  }
+  return "";
 }
 </script>
 
@@ -111,6 +124,7 @@ function getDate(stageId: number): string {
   display: flex;
   flex-direction: column;
   gap: 4rpx;
+  flex: 1;
 }
 .stage-row {
   display: flex;
@@ -121,16 +135,20 @@ function getDate(stageId: number): string {
   font-size: 28rpx;
   color: #333;
 }
-.stage-qty {
-  font-size: 24rpx;
-  color: #666;
-}
-.stage-defect {
-  font-size: 24rpx;
-  color: #fa5151;
+.stage-meta {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
 }
 .stage-date {
   font-size: 22rpx;
   color: #999;
+}
+.stage-duration {
+  font-size: 22rpx;
+  color: #0083ff;
+  background: #f0f7ff;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
 }
 </style>

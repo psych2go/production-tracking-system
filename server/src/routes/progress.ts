@@ -16,11 +16,6 @@ const router = Router();
 const progressSchema = z.object({
   batchId: z.number().int().positive(),
   stageId: z.number().int().positive(),
-  inputQuantity: z.number().int().min(0).optional(),
-  outputQuantity: z.number().int().min(0).optional(),
-  defectQuantity: z.number().int().min(0).optional(),
-  defectType: z.string().optional(),
-  defectNotes: z.string().optional(),
   status: z.enum(["completed", "in_progress"]).optional(),
   notes: z.string().optional(),
 });

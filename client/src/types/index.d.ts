@@ -3,7 +3,7 @@ export interface User {
   wwUserId: string;
   name: string;
   department: string | null;
-  role: "admin" | "supervisor" | "worker";
+  role: "admin" | "worker";
   avatarUrl: string | null;
   isActive: boolean;
 }
@@ -19,15 +19,21 @@ export interface Product {
 export interface Batch {
   id: number;
   batchNo: string;
-  productId: number;
+  batchType: "product" | "trial";
+  productId: number | null;
   quantity: number;
+  customerCode: string | null;
+  orderNo: string | null;
+  packageType: string | null;
+  expectedDelivery: string | null;
+  trialContent: string | null;
   status: "active" | "completed" | "archived";
   priority: "normal" | "urgent";
   notes: string | null;
   createdBy: number | null;
   createdAt: string;
   updatedAt: string;
-  product?: Product;
+  product?: Product | null;
   creator?: { id: number; name: string };
   progressRecords?: ProgressRecord[];
 }
@@ -46,15 +52,7 @@ export interface ProgressRecord {
   batchId: number;
   stageId: number;
   operatorId: number;
-  inputQuantity: number | null;
-  outputQuantity: number | null;
-  defectQuantity: number;
-  defectType: string | null;
-  defectNotes: string | null;
   status: "completed" | "in_progress";
-  startedAt: string | null;
-  completedAt: string | null;
-  durationMinutes: number | null;
   notes: string | null;
   createdAt: string;
   stage?: ProcessStage;
@@ -71,9 +69,9 @@ export interface PaginatedResult<T> {
 
 export interface DashboardData {
   stats: {
-    activeBatches: number;
-    todayRecords: number;
-    totalBatches: number;
+    activeProductBatches: number;
+    activeProductQuantity: number;
+    totalTrialBatches: number;
   };
   recentActivity: ProgressRecord[];
   activeBatchList: Batch[];
@@ -90,9 +88,8 @@ export interface ProcessDurationData {
 
 export interface ProductionTrendData {
   period: string;
-  recordCount: number;
-  totalOutput: number;
-  avgYieldRate: number;
+  batchCount: number;
+  totalQuantity: number;
 }
 
 export interface AnomalyItem {
@@ -115,4 +112,17 @@ export interface AuditLog {
   ip: string | null;
   createdAt: string;
   user?: { id: number; name: string; role: string };
+}
+
+export interface PackageType {
+  id: number;
+  name: string;
+  category: string;
+  sortOrder: number;
+}
+
+export interface ScheduleItem {
+  orderNum: number;
+  batchId: number;
+  batch: Batch;
 }

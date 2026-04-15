@@ -64,6 +64,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { userApi } from "../../api/modules";
+import { ROLE_LABELS } from "../../utils/constants";
 import type { User } from "../../types";
 
 const users = ref<User[]>([]);
@@ -76,9 +77,7 @@ const editDepartment = ref("");
 
 const roleOptions = [
   { label: "管理员", value: "admin" },
-  { label: "班组长", value: "supervisor" },
-  { label: "工人", value: "worker" },
-  { label: "质检", value: "qc" },
+  { label: "作业员", value: "worker" },
 ];
 
 const filterOptions = [
@@ -86,12 +85,7 @@ const filterOptions = [
   ...roleOptions,
 ];
 
-const roleLabels: Record<string, string> = {
-  admin: "管理员",
-  supervisor: "班组长",
-  worker: "工人",
-  qc: "质检",
-};
+const roleLabels = ROLE_LABELS;
 
 async function loadUsers() {
   try {
@@ -115,7 +109,7 @@ function openEdit(user: User) {
   editingUser.value = user;
   editDepartment.value = user.department || "";
   editRoleIndex.value = roleOptions.findIndex((r) => r.value === user.role);
-  if (editRoleIndex.value < 0) editRoleIndex.value = 2;
+  if (editRoleIndex.value < 0) editRoleIndex.value = 1;
   showEdit.value = true;
 }
 
@@ -189,9 +183,7 @@ onMounted(loadUsers);
   border-radius: 6rpx;
 }
 .role-admin { background: #fff2e8; color: #fa5151; }
-.role-supervisor { background: #e8f4ff; color: #0083ff; }
 .role-worker { background: #f0f0f0; color: #666; }
-.role-qc { background: #e8fff0; color: #07c160; }
 .actions { display: flex; gap: 24rpx; }
 .action-link { font-size: 26rpx; color: #0083ff; }
 .text-danger { color: #fa5151; }

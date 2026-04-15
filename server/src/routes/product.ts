@@ -28,7 +28,7 @@ router.get("/", authGuard, async (req, res, next) => {
   }
 });
 
-router.post("/", authGuard, roleGuard("admin", "supervisor"), validate(createSchema), async (req: AuthRequest, res, next) => {
+router.post("/", authGuard, roleGuard("admin"), validate(createSchema), async (req: AuthRequest, res, next) => {
   try {
     const product = await createProduct(req.body);
     res.status(201).json(product);
@@ -37,7 +37,7 @@ router.post("/", authGuard, roleGuard("admin", "supervisor"), validate(createSch
   }
 });
 
-router.put("/:id", authGuard, roleGuard("admin", "supervisor"), validate(updateSchema), async (req: AuthRequest, res, next) => {
+router.put("/:id", authGuard, roleGuard("admin"), validate(updateSchema), async (req: AuthRequest, res, next) => {
   try {
     const product = await updateProduct(parseInt(req.params.id as string), req.body);
     res.json(product);

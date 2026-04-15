@@ -14,9 +14,85 @@
 
     <!-- Export button -->
     <view class="card export-bar">
-      <picker :range="exportTypes" @change="onExport">
-        <button class="btn-export">导出 Excel</button>
-      </picker>
+      <view class="export-left">
+        <text class="export-hint" v-if="activeTab === 'online'">分别统计在线产品和在线试验的详细信息及当前工序</text>
+        <text class="export-hint" v-else-if="activeTab === 'durations'">统计规则：耗时 = 相邻两道工序流转记录的时间差，按工序汇总平均/最短/最长值</text>
+        <text class="export-hint" v-else-if="activeTab === 'production'">统计规则：仅统计产品批次（不含试验），按完成日期汇总产量（加工数量之和）</text>
+        <text class="export-hint" v-else>统计规则：活跃批次超过 5 天无进度更新则标记为延迟预警</text>
+      </view>
+      <button class="btn-export" @click="onExport">导出 Excel</button>
+    </view>
+
+    <!-- Tab: Online batches -->
+    <view v-if="activeTab === 'online'">
+      <!-- Product batches -->
+      <view class="card">
+        <text class="section-title text-bold">在线产品</text>
+        <scroll-view scroll-x class="mt-sm" v-if="onlineProducts.length">
+          <view class="online-table">
+            <view class="online-header">
+              <text class="online-col online-col-no">批号</text>
+              <text class="online-col online-col-model">产品型号</text>
+              <text class="online-col online-col-qty">数量</text>
+              <text class="online-col online-col-pkg">封装形式</text>
+              <text class="online-col online-col-customer">客户代码</text>
+              <text class="online-col online-col-order">订单编号</text>
+              <text class="online-col online-col-priority">优先级</text>
+              <text class="online-col online-col-stage">当前工序</text>
+              <text class="online-col online-col-notes">备注</text>
+              <text class="online-col online-col-date">创建时间</text>
+            </view>
+            <view v-for="batch in onlineProducts" :key="batch.id" class="online-row" @click="goBatchDetail(batch.id)">
+              <text class="online-col online-col-no">{{ batch.batchNo }}</text>
+              <text class="online-col online-col-model">{{ batch.product?.model || '-' }}</text>
+              <text class="online-col online-col-qty">{{ batch.quantity }}</text>
+              <text class="online-col online-col-pkg">{{ batch.packageType || '-' }}</text>
+              <text class="online-col online-col-customer">{{ batch.customerCode || '-' }}</text>
+              <text class="online-col online-col-order">{{ batch.orderNo || '-' }}</text>
+              <text class="online-col online-col-priority">
+                <text v-if="batch.priority === 'urgent'" style="color:#fa5151">紧急</text>
+                <text v-else>普通</text>
+              </text>
+              <text class="online-col online-col-stage">{{ getCurrentStage(batch) }}</text>
+              <text class="online-col online-col-notes">{{ batch.notes || '-' }}</text>
+              <text class="online-col online-col-date">{{ batch.createdAt.slice(0, 10) }}</text>
+            </view>
+          </view>
+        </scroll-view>
+        <view v-else class="empty-chart">
+          <text class="text-secondary">暂无在线产品批次</text>
+        </view>
+      </view>
+
+      <!-- Trial batches -->
+      <view class="card mt-md">
+        <text class="section-title text-bold">在线试验</text>
+        <scroll-view scroll-x class="mt-sm" v-if="onlineTrials.length">
+          <view class="online-table">
+            <view class="online-header">
+              <text class="online-col trial-col-no">批号</text>
+              <text class="online-col trial-col-content">试验内容</text>
+              <text class="online-col trial-col-pkg">封装形式</text>
+              <text class="online-col trial-col-deadline">要求完成时间</text>
+              <text class="online-col trial-col-notes">备注</text>
+              <text class="online-col trial-col-stage">当前工序</text>
+              <text class="online-col trial-col-date">创建时间</text>
+            </view>
+            <view v-for="batch in onlineTrials" :key="batch.id" class="online-row" @click="goBatchDetail(batch.id)">
+              <text class="online-col trial-col-no">{{ batch.batchNo }}</text>
+              <text class="online-col trial-col-content">{{ batch.trialContent || '-' }}</text>
+              <text class="online-col trial-col-pkg">{{ batch.packageType || '-' }}</text>
+              <text class="online-col trial-col-deadline">{{ batch.expectedDelivery ? batch.expectedDelivery.slice(0, 10) : '-' }}</text>
+              <text class="online-col trial-col-notes">{{ batch.notes || '-' }}</text>
+              <text class="online-col trial-col-stage">{{ getCurrentStage(batch) }}</text>
+              <text class="online-col trial-col-date">{{ batch.createdAt.slice(0, 10) }}</text>
+            </view>
+          </view>
+        </scroll-view>
+        <view v-else class="empty-chart">
+          <text class="text-secondary">暂无在线试验批次</text>
+        </view>
+      </view>
     </view>
 
     <!-- Tab: Durations -->
@@ -33,14 +109,14 @@
       </view>
       <view class="data-table mt-md" v-if="durationList.length">
         <view class="table-header">
-          <text class="col">工序</text>
-          <text class="col">平均(分)</text>
-          <text class="col">最短</text>
-          <text class="col">最长</text>
+          <text class="col col-name">工序</text>
+          <text class="col">平均(分钟)</text>
+          <text class="col">最短(分钟)</text>
+          <text class="col">最长(分钟)</text>
           <text class="col">样本</text>
         </view>
         <view v-for="(item, i) in durationList" :key="i" class="table-row">
-          <text class="col">{{ item.stageName }}</text>
+          <text class="col col-name">{{ item.stageName }}</text>
           <text class="col">{{ item.avgMinutes }}</text>
           <text class="col">{{ item.minMinutes }}</text>
           <text class="col">{{ item.maxMinutes }}</text>
@@ -74,12 +150,13 @@
       <view v-if="anomalies.length === 0" class="empty-chart">
         <text class="text-success">暂无延迟批次</text>
       </view>
-      <view v-for="(a, i) in anomalies" :key="i" class="anomaly-item sev-major">
+      <view v-for="(a, i) in anomalies" :key="i" class="anomaly-item sev-major" @click="a.batchId && goBatchDetail(a.batchId)">
         <view class="flex-between">
           <text class="text-bold">{{ a.batchNo }}</text>
           <text class="severity-tag tag-major">延迟</text>
         </view>
         <text class="text-sm mt-sm">{{ a.description }}</text>
+        <text class="text-sm text-primary mt-sm">点击查看详情 ></text>
       </view>
     </view>
   </view>
@@ -87,11 +164,17 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { statsApi } from "../../api/modules";
-import type { ProcessDurationData, ProductionTrendData, AnomalyItem } from "../../types";
+import { statsApi, batchApi } from "../../api/modules";
+import { useAppStore } from "../../store/app";
+import { useUserStore } from "../../store/user";
+import type { Batch, ProcessDurationData, ProductionTrendData, AnomalyItem } from "../../types";
 import Charts from "../../components/Charts.vue";
 
+const appStore = useAppStore();
+const userStore = useUserStore();
+
 const tabs = [
+  { key: "online", label: "在线" },
   { key: "durations", label: "耗时" },
   { key: "production", label: "产量" },
   { key: "anomalies", label: "预警" },
@@ -109,25 +192,37 @@ const groupOptions = [
   { label: "按月", value: "month" },
 ];
 
-const exportTypes = ["工序耗时", "产量趋势"];
-const exportTypeMap: Record<string, string> = { "工序耗时": "durations", "产量趋势": "production" };
-
-const activeTab = ref("durations");
+const activeTab = ref("online");
 const selectedRange = ref(timeRanges[1]);
 const groupBy = ref("day");
 
 const durationList = ref<ProcessDurationData[]>([]);
 const productionList = ref<ProductionTrendData[]>([]);
 const anomalies = ref<AnomalyItem[]>([]);
+const onlineBatches = ref<Batch[]>([]);
+const onlineProducts = computed(() => onlineBatches.value.filter(b => b.batchType === "product"));
+const onlineTrials = computed(() => onlineBatches.value.filter(b => b.batchType === "trial"));
+
+function getCurrentStage(batch: Batch): string {
+  if (!appStore.stages.length || !batch.progressRecords?.length) return '未开始';
+  const completed = batch.progressRecords
+    .filter((r) => r.status === "completed")
+    .sort((a, b) => {
+      const oa = appStore.stages.find((s) => s.id === a.stageId)?.stageOrder ?? 0;
+      const ob = appStore.stages.find((s) => s.id === b.stageId)?.stageOrder ?? 0;
+      return ob - oa;
+    });
+  return completed[0]?.stage?.name || '未开始';
+}
 
 const durationData = computed(() => ({
   categories: durationList.value.map((d) => d.stageName),
-  series: [{ name: "平均耗时(分)", data: durationList.value.map((d) => d.avgMinutes) }],
+  series: [{ name: "平均耗时(分钟)", data: durationList.value.map((d) => d.avgMinutes) }],
 }));
 
 const productionData = computed(() => ({
   categories: productionList.value.map((p) => p.period.slice(5)),
-  series: [{ name: "产出", data: productionList.value.map((p) => p.totalOutput) }],
+  series: [{ name: "产量", data: productionList.value.map((p) => p.totalQuantity) }],
 }));
 
 function getDateRange() {
@@ -149,28 +244,42 @@ function onTimeRange(e: { detail: { value: number } }) {
   loadData();
 }
 
-function onExport(e: { detail: { value: number } }) {
-  const type = exportTypeMap[exportTypes[e.detail.value]];
-  if (!type) return;
+function onExport() {
+  const type = activeTab.value;
   const range = getDateRange();
-  const url = statsApi.exportExcel(type, range);
+  const baseUrl = statsApi.exportExcel(type, range);
+  const token = userStore.token;
+  const separator = baseUrl.includes("?") ? "&" : "?";
+  const url = `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
+  // #ifdef H5
+  window.open(url, "_blank");
+  // #endif
+  // #ifndef H5
   uni.downloadFile({
     url,
     success: (res) => {
       if (res.statusCode === 200) {
         uni.openDocument({ filePath: res.tempFilePath, fileType: "xlsx" });
+      } else {
+        uni.showToast({ title: "导出失败", icon: "none" });
       }
     },
     fail: () => {
-      window.open(url, "_blank");
+      uni.showToast({ title: "导出失败", icon: "none" });
     },
   });
+  // #endif
 }
 
 async function loadData() {
   const range = getDateRange();
   try {
     switch (activeTab.value) {
+      case "online": {
+        const res = await batchApi.list({ status: "active" });
+        onlineBatches.value = res.items;
+        break;
+      }
       case "durations": {
         const data = await statsApi.durations(range);
         durationList.value = data;
@@ -197,7 +306,14 @@ async function loadProduction() {
   productionList.value = data;
 }
 
-onMounted(loadData);
+onMounted(async () => {
+  await appStore.loadStages();
+  loadData();
+});
+
+function goBatchDetail(id: number) {
+  uni.navigateTo({ url: `/pages/batch/detail?id=${id}` });
+}
 </script>
 
 <style scoped lang="scss">
@@ -221,7 +337,18 @@ onMounted(loadData);
     font-weight: bold;
   }
 }
-.export-bar { display: flex; justify-content: flex-end; padding: 16rpx 24rpx; }
+.export-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 24rpx;
+}
+.export-left { flex: 1; margin-right: 20rpx; }
+.export-hint {
+  font-size: 22rpx;
+  color: #999;
+  line-height: 1.6;
+}
 .btn-export {
   font-size: 24rpx;
   padding: 8rpx 24rpx;
@@ -244,7 +371,7 @@ onMounted(loadData);
 .data-table { width: 100%; }
 .table-header {
   display: flex;
-  padding: 12rpx 0;
+  padding: 14rpx 0;
   border-bottom: 2rpx solid #e5e5e5;
   font-size: 22rpx;
   color: #999;
@@ -257,6 +384,7 @@ onMounted(loadData);
   &:last-child { border-bottom: none; }
 }
 .col { flex: 1; text-align: center; }
+.col-name { flex: 1.5; text-align: left; }
 .text-success { color: #07c160; }
 .anomaly-item {
   padding: 20rpx;
@@ -271,4 +399,51 @@ onMounted(loadData);
   border-radius: 6rpx;
 }
 .tag-major { background: #fff8e8; color: #ff9900; }
+
+/* Online table */
+.online-table {
+  min-width: 1100rpx;
+}
+.online-header {
+  display: flex;
+  padding: 14rpx 0;
+  border-bottom: 2rpx solid #e5e5e5;
+  font-size: 22rpx;
+  color: #999;
+  background: #fafafa;
+}
+.online-row {
+  display: flex;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+  font-size: 24rpx;
+  &:last-child { border-bottom: none; }
+  &:active { background: #f5f5f5; }
+}
+.online-col {
+  flex-shrink: 0;
+  padding: 0 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.online-col-no { width: 180rpx; justify-content: flex-start; font-weight: 500; }
+.online-col-model { width: 160rpx; }
+.online-col-qty { width: 100rpx; }
+.online-col-pkg { width: 200rpx; }
+.online-col-customer { width: 140rpx; }
+.online-col-order { width: 160rpx; }
+.online-col-priority { width: 100rpx; }
+.online-col-stage { width: 140rpx; color: #0083ff; font-weight: 500; }
+.online-col-notes { width: 200rpx; justify-content: flex-start; }
+.online-col-date { width: 160rpx; }
+
+/* Trial table columns */
+.trial-col-no { width: 180rpx; justify-content: flex-start; font-weight: 500; }
+.trial-col-content { width: 400rpx; justify-content: flex-start; }
+.trial-col-pkg { width: 400rpx; }
+.trial-col-deadline { width: 180rpx; }
+.trial-col-notes { width: 180rpx; justify-content: flex-start; }
+.trial-col-stage { width: 140rpx; color: #0083ff; font-weight: 500; }
+.trial-col-date { width: 160rpx; }
 </style>

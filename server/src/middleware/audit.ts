@@ -1,8 +1,6 @@
 import { Response, NextFunction } from "express";
-import { PrismaClient } from "@prisma/client";
 import { AuthRequest } from "./auth.js";
-
-const prisma = new PrismaClient();
+import { prisma } from "../config/database.js";
 
 export function auditLog(action: string, entity: string) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -18,8 +16,7 @@ export function auditLog(action: string, entity: string) {
         // Trim detail to avoid storing huge payloads
         const detailObj: Record<string, unknown> = {};
         if (req.body && typeof req.body === "object") {
-          const { ...rest } = req.body as Record<string, unknown>;
-          detailObj.body = rest;
+          detailObj.body = req.body;
         }
         if (Object.keys(req.params).length > 0) {
           detailObj.params = req.params;

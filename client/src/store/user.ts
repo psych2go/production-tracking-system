@@ -46,7 +46,7 @@ export const useUserStore = defineStore("user", () => {
   }
 
   function isAdmin() {
-    return userInfo.value?.role === "admin" || userInfo.value?.role === "supervisor";
+    return userInfo.value?.role === "admin";
   }
 
   return { token, userInfo, isLoggedIn, checkAuth, devLogin, wwLogin, logout, isAdmin };

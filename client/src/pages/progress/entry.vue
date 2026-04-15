@@ -5,152 +5,242 @@
     </view>
 
     <view v-else>
+      <!-- Stage filter with counts -->
+      <view class="card" v-if="step === 1 && appStore.stages.length">
+        <view class="flex-between">
+          <text class="section-title text-bold">按工序查看</text>
+        </view>
+        <scroll-view scroll-x class="stage-scroll mt-sm">
+          <view
+            class="stage-chip"
+            :class="{ active: !selectedStageId }"
+            @click="selectedStageId = null"
+          >
+            全部
+          </view>
+          <view
+            v-for="stage in regularStages"
+            :key="stage.id"
+            class="stage-chip"
+            :class="{ active: selectedStageId === stage.id }"
+            @click="selectedStageId = selectedStageId === stage.id ? null : stage.id"
+          >
+            {{ stage.name }}
+            <text class="stage-chip-count" v-if="stageBatchCounts[stage.id]">
+              {{ stageBatchCounts[stage.id] }}
+            </text>
+          </view>
+        </scroll-view>
+        <!-- 按封装形式查看 -->
+        <view class="flex-between mt-md">
+          <text class="section-title text-bold">按封装形式查看</text>
+        </view>
+        <scroll-view scroll-x class="stage-scroll mt-sm">
+          <view
+            class="stage-chip"
+            :class="{ active: !selectedPackageType }"
+            @click="selectedPackageType = ''"
+          >
+            全部
+          </view>
+          <view
+            v-for="pt in packageTypes"
+            :key="pt.id"
+            class="stage-chip"
+            :class="{ active: selectedPackageType === pt.name }"
+            @click="selectedPackageType = selectedPackageType === pt.name ? '' : pt.name"
+          >
+            {{ pt.name }}
+            <text class="stage-chip-count" v-if="packageBatchCounts[pt.name]">
+              {{ packageBatchCounts[pt.name] }}
+            </text>
+          </view>
+        </scroll-view>
+      </view>
+
       <!-- Step 1: Select Batch -->
       <view v-if="step === 1" class="card">
-        <text class="section-title text-bold">选择批次</text>
+        <view class="flex-between">
+          <text class="section-title text-bold">选择批次</text>
+        </view>
         <view class="search-box mt-sm">
           <input
             v-model="batchKeyword"
             placeholder="搜索批号或型号"
             class="search-input"
             @confirm="searchBatches"
+            @input="onBatchInput"
           />
         </view>
         <view class="mt-md">
           <view
-            v-for="batch in batches"
+            v-for="batch in filteredBatches"
             :key="batch.id"
             class="batch-option"
-            :class="{ selected: selectedBatch?.id === batch.id }"
             @click="selectBatch(batch)"
           >
             <view class="flex-between">
-              <text class="text-bold">{{ batch.batchNo }}</text>
-              <text class="text-secondary text-sm">{{ batch.product?.model }}</text>
+              <view class="flex-center">
+                <text class="text-bold">{{ batch.batchNo }} {{ batch.product?.model || '' }}</text>
+                <view v-if="batch.priority === 'urgent'" class="urgent-tag">急</view>
+              </view>
+              <text class="text-secondary text-sm">{{ batch.packageType }}</text>
             </view>
-            <text class="text-sm text-secondary mt-sm">数量: {{ batch.quantity }}</text>
+            <view class="flex-between mt-sm">
+              <text class="text-sm text-secondary">数量: {{ batch.quantity }}</text>
+              <view v-if="getCurrentStage(batch)" class="current-stage-hint-inline">
+                <text class="text-sm">当前: {{ getCurrentStage(batch)?.name }}</text>
+              </view>
+            </view>
           </view>
-          <view v-if="!batches.length" class="text-center mt-lg text-secondary">
-            <text>暂无活跃批次</text>
+          <view v-if="!filteredBatches.length" class="text-center mt-lg text-secondary">
+            <text>{{ batchKeyword || selectedStageId || selectedPackageType ? '无匹配批次' : '加载中...' }}</text>
           </view>
         </view>
-        <button class="btn-primary mt-lg" :disabled="!selectedBatch" @click="step = 2">下一步</button>
       </view>
 
-      <!-- Step 2: Select Stage -->
+      <!-- Step 2: Select Stage (click to submit) -->
       <view v-if="step === 2" class="card">
         <view class="flex-between">
+          <text class="nav-back-default" @click="step = 1">&lt;</text>
           <text class="section-title text-bold">选择工序</text>
-          <text class="text-secondary text-sm" @click="step = 1">返回选批次</text>
+          <view style="width: 60rpx;"></view>
         </view>
         <view class="batch-summary mt-sm">
-          <text>{{ selectedBatch?.batchNo }} | {{ selectedBatch?.product?.model }} | {{ selectedBatch?.quantity }}件</text>
+          <text>{{ selectedBatch?.batchNo }} {{ selectedBatch?.product?.model }} | {{ selectedBatch?.quantity }}件</text>
         </view>
-        <view class="stage-list mt-md">
+        <text class="hint-text mt-md">点击工序确认流转</text>
+        <view class="stage-list mt-sm">
           <view
-            v-for="stage in appStore.stages"
+            v-for="stage in regularStages"
             :key="stage.id"
             class="stage-option"
             :class="{
-              selected: selectedStage?.id === stage.id,
               done: isStageCompleted(stage.id),
+              current: isCurrentStage(stage.id),
             }"
-            @click="selectStage(stage)"
+            @click="confirmStage(stage)"
           >
-            <view class="stage-order">{{ stage.stageOrder }}</view>
+            <view class="stage-order" :class="{ 'order-done': isStageCompleted(stage.id), 'order-current': isCurrentStage(stage.id) }">
+              <text v-if="isStageCompleted(stage.id)" class="check-mark">&#10003;</text>
+              <text v-else>{{ stage.stageOrder }}</text>
+            </view>
             <text class="stage-name">{{ stage.name }}</text>
-            <text v-if="isStageCompleted(stage.id)" class="text-success text-sm">已完成</text>
+            <text v-if="isCurrentStage(stage.id)" class="text-primary text-sm">当前</text>
+          </view>
+          <!-- 第14道「已完成」工序，闪烁显示 -->
+          <view
+            v-if="completedStage"
+            class="stage-option stage-completed-blink"
+            :class="{ done: isStageCompleted(completedStage.id) }"
+            @click="confirmStage(completedStage)"
+          >
+            <view class="stage-order" :class="{ 'order-done': isStageCompleted(completedStage.id) }">
+              <text v-if="isStageCompleted(completedStage.id)" class="check-mark">&#10003;</text>
+              <text v-else>14</text>
+            </view>
+            <text class="stage-name">已完成</text>
           </view>
         </view>
-        <button class="btn-primary mt-lg" :disabled="!selectedStage" @click="step = 3">下一步</button>
-      </view>
-
-      <!-- Step 3: Input quantities -->
-      <view v-if="step === 3" class="card">
-        <view class="flex-between">
-          <text class="section-title text-bold">录入数据</text>
-          <text class="text-secondary text-sm" @click="step = 2">返回选工序</text>
-        </view>
-        <view class="batch-summary mt-sm">
-          <text>{{ selectedBatch?.batchNo }} → {{ selectedStage?.name }}</text>
-        </view>
-
-        <view class="form-group mt-lg">
-          <text class="form-label">投入数量</text>
-          <input v-model="form.inputQuantity" type="number" placeholder="投入数量" class="form-input" />
-        </view>
-        <view class="form-group mt-md">
-          <text class="form-label">产出数量</text>
-          <input v-model="form.outputQuantity" type="number" placeholder="产出数量" class="form-input" />
-        </view>
-        <view class="form-group mt-md">
-          <text class="form-label">不良数量</text>
-          <input v-model="form.defectQuantity" type="number" placeholder="0" class="form-input" />
-        </view>
-        <view v-if="Number(form.defectQuantity) > 0" class="form-group mt-md">
-          <text class="form-label">不良类型</text>
-          <picker :range="defectTypes" @change="(e: any) => form.defectType = defectTypes[e.detail.value]">
-            <view class="form-input picker-value">{{ form.defectType || '请选择' }}</view>
-          </picker>
-        </view>
-        <view class="form-group mt-md">
-          <text class="form-label">备注</text>
-          <textarea v-model="form.notes" placeholder="备注信息（可选）" class="form-textarea" />
-        </view>
-
-        <button class="btn-primary mt-lg" :loading="submitting" @click="submitProgress">提交</button>
       </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import { useUserStore } from "../../store/user";
 import { useAppStore } from "../../store/app";
-import { batchApi, progressApi } from "../../api/modules";
-import type { Batch, ProcessStage } from "../../types";
+import { batchApi, progressApi, settingsApi } from "../../api/modules";
+import type { Batch, PackageType, ProcessStage, DashboardData } from "../../types";
 
 const userStore = useUserStore();
 const appStore = useAppStore();
+const dashboard = ref<DashboardData | null>(null);
+
+/** 已完成工序（code === "completed"） */
+const completedStage = computed(() =>
+  appStore.stages.find(s => s.code === "completed") ?? null
+);
+
+/** 常规工序（排除已完成） */
+const regularStages = computed(() =>
+  appStore.stages.filter(s => s.code !== "completed")
+);
+
+/** Compute batch count per stage: count batches whose CURRENT (latest completed) stage is this one */
+const stageBatchCounts = computed(() => {
+  const counts: Record<number, number> = {};
+  if (!dashboard.value?.activeBatchList) return counts;
+  for (const batch of dashboard.value.activeBatchList) {
+    const records = batch.progressRecords || [];
+    if (!records.length) continue;
+    // Find the latest completed record by stageOrder
+    const sorted = [...records].sort((a, b) => {
+      const oa = appStore.stages.find(s => s.id === a.stageId)?.stageOrder ?? 0;
+      const ob = appStore.stages.find(s => s.id === b.stageId)?.stageOrder ?? 0;
+      return ob - oa;
+    });
+    const latestStageId = sorted[0].stageId;
+    counts[latestStageId] = (counts[latestStageId] || 0) + 1;
+  }
+  return counts;
+});
 
 const step = ref(1);
 const batchKeyword = ref("");
 const batches = ref<Batch[]>([]);
 const selectedBatch = ref<Batch | null>(null);
-const selectedStage = ref<ProcessStage | null>(null);
+const selectedStageId = ref<number | null>(null);
+const selectedPackageType = ref("");
 const submitting = ref(false);
+const packageTypes = ref<PackageType[]>([]);
 
-const defectTypes = ["裂纹", "键合不良", "污染", "尺寸异常", "外观不良", "其他"];
-
-const form = ref({
-  inputQuantity: "",
-  outputQuantity: "",
-  defectQuantity: "0",
-  defectType: "",
-  notes: "",
+/** Count batches per package type (from dashboard active batches) */
+const packageBatchCounts = computed(() => {
+  const counts: Record<string, number> = {};
+  if (!dashboard.value?.activeBatchList) return counts;
+  for (const batch of dashboard.value.activeBatchList) {
+    if (batch.packageType) {
+      counts[batch.packageType] = (counts[batch.packageType] || 0) + 1;
+    }
+  }
+  return counts;
 });
 
-async function searchBatches() {
-  try {
-    const res = await batchApi.list({ status: "active", keyword: batchKeyword.value });
-    batches.value = res.items;
-  } catch (e: unknown) {
-    uni.showToast({ title: (e as Error).message, icon: "none" });
+/** Filter batches by selected stage, package type, and keyword */
+const filteredBatches = computed(() => {
+  let result = batches.value;
+  if (selectedStageId.value) {
+    result = result.filter(b => {
+      const current = getCurrentStage(b);
+      return current?.id === selectedStageId.value;
+    });
   }
+  if (selectedPackageType.value) {
+    result = result.filter(b => b.packageType === selectedPackageType.value);
+  }
+  return result;
+});
+
+/** Get the current (latest completed) stage for a batch */
+function getCurrentStage(batch: Batch): ProcessStage | null {
+  if (!appStore.stages.length || !batch.progressRecords?.length) return null;
+  const completed = batch.progressRecords
+    .filter((r) => r.status === "completed")
+    .sort((a, b) => {
+      const oa = appStore.stages.find((s) => s.id === a.stageId)?.stageOrder ?? 0;
+      const ob = appStore.stages.find((s) => s.id === b.stageId)?.stageOrder ?? 0;
+      return ob - oa;
+    });
+  return completed[0]?.stage ?? null;
 }
 
-function selectBatch(batch: Batch) {
-  selectedBatch.value = batch;
-}
-
-function selectStage(stage: ProcessStage) {
-  selectedStage.value = stage;
-  // Pre-fill with batch quantity
-  if (!form.value.inputQuantity) {
-    form.value.inputQuantity = String(selectedBatch.value?.quantity ?? "");
-  }
+function isCurrentStage(stageId: number): boolean {
+  if (!selectedBatch.value) return false;
+  const current = getCurrentStage(selectedBatch.value);
+  return current?.id === stageId;
 }
 
 function isStageCompleted(stageId: number): boolean {
@@ -159,29 +249,47 @@ function isStageCompleted(stageId: number): boolean {
   ) ?? false;
 }
 
-async function submitProgress() {
-  if (!selectedBatch.value || !selectedStage.value) return;
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
+
+function onBatchInput() {
+  if (searchTimer) clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => searchBatches(), 300);
+}
+
+async function searchBatches() {
+  try {
+    const res = await batchApi.list({ status: "active", keyword: batchKeyword.value || undefined });
+    batches.value = res.items;
+  } catch (e: unknown) {
+    uni.showToast({ title: (e as Error).message, icon: "none" });
+  }
+}
+
+function selectBatch(batch: Batch) {
+  selectedBatch.value = batch;
+  step.value = 2;
+}
+
+async function confirmStage(stage: ProcessStage) {
+  if (submitting.value) return;
+
+  const res = await uni.showModal({
+    title: "确认流转",
+    content: `确认将 ${selectedBatch.value?.batchNo} 流转到「${stage.name}」工序？`,
+  });
+  if (res.cancel) return;
 
   submitting.value = true;
   try {
     await progressApi.create({
-      batchId: selectedBatch.value.id,
-      stageId: selectedStage.value.id,
-      inputQuantity: Number(form.value.inputQuantity) || undefined,
-      outputQuantity: Number(form.value.outputQuantity) || undefined,
-      defectQuantity: Number(form.value.defectQuantity) || 0,
-      defectType: form.value.defectType || undefined,
-      notes: form.value.notes || undefined,
+      batchId: selectedBatch.value!.id,
+      stageId: stage.id,
     });
+    uni.showToast({ title: "流转成功", icon: "success" });
 
-    uni.showToast({ title: "录入成功", icon: "success" });
-
-    // Reset form
-    form.value = { inputQuantity: "", outputQuantity: "", defectQuantity: "0", defectType: "", notes: "" };
-    selectedStage.value = null;
+    // Reset and refresh
+    selectedBatch.value = null;
     step.value = 1;
-
-    // Reload batches
     await searchBatches();
   } catch (e: unknown) {
     uni.showToast({ title: (e as Error).message, icon: "none" });
@@ -190,9 +298,27 @@ async function submitProgress() {
   }
 }
 
-onShow(() => {
+onShow(async () => {
   if (userStore.isLoggedIn) {
     searchBatches();
+    try { dashboard.value = await progressApi.dashboard(); } catch { /* ignore */ }
+    if (!packageTypes.value.length) {
+      try { packageTypes.value = await settingsApi.listPackageTypes(); } catch { /* ignore */ }
+    }
+    const pendingId = uni.getStorageSync("pendingBatchId");
+    if (pendingId) {
+      uni.removeStorageSync("pendingBatchId");
+      const batch = batches.value.find((b) => b.id === pendingId);
+      if (batch) {
+        selectBatch(batch);
+      } else {
+        try {
+          const b = await batchApi.get(pendingId);
+          batches.value.unshift(b);
+          selectBatch(b);
+        } catch { /* ignore */ }
+      }
+    }
   }
 });
 
@@ -202,6 +328,12 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+.nav-back-default {
+  font-size: 36rpx;
+  color: #333;
+  font-weight: 500;
+  width: 60rpx;
+}
 .search-box {
   background: #f5f5f5;
   border-radius: 12rpx;
@@ -215,7 +347,16 @@ onMounted(() => {
   border: 2rpx solid #e5e5e5;
   border-radius: 12rpx;
   margin-bottom: 16rpx;
-  &.selected { border-color: #0083ff; background: #f0f7ff; }
+}
+.current-stage-hint-inline {
+  background: #f0f7ff;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+.hint-text {
+  display: block;
+  font-size: 24rpx;
+  color: #999;
 }
 .stage-list {
   display: flex;
@@ -225,16 +366,17 @@ onMounted(() => {
 .stage-option {
   display: flex;
   align-items: center;
-  padding: 20rpx 24rpx;
+  padding: 24rpx;
   border: 2rpx solid #e5e5e5;
   border-radius: 12rpx;
   gap: 20rpx;
-  &.selected { border-color: #0083ff; background: #f0f7ff; }
+  min-height: 88rpx;
   &.done { opacity: 0.5; }
+  &.current { border-color: #0083ff; background: #f0f7ff; border-width: 3rpx; }
 }
 .stage-order {
-  width: 48rpx;
-  height: 48rpx;
+  width: 52rpx;
+  height: 52rpx;
   border-radius: 50%;
   background: #f5f5f5;
   display: flex;
@@ -242,9 +384,24 @@ onMounted(() => {
   justify-content: center;
   font-size: 24rpx;
   color: #666;
+  flex-shrink: 0;
+  &.order-done { background: #07c160; color: #fff; }
+  &.order-current { background: #0083ff; color: #fff; }
 }
-.stage-name {
-  flex: 1;
+.check-mark { color: #fff; font-size: 24rpx; }
+.stage-name { flex: 1; }
+.stage-completed-blink {
+  border-color: #07c160;
+  background: linear-gradient(135deg, #f0fff0 0%, #e8f5e9 100%);
+  animation: blink-border 1.5s ease-in-out infinite;
+}
+.stage-completed-blink.done {
+  animation: none;
+  opacity: 0.5;
+}
+@keyframes blink-border {
+  0%, 100% { border-color: #07c160; box-shadow: 0 0 0rpx transparent; }
+  50% { border-color: #07c160; box-shadow: 0 0 12rpx rgba(7, 193, 96, 0.4); }
 }
 .batch-summary {
   padding: 16rpx 24rpx;
@@ -252,44 +409,37 @@ onMounted(() => {
   border-radius: 12rpx;
   font-size: 26rpx;
 }
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8rpx;
+.section-title { font-size: 32rpx; }
+.stage-scroll {
+  white-space: nowrap;
 }
-.form-label {
+.stage-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 16rpx 28rpx;
+  background: #f0f7ff;
+  color: #0083ff;
+  border-radius: 24rpx;
   font-size: 26rpx;
-  color: #666;
-}
-.form-input {
-  border: 2rpx solid #e5e5e5;
-  border-radius: 12rpx;
-  padding: 20rpx 24rpx;
-  font-size: 28rpx;
-}
-.form-textarea {
-  border: 2rpx solid #e5e5e5;
-  border-radius: 12rpx;
-  padding: 20rpx 24rpx;
-  font-size: 28rpx;
-  height: 160rpx;
-}
-.picker-value {
-  color: #333;
-}
-.btn-primary {
-  background: #0083ff;
-  color: #fff;
-  border: none;
-  border-radius: 12rpx;
-  padding: 24rpx 0;
-  font-size: 32rpx;
-  text-align: center;
-  &[disabled] {
-    opacity: 0.5;
+  margin-right: 16rpx;
+  min-height: 60rpx;
+  &.active {
+    background: #0083ff;
+    color: #fff;
+  }
+  &.active .stage-chip-count {
+    background: rgba(255, 255, 255, 0.3);
+    color: #fff;
   }
 }
-.section-title {
-  font-size: 32rpx;
+.stage-chip-count {
+  background: #0083ff;
+  color: #fff;
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 16rpx;
+  margin-left: 8rpx;
+  min-width: 32rpx;
+  text-align: center;
 }
 </style>

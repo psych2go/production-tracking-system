@@ -1,5 +1,5 @@
 import { api } from "./index";
-import type { User, Product, Batch, ProcessStage, ProgressRecord, PaginatedResult, DashboardData, ProcessDurationData, ProductionTrendData, AnomalyItem, AuditLog } from "../types";
+import type { User, Product, Batch, ProcessStage, ProgressRecord, PaginatedResult, DashboardData, ProcessDurationData, ProductionTrendData, AnomalyItem, AuditLog, PackageType, ScheduleItem } from "../types";
 
 // Auth
 export const authApi = {
@@ -19,7 +19,6 @@ export const userApi = {
   },
   update: (id: number, data: { role?: string; department?: string; isActive?: boolean }) =>
     api.put<User>(`/api/users/${id}`, data),
-  deactivate: (id: number) => api.delete(`/api/users/${id}`),
 };
 
 // Products
@@ -32,19 +31,20 @@ export const productApi = {
 
 // Batches
 export const batchApi = {
-  list: (params?: { status?: string; productId?: number; keyword?: string; page?: number }) => {
+  list: (params?: { status?: string; productId?: number; keyword?: string; customerCode?: string; packageType?: string; batchType?: string; page?: number }) => {
     const query = new URLSearchParams();
     if (params?.status) query.set("status", params.status);
     if (params?.productId) query.set("productId", String(params.productId));
     if (params?.keyword) query.set("keyword", params.keyword);
+    if (params?.customerCode) query.set("customerCode", params.customerCode);
+    if (params?.packageType) query.set("packageType", params.packageType);
+    if (params?.batchType) query.set("batchType", params.batchType);
     if (params?.page) query.set("page", String(params.page));
     return api.get<PaginatedResult<Batch>>(`/api/batches?${query.toString()}`);
   },
   get: (id: number) => api.get<Batch>(`/api/batches/${id}`),
-  create: (data: { batchNo: string; productId: number; quantity: number; priority?: string; notes?: string }) =>
+  create: (data: Record<string, unknown>) =>
     api.post<Batch>("/api/batches", data),
-  update: (id: number, data: { status?: string; priority?: string; notes?: string }) =>
-    api.put<Batch>(`/api/batches/${id}`, data),
 };
 
 // Progress
@@ -62,11 +62,6 @@ export const progressApi = {
   create: (data: {
     batchId: number;
     stageId: number;
-    inputQuantity?: number;
-    outputQuantity?: number;
-    defectQuantity?: number;
-    defectType?: string;
-    defectNotes?: string;
     status?: string;
     notes?: string;
   }) => api.post<ProgressRecord>("/api/progress", data),
@@ -100,12 +95,18 @@ export const statsApi = {
 
 // Settings
 export const settingsApi = {
-  stages: () => api.get<ProcessStage[]>("/api/settings/stages"),
+  stages: () => api.get<ProcessStage[]>("/api/progress/stages"),
   createStage: (data: { code: string; name: string; stageOrder: number; isQcStage?: boolean; description?: string }) =>
     api.post<ProcessStage>("/api/settings/stages", data),
   updateStage: (id: number, data: { name?: string; stageOrder?: number; isQcStage?: boolean; description?: string | null }) =>
     api.put<ProcessStage>(`/api/settings/stages/${id}`, data),
   deleteStage: (id: number) => api.delete(`/api/settings/stages/${id}`),
+
+  // Package types
+  listPackageTypes: () => api.get<PackageType[]>("/api/settings/package-types"),
+  createPackageType: (data: { name: string; category?: string; sortOrder?: number }) =>
+    api.post<PackageType>("/api/settings/package-types", data),
+  deletePackageType: (id: number) => api.delete(`/api/settings/package-types/${id}`),
 };
 
 // Audit
@@ -120,4 +121,12 @@ export const auditApi = {
     if (params?.page) query.set("page", String(params.page));
     return api.get<PaginatedResult<AuditLog>>(`/api/audit/logs?${query.toString()}`);
   },
+};
+
+// Schedule
+export const scheduleApi = {
+  getQueue: (stageId: number) =>
+    api.get<ScheduleItem[]>(`/api/schedule/${stageId}`),
+  reorder: (stageId: number, batchId: number, direction: "up" | "down") =>
+    api.put<ScheduleItem[]>(`/api/schedule/${stageId}/reorder`, { batchId, direction }),
 };

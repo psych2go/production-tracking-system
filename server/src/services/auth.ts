@@ -1,8 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { config } from "../config/index.js";
-
-const prisma = new PrismaClient();
+import { prisma } from "../config/database.js";
 
 // Access token cache for WeChat Work API
 let tokenCache = { token: "", expiresAt: 0 };
