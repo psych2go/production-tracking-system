@@ -17,9 +17,16 @@ jobs:
           script: |
             cd /opt/pts
             git pull origin main
+
+            # 后端
             cd server
-            npm install --production=false
-            npx prisma migrate deploy
+            npm install
+            DATABASE_URL="file:./dev.db" npx prisma migrate deploy
+            DATABASE_URL="file:./dev.db" npx prisma generate
             npm run build
-            npm run db:seed
             pm2 restart pts
+
+            # 前端
+            cd ../client
+            npm install
+            npm run build:h5
