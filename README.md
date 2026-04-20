@@ -179,6 +179,94 @@ npm run build:mp-weixin  # 微信小程序生产构建
 | `WW_CORP_SECRET` | 企业微信 Secret | - |
 | `CLIENT_URL` | 前端地址（CORS） | `http://localhost:5173` |
 
+## 服务器部署
+
+### 首次部署
+
+```bash
+# 1. 安装环境
+apt update && apt upgrade -y
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt install -y nodejs nginx
+npm install -g pm2
+
+# 2. 克隆项目
+git clone https://github.com/psych2go/production-tracking-system.git /opt/pts
+
+# 3. 后端
+cd /opt/pts/server
+npm install
+npx prisma generate
+npx prisma migrate deploy
+sudo DATABASE_URL="file:./dev.db" npm run db:seed
+nano .env                    # 编辑 .env 填入实际配置
+
+# 4. 前端
+cd /opt/pts/client
+npm install
+npm run build:h5
+
+# 5. 启动后端
+cd /opt/pts/server
+pm2 start npm --name pts-api --cwd /opt/pts/server -- start
+pm2 save
+pm2 startup
+
+# 6. 配置 Nginx
+sudo nano /etc/nginx/sites-available/pts
+```
+
+Nginx 配置：
+
+```nginx
+server {
+    listen 80;
+    server_name 你的域名.com www.你的域名.com;
+
+    location / {
+        root /opt/pts/client/dist/build/h5;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+```bash
+sudo ln -s /etc/nginx/sites-available/pts /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl reload nginx
+
+# 7. HTTPS（备案通过后）
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d 你的域名.com -d www.你的域名.com
+```
+
+### 更新部署
+
+```bash
+cd /opt/pts
+sudo git pull origin main
+
+# 后端有改动
+cd server && sudo npm run build && sudo pm2 restart pts-api
+
+# 前端有改动
+cd ../client && sudo npm run build:h5
+
+# 数据库有改动（新增迁移）
+cd server && sudo DATABASE_URL="file:./dev.db" npx prisma migrate deploy
+
+# 依赖有改动
+cd server && sudo npm install
+cd ../client && sudo npm install
+```
+
 ## License
 
 Private - 内部使用
