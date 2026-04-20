@@ -1,0 +1,24 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.routes = void 0;
+const express_1 = require("express");
+const auth_js_1 = require("./auth.js");
+const user_js_1 = require("./user.js");
+const product_js_1 = require("./product.js");
+const batch_js_1 = require("./batch.js");
+const progress_js_1 = require("./progress.js");
+const statistics_js_1 = require("./statistics.js");
+const audit_js_1 = require("./audit.js");
+const settings_js_1 = require("./settings.js");
+const schedule_js_1 = require("./schedule.js");
+exports.routes = (0, express_1.Router)();
+exports.routes.use("/auth", auth_js_1.authRoutes);
+exports.routes.use("/users", user_js_1.userRoutes);
+exports.routes.use("/products", product_js_1.productRoutes);
+exports.routes.use("/batches", batch_js_1.batchRoutes);
+exports.routes.use("/progress", progress_js_1.progressRoutes);
+exports.routes.use("/statistics", statistics_js_1.statisticsRoutes);
+exports.routes.use("/audit", audit_js_1.auditRoutes);
+exports.routes.use("/settings", settings_js_1.settingsRoutes);
+exports.routes.use("/schedule", schedule_js_1.scheduleRoutes);
+//# sourceMappingURL=index.js.map
