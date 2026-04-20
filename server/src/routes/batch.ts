@@ -16,7 +16,8 @@ const createProductSchema = z.object({
   packageType: z.string().min(1, "请选择封装形式"),
   customerCode: z.string().optional(),
   orderNo: z.string().optional(),
-  expectedDelivery: z.string().optional(),
+  customerDelivery: z.string().optional(),
+  productionDelivery: z.string().optional(),
   priority: z.enum(["normal", "urgent"]).optional(),
   notes: z.string().optional(),
 });
@@ -25,8 +26,9 @@ const createProductSchema = z.object({
 const createTrialSchema = z.object({
   batchType: z.literal("trial"),
   trialContent: z.string().min(1, "试验内容不能为空"),
+  quantity: z.number().int().optional(),
   packageType: z.string().optional(),
-  expectedDelivery: z.string().optional(),
+  customerDelivery: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -39,10 +41,15 @@ const createSchema = z.discriminatedUnion("batchType", [
 const updateSchema = z.object({
   status: z.enum(["active", "completed", "archived"]).optional(),
   priority: z.enum(["normal", "urgent"]).optional(),
+  batchNo: z.string().optional(),
+  productModel: z.string().optional(),
+  quantity: z.number().int().positive().optional(),
+  trialContent: z.string().optional(),
   customerCode: z.string().nullable().optional(),
   orderNo: z.string().nullable().optional(),
   packageType: z.string().nullable().optional(),
-  expectedDelivery: z.string().nullable().optional(),
+  customerDelivery: z.string().nullable().optional(),
+  productionDelivery: z.string().nullable().optional(),
   notes: z.string().optional(),
 });
 

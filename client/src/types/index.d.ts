@@ -25,7 +25,8 @@ export interface Batch {
   customerCode: string | null;
   orderNo: string | null;
   packageType: string | null;
-  expectedDelivery: string | null;
+  customerDelivery: string | null;
+  productionDelivery: string | null;
   trialContent: string | null;
   status: "active" | "completed" | "archived";
   priority: "normal" | "urgent";

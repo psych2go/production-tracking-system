@@ -63,9 +63,16 @@
         </view>
 
         <view class="form-group mt-md">
-          <text class="form-label">交期</text>
-          <picker mode="date" @change="onDeliveryDateChange">
-            <view class="form-input picker-value">{{ form.expectedDelivery || '请选择交期' }}</view>
+          <text class="form-label">客户要求交期</text>
+          <picker mode="date" @change="onCustomerDeliveryChange">
+            <view class="form-input picker-value">{{ form.customerDelivery || '请选择客户要求交期' }}</view>
+          </picker>
+        </view>
+
+        <view class="form-group mt-md">
+          <text class="form-label">生产预计交期</text>
+          <picker mode="date" @change="onProductionDeliveryChange">
+            <view class="form-input picker-value">{{ form.productionDelivery || '请选择生产预计交期' }}</view>
           </picker>
         </view>
 
@@ -98,8 +105,13 @@
         </view>
 
         <view class="form-group mt-md">
+          <text class="form-label">数量</text>
+          <input v-model="form.trialQuantity" type="number" placeholder="请输入数量" class="form-input" />
+        </view>
+
+        <view class="form-group mt-md">
           <text class="form-label">要求完成时间</text>
-          <picker mode="date" @change="onDeadlineChange">
+          <picker mode="date" @change="onTrialCustomerDeliveryChange">
             <view class="form-input picker-value">{{ form.deadline || '请选择完成时间' }}</view>
           </picker>
         </view>
@@ -143,13 +155,15 @@ const form = ref({
   quantity: "",
   customerCode: "",
   orderNo: "",
-  expectedDelivery: "",
+  customerDelivery: "",
+  productionDelivery: "",
   priority: "normal",
   // Shared fields
   packageType: "",
   notes: "",
   // Trial fields
   trialContent: "",
+  trialQuantity: "",
   deadline: "",
 });
 
@@ -186,11 +200,15 @@ function togglePackageType(name: string) {
   selectedPackageTypes.value = s;
 }
 
-function onDeliveryDateChange(e: any) {
-  form.value.expectedDelivery = e.detail.value ?? "";
+function onCustomerDeliveryChange(e: any) {
+  form.value.customerDelivery = e.detail.value ?? "";
 }
 
-function onDeadlineChange(e: any) {
+function onProductionDeliveryChange(e: any) {
+  form.value.productionDelivery = e.detail.value ?? "";
+}
+
+function onTrialCustomerDeliveryChange(e: any) {
   form.value.deadline = e.detail.value ?? "";
 }
 
@@ -226,7 +244,8 @@ async function submit() {
         packageType: form.value.packageType || undefined,
         customerCode: form.value.customerCode || undefined,
         orderNo: form.value.orderNo || undefined,
-        expectedDelivery: form.value.expectedDelivery || undefined,
+        customerDelivery: form.value.customerDelivery || undefined,
+        productionDelivery: form.value.productionDelivery || undefined,
         priority: form.value.priority,
         notes: form.value.notes || undefined,
       });
@@ -234,10 +253,11 @@ async function submit() {
       await batchApi.create({
         batchType: "trial",
         trialContent: form.value.trialContent,
+        quantity: form.value.trialQuantity ? Number(form.value.trialQuantity) : 0,
         packageType: selectedPackageTypes.value.size > 0
           ? Array.from(selectedPackageTypes.value).join(",") || undefined
           : undefined,
-        expectedDelivery: form.value.deadline || undefined,
+        customerDelivery: form.value.deadline || undefined,
         notes: form.value.notes || undefined,
       });
     }

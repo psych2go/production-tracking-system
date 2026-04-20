@@ -103,7 +103,7 @@
             <view class="flex-between">
               <view class="flex-center">
                 <text class="text-bold">{{ record.batch?.batchNo }} {{ record.batch?.product?.model || '' }}</text>
-                <view v-if="record.batch?.priority === 'urgent'" class="urgent-tag">急</view>
+                <view v-if="record.batch?.priority === 'urgent'" class="urgent-tag">紧急</view>
               </view>
               <text class="text-secondary text-sm">{{ formatTime(record.createdAt) }}</text>
             </view>

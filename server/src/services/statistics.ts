@@ -301,7 +301,7 @@ export async function exportExcel(filters: {
           批号: b.batchNo,
           试验内容: b.trialContent || "",
           封装形式: b.packageType || "",
-          要求完成时间: b.expectedDelivery ? b.expectedDelivery.toISOString().slice(0, 10) : "",
+          要求完成时间: b.customerDelivery ? b.customerDelivery.toISOString().slice(0, 10) : "",
           备注: b.notes || "",
           当前工序: currentStage,
           创建时间: b.createdAt.toISOString().slice(0, 10),

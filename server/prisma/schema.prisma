@@ -49,9 +49,10 @@ model Batch {
   priority   String   @default("normal") // normal, urgent
   customerCode     String?   @map("customer_code")
   orderNo          String?   @map("order_no")
-  packageType      String?   @map("package_type")
-  expectedDelivery DateTime? @map("expected_delivery")
-  trialContent     String?   @map("trial_content")
+  packageType        String?   @map("package_type")
+  customerDelivery   DateTime? @map("customer_delivery")
+  productionDelivery DateTime? @map("production_delivery")
+  trialContent       String?   @map("trial_content")
   notes            String?
   createdBy        Int?      @map("created_by")
   createdAt        DateTime  @default(now()) @map("created_at")

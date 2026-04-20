@@ -451,18 +451,19 @@ PackageType                   (独立表，管理员 CRUD)
 | 1 | incoming_inspection | 来料检验 | 是 | 原材料入库检验 |
 | 2 | slide_inspection | 减划 | | 减薄划片 |
 | 3 | in_process_inspection | 镜检 | 是 | 显微镜检验 |
-| 4 | die_attach | 粘片 | | 芯片粘接 |
-| 5 | wire_bonding | 压焊 | | 引线键合 |
-| 6 | molding | 塑封 | | 塑封封装 |
-| 7 | ultrasound_scan | 超扫 | 是 | 超声波扫描检测 |
-| 8 | deflashing | 去溢料 | | 去除溢料 |
-| 9 | lead_cutting | 切筋 | | 切筋成型 |
-| 10 | plating | 电镀 | | 电镀处理 |
-| 11 | marking | 打印 | | 激光打标/打印 |
-| 12 | trimming | 成型 | | 冲切成型 |
-| 13 | visual_inspection | 外观检验 | 是 | 成品外观质量检验 |
-| 14 | packaging | 包装 | | 成品包装 |
-| 15 | completed | 已完成 | | 生产完成（流转到包装时自动标记，也可手动流转） |
+| 4 | die_bonding_prep | 粘片库 | | 粘片备料 |
+| 5 | die_attach | 粘片 | | 芯片粘接 |
+| 6 | wire_bonding | 压焊 | | 引线键合 |
+| 7 | molding | 塑封 | | 塑封封装 |
+| 8 | ultrasound_scan | 超扫 | 是 | 超声波扫描检测 |
+| 9 | deflashing | 去溢料 | | 去除溢料 |
+| 10 | lead_cutting | 切筋 | | 切筋成型 |
+| 11 | plating | 电镀 | | 电镀处理 |
+| 12 | marking | 打印 | | 激光打标/打印 |
+| 13 | trimming | 成型 | | 冲切成型 |
+| 14 | visual_inspection | 外观检验 | 是 | 成品外观质量检验 |
+| 15 | packaging | 包装 | | 成品包装 |
+| 16 | completed | 已完成 | | 生产完成（流转到包装时自动标记，也可手动流转） |
 
 > 工序可通过管理员工序管理页面动态增删改。
 

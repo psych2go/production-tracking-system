@@ -45,6 +45,8 @@ export const batchApi = {
   get: (id: number) => api.get<Batch>(`/api/batches/${id}`),
   create: (data: Record<string, unknown>) =>
     api.post<Batch>("/api/batches", data),
+  update: (id: number, data: Record<string, unknown>) =>
+    api.put<Batch>(`/api/batches/${id}`, data),
 };
 
 // Progress

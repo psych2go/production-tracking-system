@@ -39,7 +39,7 @@
           <view class="batch-header">
             <text class="text-bold">{{ item.batch.batchNo }}</text>
             <text v-if="item.batch.product?.model" class="ml-sm">{{ item.batch.product.model }}</text>
-            <view v-if="item.batch.priority === 'urgent'" class="urgent-tag">急</view>
+            <view v-if="item.batch.priority === 'urgent'" class="urgent-tag">紧急</view>
             <view v-if="item.batch.batchType === 'trial'" class="trial-tag">试验</view>
           </view>
           <view v-if="item.batch.batchType === 'trial' && item.batch.trialContent" class="mt-sm">
@@ -48,7 +48,7 @@
           <view class="batch-meta mt-sm">
             <text v-if="item.batch.batchType === 'product'" class="text-sm text-secondary">数量: {{ item.batch.quantity }}</text>
             <text v-if="item.batch.packageType" class="text-sm text-secondary">{{ item.batch.packageType }}</text>
-            <text v-if="item.batch.expectedDelivery" class="text-sm text-secondary">交期: {{ formatDate(item.batch.expectedDelivery) }}</text>
+            <text v-if="item.batch.customerDelivery" class="text-sm text-secondary">客户交期: {{ formatDate(item.batch.customerDelivery) }}</text>
           </view>
         </view>
 

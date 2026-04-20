@@ -64,7 +64,8 @@ export declare function listProgress(filters: {
             quantity: number;
             priority: string;
             orderNo: string | null;
-            expectedDelivery: Date | null;
+            customerDelivery: Date | null;
+            productionDelivery: Date | null;
             notes: string | null;
             createdBy: number | null;
         };
@@ -130,7 +131,8 @@ export declare function getDashboardData(): Promise<{
             quantity: number;
             priority: string;
             orderNo: string | null;
-            expectedDelivery: Date | null;
+            customerDelivery: Date | null;
+            productionDelivery: Date | null;
             notes: string | null;
             createdBy: number | null;
         };
@@ -209,7 +211,8 @@ export declare function getDashboardData(): Promise<{
         quantity: number;
         priority: string;
         orderNo: string | null;
-        expectedDelivery: Date | null;
+        customerDelivery: Date | null;
+        productionDelivery: Date | null;
         notes: string | null;
         createdBy: number | null;
     })[];
@@ -259,7 +262,8 @@ export declare function getStageProducts(stageId: number): Promise<({
         quantity: number;
         priority: string;
         orderNo: string | null;
-        expectedDelivery: Date | null;
+        customerDelivery: Date | null;
+        productionDelivery: Date | null;
         notes: string | null;
         createdBy: number | null;
     };

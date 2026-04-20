@@ -60,7 +60,8 @@ export declare function listBatches(filters: {
         quantity: number;
         priority: string;
         orderNo: string | null;
-        expectedDelivery: Date | null;
+        customerDelivery: Date | null;
+        productionDelivery: Date | null;
         notes: string | null;
         createdBy: number | null;
     })[];
@@ -124,7 +125,8 @@ export declare function getBatchDetail(id: number): Promise<({
     quantity: number;
     priority: string;
     orderNo: string | null;
-    expectedDelivery: Date | null;
+    customerDelivery: Date | null;
+    productionDelivery: Date | null;
     notes: string | null;
     createdBy: number | null;
 }) | null>;
@@ -136,7 +138,8 @@ export declare function createBatch(data: {
     packageType?: string;
     customerCode?: string;
     orderNo?: string;
-    expectedDelivery?: string;
+    customerDelivery?: string;
+    productionDelivery?: string;
     priority?: string;
     trialContent?: string;
     notes?: string;
@@ -155,17 +158,23 @@ export declare function createBatch(data: {
     quantity: number;
     priority: string;
     orderNo: string | null;
-    expectedDelivery: Date | null;
+    customerDelivery: Date | null;
+    productionDelivery: Date | null;
     notes: string | null;
     createdBy: number | null;
 }>;
 export declare function updateBatch(id: number, data: {
     status?: string;
     priority?: string;
+    batchNo?: string;
+    productModel?: string;
+    quantity?: number;
+    trialContent?: string;
     customerCode?: string | null;
     orderNo?: string | null;
     packageType?: string | null;
-    expectedDelivery?: string | null;
+    customerDelivery?: string | null;
+    productionDelivery?: string | null;
     notes?: string;
 }): Promise<{
     id: number;
@@ -181,7 +190,8 @@ export declare function updateBatch(id: number, data: {
     quantity: number;
     priority: string;
     orderNo: string | null;
-    expectedDelivery: Date | null;
+    customerDelivery: Date | null;
+    productionDelivery: Date | null;
     notes: string | null;
     createdBy: number | null;
 }>;

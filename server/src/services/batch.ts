@@ -70,7 +70,8 @@ export async function createBatch(data: {
   packageType?: string;
   customerCode?: string;
   orderNo?: string;
-  expectedDelivery?: string;
+  customerDelivery?: string;
+  productionDelivery?: string;
   priority?: string;
   trialContent?: string;
   notes?: string;
@@ -85,9 +86,9 @@ export async function createBatch(data: {
         data: {
           batchNo,
           batchType: "trial",
-          quantity: 0,
+          quantity: data.quantity ?? 0,
           packageType: data.packageType,
-          expectedDelivery: data.expectedDelivery ? new Date(data.expectedDelivery) : undefined,
+          customerDelivery: data.customerDelivery ? new Date(data.customerDelivery) : undefined,
           trialContent: data.trialContent,
           notes: data.notes,
           createdBy: data.createdBy,
@@ -111,7 +112,8 @@ export async function createBatch(data: {
         packageType: data.packageType,
         customerCode: data.customerCode,
         orderNo: data.orderNo,
-        expectedDelivery: data.expectedDelivery ? new Date(data.expectedDelivery) : undefined,
+        customerDelivery: data.customerDelivery ? new Date(data.customerDelivery) : undefined,
+        productionDelivery: data.productionDelivery ? new Date(data.productionDelivery) : undefined,
         priority: data.priority,
         notes: data.notes,
         createdBy: data.createdBy,
@@ -144,24 +146,49 @@ async function generateTrialBatchNo(tx: any): Promise<string> {
 export async function updateBatch(id: number, data: {
   status?: string;
   priority?: string;
+  batchNo?: string;
+  productModel?: string;
+  quantity?: number;
+  trialContent?: string;
   customerCode?: string | null;
   orderNo?: string | null;
   packageType?: string | null;
-  expectedDelivery?: string | null;
+  customerDelivery?: string | null;
+  productionDelivery?: string | null;
   notes?: string;
 }) {
-  return prisma.batch.update({
-    where: { id },
-    data: {
+  return prisma.$transaction(async (tx) => {
+    const updateData: Record<string, unknown> = {
       status: data.status,
       priority: data.priority,
       customerCode: data.customerCode,
       orderNo: data.orderNo,
       packageType: data.packageType,
-      expectedDelivery: data.expectedDelivery !== undefined
-        ? (data.expectedDelivery ? new Date(data.expectedDelivery) : null)
+      customerDelivery: data.customerDelivery !== undefined
+        ? (data.customerDelivery ? new Date(data.customerDelivery) : null)
+        : undefined,
+      productionDelivery: data.productionDelivery !== undefined
+        ? (data.productionDelivery ? new Date(data.productionDelivery) : null)
         : undefined,
       notes: data.notes,
-    },
+    };
+
+    if (data.batchNo !== undefined) updateData.batchNo = data.batchNo;
+    if (data.quantity !== undefined) updateData.quantity = data.quantity;
+    if (data.trialContent !== undefined) updateData.trialContent = data.trialContent;
+
+    if (data.productModel !== undefined) {
+      const product = await tx.product.upsert({
+        where: { model: data.productModel },
+        update: {},
+        create: { model: data.productModel },
+      });
+      updateData.productId = product.id;
+    }
+
+    return tx.batch.update({
+      where: { id },
+      data: updateData,
+    });
   });
 }

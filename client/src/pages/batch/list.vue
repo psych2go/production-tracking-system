@@ -86,8 +86,8 @@ const filteredBatches = computed(() => {
   let result = batches.value;
   if (smartFilter.value === "overdue") {
     result = result.filter((b) =>
-      b.expectedDelivery &&
-      new Date(b.expectedDelivery) < new Date() &&
+      b.customerDelivery &&
+      new Date(b.customerDelivery) < new Date() &&
       b.status === "active"
     );
   } else if (smartFilter.value === "urgent") {

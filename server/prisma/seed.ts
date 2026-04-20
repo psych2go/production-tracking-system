@@ -6,18 +6,19 @@ const STAGES = [
   { code: "incoming_inspection", name: "来料检验", stageOrder: 1, isQcStage: true, description: "原材料入库检验" },
   { code: "slide_inspection", name: "减划", stageOrder: 2, isQcStage: false, description: "减薄划片" },
   { code: "in_process_inspection", name: "镜检", stageOrder: 3, isQcStage: true, description: "显微镜检验" },
-  { code: "die_attach", name: "粘片", stageOrder: 4, isQcStage: false, description: "芯片粘接" },
-  { code: "wire_bonding", name: "压焊", stageOrder: 5, isQcStage: false, description: "引线键合" },
-  { code: "molding", name: "塑封", stageOrder: 6, isQcStage: false, description: "塑封封装" },
-  { code: "ultrasound_scan", name: "超扫", stageOrder: 7, isQcStage: true, description: "超声波扫描检测" },
-  { code: "deflashing", name: "去溢料", stageOrder: 8, isQcStage: false, description: "去除溢料" },
-  { code: "lead_cutting", name: "切筋", stageOrder: 9, isQcStage: false, description: "切筋成型" },
-  { code: "plating", name: "电镀", stageOrder: 10, isQcStage: false, description: "电镀处理" },
-  { code: "marking", name: "打印", stageOrder: 11, isQcStage: false, description: "激光打标/打印" },
-  { code: "trimming", name: "成型", stageOrder: 12, isQcStage: false, description: "冲切成型" },
-  { code: "visual_inspection", name: "外观检验", stageOrder: 13, isQcStage: true, description: "成品外观质量检验" },
-  { code: "packaging", name: "包装", stageOrder: 14, isQcStage: false, description: "成品包装" },
-  { code: "completed", name: "已完成", stageOrder: 15, isQcStage: false, description: "生产完成" },
+  { code: "die_bonding_prep", name: "粘片库", stageOrder: 4, isQcStage: false, description: "粘片备料" },
+  { code: "die_attach", name: "粘片", stageOrder: 5, isQcStage: false, description: "芯片粘接" },
+  { code: "wire_bonding", name: "压焊", stageOrder: 6, isQcStage: false, description: "引线键合" },
+  { code: "molding", name: "塑封", stageOrder: 7, isQcStage: false, description: "塑封封装" },
+  { code: "ultrasound_scan", name: "超扫", stageOrder: 8, isQcStage: true, description: "超声波扫描检测" },
+  { code: "deflashing", name: "去溢料", stageOrder: 9, isQcStage: false, description: "去除溢料" },
+  { code: "lead_cutting", name: "切筋", stageOrder: 10, isQcStage: false, description: "切筋成型" },
+  { code: "plating", name: "电镀", stageOrder: 11, isQcStage: false, description: "电镀处理" },
+  { code: "marking", name: "打印", stageOrder: 12, isQcStage: false, description: "激光打标/打印" },
+  { code: "trimming", name: "成型", stageOrder: 13, isQcStage: false, description: "冲切成型" },
+  { code: "visual_inspection", name: "外观检验", stageOrder: 14, isQcStage: true, description: "成品外观质量检验" },
+  { code: "packaging", name: "包装", stageOrder: 15, isQcStage: false, description: "成品包装" },
+  { code: "completed", name: "已完成", stageOrder: 16, isQcStage: false, description: "生产完成" },
 ];
 
 const PACKAGE_TYPES = [
@@ -84,12 +85,15 @@ async function main() {
   // Create a default admin user for development
   const admin = await prisma.user.upsert({
     where: { wwUserId: "dev_admin" },
-    update: {},
+    update: {
+      name: "冯部长",
+      department: "研发部",
+    },
     create: {
       wwUserId: "dev_admin",
-      name: "开发管理员",
+      name: "冯部长",
       role: "admin",
-      department: "开发部",
+      department: "研发部",
     },
   });
 

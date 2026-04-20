@@ -17,7 +17,8 @@ const createProductSchema = zod_1.z.object({
     packageType: zod_1.z.string().min(1, "请选择封装形式"),
     customerCode: zod_1.z.string().optional(),
     orderNo: zod_1.z.string().optional(),
-    expectedDelivery: zod_1.z.string().optional(),
+    customerDelivery: zod_1.z.string().optional(),
+    productionDelivery: zod_1.z.string().optional(),
     priority: zod_1.z.enum(["normal", "urgent"]).optional(),
     notes: zod_1.z.string().optional(),
 });
@@ -25,8 +26,9 @@ const createProductSchema = zod_1.z.object({
 const createTrialSchema = zod_1.z.object({
     batchType: zod_1.z.literal("trial"),
     trialContent: zod_1.z.string().min(1, "试验内容不能为空"),
+    quantity: zod_1.z.number().int().optional(),
     packageType: zod_1.z.string().optional(),
-    expectedDelivery: zod_1.z.string().optional(),
+    customerDelivery: zod_1.z.string().optional(),
     notes: zod_1.z.string().optional(),
 });
 // Union: discriminate by batchType
@@ -37,10 +39,15 @@ const createSchema = zod_1.z.discriminatedUnion("batchType", [
 const updateSchema = zod_1.z.object({
     status: zod_1.z.enum(["active", "completed", "archived"]).optional(),
     priority: zod_1.z.enum(["normal", "urgent"]).optional(),
+    batchNo: zod_1.z.string().optional(),
+    productModel: zod_1.z.string().optional(),
+    quantity: zod_1.z.number().int().positive().optional(),
+    trialContent: zod_1.z.string().optional(),
     customerCode: zod_1.z.string().nullable().optional(),
     orderNo: zod_1.z.string().nullable().optional(),
     packageType: zod_1.z.string().nullable().optional(),
-    expectedDelivery: zod_1.z.string().nullable().optional(),
+    customerDelivery: zod_1.z.string().nullable().optional(),
+    productionDelivery: zod_1.z.string().nullable().optional(),
     notes: zod_1.z.string().optional(),
 });
 router.get("/", auth_js_1.authGuard, async (req, res, next) => {

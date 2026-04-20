@@ -82,7 +82,8 @@
             <view class="flex-between">
               <view class="flex-center">
                 <text class="text-bold">{{ batch.batchNo }} {{ batch.product?.model || '' }}</text>
-                <view v-if="batch.priority === 'urgent'" class="urgent-tag">急</view>
+                <text v-if="batch.batchType === 'trial'" class="trial-tag">试验</text>
+                <view v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</view>
               </view>
               <text class="text-secondary text-sm">{{ batch.packageType }}</text>
             </view>
@@ -107,7 +108,7 @@
           <view style="width: 60rpx;"></view>
         </view>
         <view class="batch-summary mt-sm">
-          <text>{{ selectedBatch?.batchNo }} {{ selectedBatch?.product?.model }} | {{ selectedBatch?.quantity }}件</text>
+          <text>{{ selectedBatch?.batchNo }} {{ selectedBatch?.product?.model }}</text>
         </view>
         <text class="hint-text mt-md">点击工序确认流转</text>
         <view class="stage-list mt-sm">

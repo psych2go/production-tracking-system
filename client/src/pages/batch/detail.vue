@@ -13,62 +13,167 @@
               {{ batch.product?.model || '' }}
             </template>
           </text>
-          <view v-if="batch.priority === 'urgent'" class="urgent-tag">急</view>
+          <view v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</view>
         </view>
-        <view class="status-tag" :style="{ color: getStatusColor(batch.status) }">
-          {{ statusLabel(batch.status) }}
+        <view class="flex-center">
+          <view v-if="isAdmin" class="edit-btn" @click="toggleEdit">
+            <text>{{ editing ? '取消' : '编辑' }}</text>
+          </view>
+          <view class="status-tag" :style="{ color: getStatusColor(batch.status) }">
+            {{ statusLabel(batch.status) }}
+          </view>
         </view>
       </view>
 
       <!-- Overdue warning -->
-      <view v-if="isOverdue" class="overdue-warning mt-sm">
-        <text class="text-sm">已超过期望交期 {{ overdueDays }} 天</text>
+      <view v-if="isOverdue && !editing" class="overdue-warning mt-sm">
+        <text class="text-sm">已超过客户要求交期 {{ overdueDays }} 天</text>
       </view>
 
-      <!-- Trial batch fields -->
-      <view v-if="isTrial" class="info-grid mt-md">
-        <text class="text-secondary">试验内容</text>
-        <text>{{ batch.trialContent || '-' }}</text>
-        <text class="text-secondary">封装形式</text>
-        <view v-if="batch.packageType" class="tag-list">
-          <text v-for="pt in batch.packageType.split(',')" :key="pt" class="info-tag">{{ pt.trim() }}</text>
+      <!-- ===== EDIT MODE ===== -->
+      <template v-if="editing">
+        <!-- Product batch edit -->
+        <template v-if="!isTrial">
+          <view class="form-group mt-lg">
+            <text class="form-label">生产批号</text>
+            <input v-model="editForm.batchNo" class="form-input" />
+          </view>
+          <view class="form-group mt-md">
+            <text class="form-label">产品型号</text>
+            <input v-model="editForm.productModel" class="form-input" />
+          </view>
+          <view class="form-group mt-md">
+            <text class="form-label">加工数量</text>
+            <input v-model="editForm.quantity" type="number" class="form-input" />
+          </view>
+          <view class="form-group mt-md">
+            <text class="form-label">封装形式</text>
+            <picker :range="packageTypeNames" @change="onPackageTypeChange">
+              <view class="form-input picker-value">{{ editForm.packageType || '请选择封装形式' }}</view>
+            </picker>
+          </view>
+          <view class="form-group mt-md">
+            <text class="form-label">客户代码</text>
+            <input v-model="editForm.customerCode" class="form-input" placeholder="可选" />
+          </view>
+          <view class="form-group mt-md">
+            <text class="form-label">订单编号</text>
+            <input v-model="editForm.orderNo" class="form-input" placeholder="可选" />
+          </view>
+          <view class="form-group mt-md">
+            <text class="form-label">客户要求交期</text>
+            <picker mode="date" :value="editForm.customerDelivery" @change="e => editForm.customerDelivery = e.detail.value">
+              <view class="form-input picker-value">{{ editForm.customerDelivery || '请选择' }}</view>
+            </picker>
+          </view>
+          <view class="form-group mt-md">
+            <text class="form-label">生产预计交期</text>
+            <picker mode="date" :value="editForm.productionDelivery" @change="e => editForm.productionDelivery = e.detail.value">
+              <view class="form-input picker-value">{{ editForm.productionDelivery || '请选择' }}</view>
+            </picker>
+          </view>
+          <view class="form-group mt-md">
+            <text class="form-label">优先级</text>
+            <picker :range="priorities" range-key="label" @change="onPriorityChange">
+              <view class="form-input picker-value">{{ editPriorityLabel || '普通' }}</view>
+            </picker>
+          </view>
+          <view class="form-group mt-md">
+            <text class="form-label">备注</text>
+            <textarea v-model="editForm.notes" class="form-textarea" placeholder="可选" />
+          </view>
+        </template>
+
+        <!-- Trial batch edit -->
+        <template v-else>
+          <view class="form-group mt-lg">
+            <text class="form-label">试验内容</text>
+            <textarea v-model="editForm.trialContent" class="form-textarea" />
+          </view>
+          <view class="form-group mt-md">
+            <text class="form-label">封装形式（可多选）</text>
+            <view class="multi-select-list">
+              <view
+                v-for="pt in packageTypes"
+                :key="pt.id"
+                class="multi-select-item"
+                :class="{ selected: editSelectedPackageTypes.has(pt.name) }"
+                @click="toggleEditPackageType(pt.name)"
+              >
+                <text>{{ pt.name }}</text>
+              </view>
+            </view>
+          </view>
+          <view class="form-group mt-md">
+            <text class="form-label">数量</text>
+            <input v-model="editForm.trialQuantity" type="number" class="form-input" placeholder="可选" />
+          </view>
+          <view class="form-group mt-md">
+            <text class="form-label">要求完成时间</text>
+            <picker mode="date" :value="editForm.customerDelivery" @change="e => editForm.customerDelivery = e.detail.value">
+              <view class="form-input picker-value">{{ editForm.customerDelivery || '请选择' }}</view>
+            </picker>
+          </view>
+          <view class="form-group mt-md">
+            <text class="form-label">备注</text>
+            <textarea v-model="editForm.notes" class="form-textarea" placeholder="可选" />
+          </view>
+        </template>
+
+        <button class="btn-primary mt-lg" :loading="saving" @click="saveEdit">保存</button>
+      </template>
+
+      <!-- ===== VIEW MODE ===== -->
+      <template v-else>
+        <!-- Trial batch fields -->
+        <view v-if="isTrial" class="info-grid mt-md">
+          <text class="text-secondary">试验内容</text>
+          <text>{{ batch.trialContent || '-' }}</text>
+          <text class="text-secondary">数量</text>
+          <text>{{ batch.quantity || '-' }}</text>
+          <text class="text-secondary">封装形式</text>
+          <view v-if="batch.packageType" class="tag-list">
+            <text v-for="pt in batch.packageType.split(',')" :key="pt" class="info-tag">{{ pt.trim() }}</text>
+          </view>
+          <text v-else>-</text>
+          <text class="text-secondary">要求完成时间</text>
+          <text :class="isOverdue ? 'text-danger' : ''">
+            {{ batch.customerDelivery ? formatDateShort(batch.customerDelivery) : '-' }}
+            <text v-if="isOverdue" class="text-sm"> (已逾期)</text>
+          </text>
+          <text class="text-secondary">创建时间</text>
+          <text>{{ formatDate(batch.createdAt) }}</text>
+          <text class="text-secondary">备注</text>
+          <text>{{ batch.notes || '-' }}</text>
         </view>
-        <text v-else>-</text>
-        <text class="text-secondary">要求完成时间</text>
-        <text :class="isOverdue ? 'text-danger' : ''">
-          {{ batch.expectedDelivery ? formatDateShort(batch.expectedDelivery) : '-' }}
-          <text v-if="isOverdue" class="text-sm"> (已逾期)</text>
-        </text>
-        <text class="text-secondary">创建时间</text>
-        <text>{{ formatDate(batch.createdAt) }}</text>
-        <text class="text-secondary">备注</text>
-        <text>{{ batch.notes || '-' }}</text>
-      </view>
 
-      <!-- Product batch fields -->
-      <view v-else class="info-grid mt-md">
-        <text class="text-secondary">产品型号</text>
-        <text>{{ batch.product?.model || '-' }}</text>
-        <text class="text-secondary">加工数量</text>
-        <text>{{ batch.quantity }}</text>
-        <text class="text-secondary">客户代码</text>
-        <text>{{ batch.customerCode || '-' }}</text>
-        <text class="text-secondary">订单编号</text>
-        <text>{{ batch.orderNo || '-' }}</text>
-        <text class="text-secondary">封装形式</text>
-        <text>{{ batch.packageType || '-' }}</text>
-        <text class="text-secondary">交期</text>
-        <text :class="isOverdue ? 'text-danger' : ''">
-          {{ batch.expectedDelivery ? formatDateShort(batch.expectedDelivery) : '-' }}
-          <text v-if="isOverdue" class="text-sm"> (已逾期)</text>
-        </text>
-        <text class="text-secondary">优先级</text>
-        <text>{{ priorityLabel(batch.priority) }}</text>
-        <text class="text-secondary">创建时间</text>
-        <text>{{ formatDate(batch.createdAt) }}</text>
-        <text class="text-secondary">备注</text>
-        <text>{{ batch.notes || '-' }}</text>
-      </view>
+        <!-- Product batch fields -->
+        <view v-else class="info-grid mt-md">
+          <text class="text-secondary">产品型号</text>
+          <text>{{ batch.product?.model || '-' }}</text>
+          <text class="text-secondary">加工数量</text>
+          <text>{{ batch.quantity }}</text>
+          <text class="text-secondary">客户代码</text>
+          <text>{{ batch.customerCode || '-' }}</text>
+          <text class="text-secondary">订单编号</text>
+          <text>{{ batch.orderNo || '-' }}</text>
+          <text class="text-secondary">封装形式</text>
+          <text>{{ batch.packageType || '-' }}</text>
+          <text class="text-secondary">客户要求交期</text>
+          <text :class="isOverdue ? 'text-danger' : ''">
+            {{ batch.customerDelivery ? formatDateShort(batch.customerDelivery) : '-' }}
+            <text v-if="isOverdue" class="text-sm"> (已逾期)</text>
+          </text>
+          <text class="text-secondary">生产预计交期</text>
+          <text>{{ batch.productionDelivery ? formatDateShort(batch.productionDelivery) : '-' }}</text>
+          <text class="text-secondary">优先级</text>
+          <text>{{ priorityLabel(batch.priority) }}</text>
+          <text class="text-secondary">创建时间</text>
+          <text>{{ formatDate(batch.createdAt) }}</text>
+          <text class="text-secondary">备注</text>
+          <text>{{ batch.notes || '-' }}</text>
+        </view>
+      </template>
     </view>
 
     <!-- Stage progress -->
@@ -82,7 +187,7 @@
     </view>
 
     <!-- Quick actions -->
-    <view v-if="batch.status === 'active'" class="card mt-md">
+    <view v-if="batch.status === 'active' && !editing" class="card mt-md">
       <button class="btn-primary" @click="goRecordProgress">
         工序流转
       </button>
@@ -94,16 +199,46 @@
 import { ref, computed } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 import { useAppStore } from "../../store/app";
-import { batchApi } from "../../api/modules";
-import { STATUS_LABELS } from "../../utils/constants";
+import { useUserStore } from "../../store/user";
+import { batchApi, settingsApi } from "../../api/modules";
+import { STATUS_LABELS, PRIORITIES } from "../../utils/constants";
 import { formatDate, formatDateShort } from "../../utils/format";
-import type { Batch } from "../../types";
+import type { Batch, PackageType } from "../../types";
 import StageTimeline from "../../components/StageTimeline.vue";
 
 const appStore = useAppStore();
+const userStore = useUserStore();
 const batch = ref<Batch | null>(null);
+const packageTypes = ref<PackageType[]>([]);
 
+const editing = ref(false);
+const saving = ref(false);
+
+const isAdmin = computed(() => userStore.isAdmin());
 const isTrial = computed(() => batch.value?.batchType === "trial");
+
+const editForm = ref({
+  batchNo: "",
+  productModel: "",
+  quantity: "",
+  customerCode: "",
+  orderNo: "",
+  packageType: "",
+  customerDelivery: "",
+  productionDelivery: "",
+  priority: "normal",
+  trialContent: "",
+  trialQuantity: "",
+  notes: "",
+});
+
+const editSelectedPackageTypes = ref<Set<string>>(new Set());
+
+const priorities = PRIORITIES;
+
+const editPriorityLabel = computed(() => {
+  return priorities.find((p) => p.value === editForm.value.priority)?.label || "";
+});
 
 function statusLabel(status: string) {
   return STATUS_LABELS[status] || status;
@@ -118,23 +253,104 @@ function getStatusColor(status: string): string {
 }
 
 const isOverdue = computed(() => {
-  if (!batch.value?.expectedDelivery || batch.value.status !== "active") return false;
-  return new Date(batch.value.expectedDelivery) < new Date();
+  if (!batch.value?.customerDelivery || batch.value.status !== "active") return false;
+  return new Date(batch.value.customerDelivery) < new Date();
 });
 
 const overdueDays = computed(() => {
-  if (!batch.value?.expectedDelivery) return 0;
-  const diff = Date.now() - new Date(batch.value.expectedDelivery).getTime();
+  if (!batch.value?.customerDelivery) return 0;
+  const diff = Date.now() - new Date(batch.value.customerDelivery).getTime();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 });
 
+const packageTypeNames = computed(() => packageTypes.value.map((pt) => pt.name));
+
+function toggleEdit() {
+  if (editing.value) {
+    editing.value = false;
+    return;
+  }
+  // Populate form from current batch data
+  const b = batch.value!;
+  editForm.value = {
+    batchNo: b.batchNo || "",
+    productModel: b.product?.model || "",
+    quantity: b.quantity ? String(b.quantity) : "",
+    customerCode: b.customerCode || "",
+    orderNo: b.orderNo || "",
+    packageType: b.packageType || "",
+    customerDelivery: b.customerDelivery ? b.customerDelivery.slice(0, 10) : "",
+    productionDelivery: b.productionDelivery ? b.productionDelivery.slice(0, 10) : "",
+    priority: b.priority || "normal",
+    trialContent: b.trialContent || "",
+    trialQuantity: b.quantity ? String(b.quantity) : "",
+    notes: b.notes || "",
+  };
+  // Trial: parse existing package types into set
+  if (isTrial.value && b.packageType) {
+    editSelectedPackageTypes.value = new Set(b.packageType.split(",").map((s: string) => s.trim()));
+  } else {
+    editSelectedPackageTypes.value = new Set();
+  }
+  editing.value = true;
+}
+
+function onPackageTypeChange(e: any) {
+  editForm.value.packageType = packageTypes.value[e.detail.value]?.name ?? "";
+}
+
+function onPriorityChange(e: any) {
+  editForm.value.priority = priorities[e.detail.value]?.value ?? "normal";
+}
+
+function toggleEditPackageType(name: string) {
+  const s = new Set(editSelectedPackageTypes.value);
+  if (s.has(name)) s.delete(name);
+  else s.add(name);
+  editSelectedPackageTypes.value = s;
+}
+
+async function saveEdit() {
+  if (!batch.value) return;
+  saving.value = true;
+  try {
+    const data: Record<string, unknown> = {};
+    if (!isTrial.value) {
+      data.batchNo = editForm.value.batchNo;
+      data.productModel = editForm.value.productModel;
+      data.quantity = Number(editForm.value.quantity);
+      data.packageType = editForm.value.packageType || null;
+      data.customerCode = editForm.value.customerCode || null;
+      data.orderNo = editForm.value.orderNo || null;
+      data.customerDelivery = editForm.value.customerDelivery || null;
+      data.productionDelivery = editForm.value.productionDelivery || null;
+      data.priority = editForm.value.priority;
+    } else {
+      data.trialContent = editForm.value.trialContent;
+      data.quantity = editForm.value.trialQuantity ? Number(editForm.value.trialQuantity) : 0;
+      data.packageType = editSelectedPackageTypes.value.size > 0
+        ? Array.from(editSelectedPackageTypes.value).join(",")
+        : null;
+      data.customerDelivery = editForm.value.customerDelivery || null;
+    }
+    data.notes = editForm.value.notes;
+
+    const updated = await batchApi.update(batch.value.id, data);
+    batch.value = updated;
+    editing.value = false;
+    uni.showToast({ title: "保存成功", icon: "success" });
+  } catch (e: unknown) {
+    uni.showToast({ title: "保存失败", icon: "none" });
+  } finally {
+    saving.value = false;
+  }
+}
+
 function goRecordProgress() {
   if (!batch.value) return;
-  // Switch to progress entry tab and pass batch info
   uni.switchTab({
     url: "/pages/progress/entry",
     success: () => {
-      // Use eventChannel or storage to pass batch id
       uni.setStorageSync("pendingBatchId", batch.value!.id);
     }
   });
@@ -147,6 +363,12 @@ onLoad(async (query) => {
     } catch (e: unknown) {
       uni.showToast({ title: "加载失败", icon: "none" });
     }
+  }
+  // Load package types for edit mode
+  if (isAdmin.value) {
+    try {
+      packageTypes.value = await settingsApi.listPackageTypes();
+    } catch { /* non-critical */ }
   }
 });
 </script>
@@ -178,6 +400,14 @@ onLoad(async (query) => {
   margin-left: 8rpx;
   vertical-align: middle;
 }
+.edit-btn {
+  padding: 8rpx 20rpx;
+  border: 2rpx solid #0083ff;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+  color: #0083ff;
+  margin-right: 16rpx;
+}
 .btn-primary {
   background: #0083ff;
   color: #fff;
@@ -200,5 +430,40 @@ onLoad(async (query) => {
   border-radius: 6rpx;
   background: #e8f4ff;
   color: #0083ff;
+}
+.form-group { display: flex; flex-direction: column; gap: 8rpx; }
+.form-label { font-size: 26rpx; color: #666; }
+.form-input {
+  border: 2rpx solid #e5e5e5;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  font-size: 28rpx;
+  min-height: 48rpx;
+}
+.form-textarea {
+  border: 2rpx solid #e5e5e5;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  font-size: 28rpx;
+  height: 160rpx;
+}
+.picker-value { color: #333; }
+.multi-select-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+.multi-select-item {
+  padding: 12rpx 24rpx;
+  border: 2rpx solid #e5e5e5;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+  color: #666;
+  background: #fff;
+  &.selected {
+    background: #f0f7ff;
+    border-color: #0083ff;
+    color: #0083ff;
+  }
 }
 </style>

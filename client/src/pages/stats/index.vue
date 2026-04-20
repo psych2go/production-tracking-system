@@ -15,7 +15,7 @@
     <!-- Export button -->
     <view class="card export-bar">
       <view class="export-left">
-        <text class="export-hint" v-if="activeTab === 'online'">分别统计在线产品和在线试验的详细信息及当前工序</text>
+        <text class="export-hint" v-if="activeTab === 'online'">统计规则：分别统计在线产品和在线试验的详细信息及当前工序</text>
         <text class="export-hint" v-else-if="activeTab === 'durations'">统计规则：耗时 = 相邻两道工序流转记录的时间差，按工序汇总平均/最短/最长值</text>
         <text class="export-hint" v-else-if="activeTab === 'production'">统计规则：仅统计产品批次（不含试验），按完成日期汇总产量（加工数量之和）</text>
         <text class="export-hint" v-else>统计规则：活跃批次超过 5 天无进度更新则标记为延迟预警</text>
@@ -38,6 +38,8 @@
               <text class="online-col online-col-customer">客户代码</text>
               <text class="online-col online-col-order">订单编号</text>
               <text class="online-col online-col-priority">优先级</text>
+              <text class="online-col online-col-delivery">客户要求交期</text>
+              <text class="online-col online-col-delivery">生产预计交期</text>
               <text class="online-col online-col-stage">当前工序</text>
               <text class="online-col online-col-notes">备注</text>
               <text class="online-col online-col-date">创建时间</text>
@@ -53,6 +55,8 @@
                 <text v-if="batch.priority === 'urgent'" style="color:#fa5151">紧急</text>
                 <text v-else>普通</text>
               </text>
+              <text class="online-col online-col-delivery">{{ batch.customerDelivery ? batch.customerDelivery.slice(0, 10) : '-' }}</text>
+              <text class="online-col online-col-delivery">{{ batch.productionDelivery ? batch.productionDelivery.slice(0, 10) : '-' }}</text>
               <text class="online-col online-col-stage">{{ getCurrentStage(batch) }}</text>
               <text class="online-col online-col-notes">{{ batch.notes || '-' }}</text>
               <text class="online-col online-col-date">{{ batch.createdAt.slice(0, 10) }}</text>
@@ -73,6 +77,7 @@
               <text class="online-col trial-col-no">批号</text>
               <text class="online-col trial-col-content">试验内容</text>
               <text class="online-col trial-col-pkg">封装形式</text>
+              <text class="online-col trial-col-qty">数量</text>
               <text class="online-col trial-col-deadline">要求完成时间</text>
               <text class="online-col trial-col-notes">备注</text>
               <text class="online-col trial-col-stage">当前工序</text>
@@ -82,7 +87,8 @@
               <text class="online-col trial-col-no">{{ batch.batchNo }}</text>
               <text class="online-col trial-col-content">{{ batch.trialContent || '-' }}</text>
               <text class="online-col trial-col-pkg">{{ batch.packageType || '-' }}</text>
-              <text class="online-col trial-col-deadline">{{ batch.expectedDelivery ? batch.expectedDelivery.slice(0, 10) : '-' }}</text>
+              <text class="online-col trial-col-qty">{{ batch.quantity || '-' }}</text>
+              <text class="online-col trial-col-deadline">{{ batch.customerDelivery ? batch.customerDelivery.slice(0, 10) : '-' }}</text>
               <text class="online-col trial-col-notes">{{ batch.notes || '-' }}</text>
               <text class="online-col trial-col-stage">{{ getCurrentStage(batch) }}</text>
               <text class="online-col trial-col-date">{{ batch.createdAt.slice(0, 10) }}</text>
@@ -434,6 +440,7 @@ function goBatchDetail(id: number) {
 .online-col-customer { width: 140rpx; }
 .online-col-order { width: 160rpx; }
 .online-col-priority { width: 100rpx; }
+.online-col-delivery { width: 180rpx; }
 .online-col-stage { width: 140rpx; color: #0083ff; font-weight: 500; }
 .online-col-notes { width: 200rpx; justify-content: flex-start; }
 .online-col-date { width: 160rpx; }
@@ -442,6 +449,7 @@ function goBatchDetail(id: number) {
 .trial-col-no { width: 180rpx; justify-content: flex-start; font-weight: 500; }
 .trial-col-content { width: 400rpx; justify-content: flex-start; }
 .trial-col-pkg { width: 400rpx; }
+.trial-col-qty { width: 100rpx; }
 .trial-col-deadline { width: 180rpx; }
 .trial-col-notes { width: 180rpx; justify-content: flex-start; }
 .trial-col-stage { width: 140rpx; color: #0083ff; font-weight: 500; }

@@ -16,19 +16,26 @@
       <view v-if="isOverdue" class="overdue-badge">逾期</view>
     </view>
 
-    <!-- Trial content preview -->
     <view v-if="isTrial && batch.trialContent" class="trial-preview mt-sm">
       <text class="text-sm text-secondary">{{ batch.trialContent }}</text>
     </view>
-
-    <view class="batch-info mt-sm">
+    <view v-if="isTrial && (batch.packageType || currentStage)" class="batch-stats flex-between mt-xs">
+      <view style="display:flex;flex-wrap:wrap;gap:8rpx;">
+        <template v-if="batch.packageType">
+          <view v-for="pt in batch.packageType.split(',')" :key="pt" class="package-tag">{{ pt.trim() }}</view>
+        </template>
+      </view>
+      <view class="flex-center" v-if="currentStage">
+        <text class="text-primary">{{ currentStage }}</text>
+      </view>
+    </view>
+    <view v-if="!isTrial" class="batch-info mt-sm">
       <template v-if="batch.packageType">
         <view v-for="pt in batch.packageType.split(',')" :key="pt" class="package-tag">{{ pt.trim() }}</view>
       </template>
     </view>
-    <view class="batch-stats flex-between mt-sm">
-      <text v-if="!isTrial">数量: {{ batch.quantity }}</text>
-      <text v-else>试验批次</text>
+    <view v-if="!isTrial" class="batch-stats flex-between mt-xs">
+      <text class="text-secondary">数量: {{ batch.quantity }}</text>
       <view class="flex-center">
         <text v-if="currentStage" class="text-primary">{{ currentStage }}</text>
         <text v-else class="text-secondary">待开始</text>
@@ -38,10 +45,17 @@
     <view class="progress-bar mt-sm">
       <view class="progress-fill" :style="{ width: progressPercent + '%' }"></view>
     </view>
-    <!-- Expected delivery hint -->
-    <view v-if="batch.expectedDelivery && batch.status === 'active'" class="delivery-hint mt-sm">
+    <!-- Delivery hints -->
+    <view v-if="!isTrial && (batch.customerDelivery || batch.productionDelivery) && batch.status === 'active'" class="delivery-hint mt-sm">
       <text class="text-sm text-secondary">
-        交期: {{ formatDateShort(batch.expectedDelivery) }}
+        <template v-if="batch.customerDelivery">客户交期: {{ formatDateShort(batch.customerDelivery) }}</template>
+        <template v-if="batch.customerDelivery && batch.productionDelivery"> | </template>
+        <template v-if="batch.productionDelivery">预计交期: {{ formatDateShort(batch.productionDelivery) }}</template>
+      </text>
+    </view>
+    <view v-else-if="isTrial && batch.customerDelivery && batch.status === 'active'" class="delivery-hint mt-sm">
+      <text class="text-sm text-secondary">
+        要求完成时间: {{ formatDateShort(batch.customerDelivery) }}
       </text>
     </view>
   </view>
@@ -76,8 +90,8 @@ const progressPercent = computed(() => {
 });
 
 const isOverdue = computed(() => {
-  if (!props.batch.expectedDelivery || props.batch.status !== "active") return false;
-  return new Date(props.batch.expectedDelivery) < new Date();
+  if (!props.batch.customerDelivery || props.batch.status !== "active") return false;
+  return new Date(props.batch.customerDelivery) < new Date();
 });
 </script>
 
@@ -93,6 +107,7 @@ const isOverdue = computed(() => {
   color: #0083ff;
 }
 .batch-stats { font-size: 26rpx; }
+.mt-xs { margin-top: 8rpx; }
 .priority-tag {
   font-size: 22rpx;
   padding: 4rpx 12rpx;
