@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { listProducts, createProduct, updateProduct, deleteProduct } from "../services/product.js";
-import { authGuard, roleGuard, AuthRequest } from "../middleware/auth.js";
+import { authGuard, roleGuard } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 
 const router = Router();
@@ -28,7 +28,7 @@ router.get("/", authGuard, async (req, res, next) => {
   }
 });
 
-router.post("/", authGuard, roleGuard("admin"), validate(createSchema), async (req: AuthRequest, res, next) => {
+router.post("/", authGuard, roleGuard("admin"), validate(createSchema), async (req, res, next) => {
   try {
     const product = await createProduct(req.body);
     res.status(201).json(product);
@@ -37,7 +37,7 @@ router.post("/", authGuard, roleGuard("admin"), validate(createSchema), async (r
   }
 });
 
-router.put("/:id", authGuard, roleGuard("admin"), validate(updateSchema), async (req: AuthRequest, res, next) => {
+router.put("/:id", authGuard, roleGuard("admin"), validate(updateSchema), async (req, res, next) => {
   try {
     const product = await updateProduct(parseInt(req.params.id as string), req.body);
     res.json(product);

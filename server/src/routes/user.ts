@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { listUsers, updateUser, deactivateUser } from "../services/user.js";
-import { authGuard, AuthRequest, roleGuard } from "../middleware/auth.js";
+import { authGuard, roleGuard } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 
