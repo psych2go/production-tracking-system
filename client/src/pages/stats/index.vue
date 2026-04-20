@@ -52,7 +52,7 @@
               <text class="online-col online-col-customer">{{ batch.customerCode || '-' }}</text>
               <text class="online-col online-col-order">{{ batch.orderNo || '-' }}</text>
               <text class="online-col online-col-priority">
-                <text v-if="batch.priority === 'urgent'" style="color:#fa5151">紧急</text>
+                <text v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</text>
                 <text v-else>普通</text>
               </text>
               <text class="online-col online-col-delivery">{{ batch.customerDelivery ? batch.customerDelivery.slice(0, 10) : '-' }}</text>

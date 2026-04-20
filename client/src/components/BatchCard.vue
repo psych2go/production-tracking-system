@@ -11,7 +11,7 @@
             {{ batch.product?.model || '' }}
           </template>
         </text>
-        <view v-if="batch.priority === 'urgent'" class="priority-tag priority-urgent">紧急</view>
+        <view v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</view>
       </view>
       <view v-if="isOverdue" class="overdue-badge">逾期</view>
     </view>
@@ -108,12 +108,6 @@ const isOverdue = computed(() => {
 }
 .batch-stats { font-size: 26rpx; }
 .mt-xs { margin-top: 8rpx; }
-.priority-tag {
-  font-size: 22rpx;
-  padding: 4rpx 12rpx;
-  border-radius: 8rpx;
-  &.priority-urgent { background: #fa5151; color: #fff; }
-}
 .overdue-badge {
   font-size: 22rpx;
   padding: 4rpx 12rpx;
