@@ -29,5 +29,6 @@ jobs:
             # 前端
             cd ../client
             npm install
-            sudo rm -rf dist/build/h5
+            rm -rf dist/build/h5
             npm run build:h5
+            sudo chown -R www-data:www-data dist/build/h5 2>/dev/null || true
