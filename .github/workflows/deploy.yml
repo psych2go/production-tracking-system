@@ -30,7 +30,8 @@ jobs:
             DATABASE_URL="file:./dev.db" npx prisma migrate deploy
             DATABASE_URL="file:./dev.db" npx prisma generate
             npm run build
-            pm2 restart pts
+            pm2 delete pts 2>/dev/null || true
+            pm2 start dist/server.js --name pts
 
             # 前端
             cd ../client
