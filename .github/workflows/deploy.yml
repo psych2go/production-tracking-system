@@ -29,4 +29,5 @@ jobs:
             # 前端
             cd ../client
             npm install
+            rm -rf dist/build/h5
             npm run build:h5
