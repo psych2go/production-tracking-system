@@ -106,7 +106,16 @@
           </view>
           <view class="form-group mt-md">
             <text class="form-label">数量</text>
-            <input v-model="editForm.trialQuantity" type="number" class="form-input" placeholder="可选" />
+            <view class="quantity-row">
+              <view class="quantity-field">
+                <input v-model="editForm.trialQtyTiao" type="number" placeholder="0" class="form-input" />
+                <text class="quantity-unit">条</text>
+              </view>
+              <view class="quantity-field">
+                <input v-model="editForm.trialQtyZhi" type="number" placeholder="0" class="form-input" />
+                <text class="quantity-unit">只</text>
+              </view>
+            </view>
           </view>
           <view class="form-group mt-md">
             <text class="form-label">要求完成时间</text>
@@ -130,7 +139,7 @@
           <text class="text-secondary">试验内容</text>
           <text>{{ batch.trialContent || '-' }}</text>
           <text class="text-secondary">数量</text>
-          <text>{{ batch.quantity || '-' }}</text>
+          <text>{{ quantityDisplay }}</text>
           <text class="text-secondary">封装形式</text>
           <view v-if="batch.packageType" class="tag-list">
             <text v-for="pt in batch.packageType.split(',')" :key="pt" class="info-tag">{{ pt.trim() }}</text>
@@ -228,7 +237,8 @@ const editForm = ref({
   productionDelivery: "",
   priority: "normal",
   trialContent: "",
-  trialQuantity: "",
+  trialQtyTiao: "",
+  trialQtyZhi: "",
   notes: "",
 });
 
@@ -265,6 +275,33 @@ const overdueDays = computed(() => {
 
 const packageTypeNames = computed(() => packageTypes.value.map((pt) => pt.name));
 
+const quantityDisplay = computed(() => {
+  if (!batch.value) return "-";
+  if (batch.value.quantityDetail) {
+    try {
+      const parsed = JSON.parse(batch.value.quantityDetail);
+      return Object.entries(parsed)
+        .filter(([, v]) => Number(v) > 0)
+        .map(([unit, val]) => `${val}${unit}`)
+        .join(" ") || "-";
+    } catch { /* fallback below */ }
+  }
+  return batch.value.quantity || "-";
+});
+
+function parseQuantityDetail(detail: string | null | undefined): { tiao: string; zhi: string } {
+  if (!detail) return { tiao: "", zhi: "" };
+  try {
+    const parsed = JSON.parse(detail);
+    return {
+      tiao: parsed["条"] ? String(parsed["条"]) : "",
+      zhi: parsed["只"] ? String(parsed["只"]) : "",
+    };
+  } catch {
+    return { tiao: "", zhi: "" };
+  }
+}
+
 function toggleEdit() {
   if (editing.value) {
     editing.value = false;
@@ -272,6 +309,7 @@ function toggleEdit() {
   }
   // Populate form from current batch data
   const b = batch.value!;
+  const qd = parseQuantityDetail(b.quantityDetail);
   editForm.value = {
     batchNo: b.batchNo || "",
     productModel: b.product?.model || "",
@@ -283,7 +321,8 @@ function toggleEdit() {
     productionDelivery: b.productionDelivery ? b.productionDelivery.slice(0, 10) : "",
     priority: b.priority || "normal",
     trialContent: b.trialContent || "",
-    trialQuantity: b.quantity ? String(b.quantity) : "",
+    trialQtyTiao: qd.tiao,
+    trialQtyZhi: qd.zhi,
     notes: b.notes || "",
   };
   // Trial: parse existing package types into set
@@ -327,7 +366,15 @@ async function saveEdit() {
       data.priority = editForm.value.priority;
     } else {
       data.trialContent = editForm.value.trialContent;
-      data.quantity = editForm.value.trialQuantity ? Number(editForm.value.trialQuantity) : 0;
+      const qtyTiao = editForm.value.trialQtyTiao ? Number(editForm.value.trialQtyTiao) : 0;
+      const qtyZhi = editForm.value.trialQtyZhi ? Number(editForm.value.trialQtyZhi) : 0;
+      const detail: Record<string, number> = {};
+      if (qtyTiao > 0) detail["条"] = qtyTiao;
+      if (qtyZhi > 0) detail["只"] = qtyZhi;
+      if (Object.keys(detail).length > 0) {
+        data.quantityDetail = JSON.stringify(detail);
+        data.quantity = qtyTiao + qtyZhi;
+      }
       data.packageType = editSelectedPackageTypes.value.size > 0
         ? Array.from(editSelectedPackageTypes.value).join(",")
         : null;
@@ -465,5 +512,26 @@ onLoad(async (query) => {
     border-color: #0083ff;
     color: #0083ff;
   }
+}
+.quantity-row {
+  display: flex;
+  gap: 16rpx;
+}
+.quantity-field {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.quantity-field .form-input {
+  width: 100%;
+  padding-right: 60rpx;
+  box-sizing: border-box;
+}
+.quantity-unit {
+  position: absolute;
+  right: 24rpx;
+  font-size: 26rpx;
+  color: #999;
 }
 </style>

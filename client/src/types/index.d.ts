@@ -22,6 +22,7 @@ export interface Batch {
   batchType: "product" | "trial";
   productId: number | null;
   quantity: number;
+  quantityDetail: string | null;
   customerCode: string | null;
   orderNo: string | null;
   packageType: string | null;

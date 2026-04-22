@@ -19,11 +19,12 @@
     <view v-if="isTrial && batch.trialContent" class="trial-preview mt-sm">
       <text class="text-sm text-secondary">{{ batch.trialContent }}</text>
     </view>
-    <view v-if="isTrial && (batch.packageType || currentStage)" class="batch-stats flex-between mt-xs">
-      <view style="display:flex;flex-wrap:wrap;gap:8rpx;">
+    <view v-if="isTrial && (trialQuantityDisplay || batch.packageType || currentStage)" class="batch-stats flex-between mt-xs">
+      <view style="display:flex;flex-wrap:wrap;gap:8rpx;align-items:center;">
         <template v-if="batch.packageType">
           <view v-for="pt in batch.packageType.split(',')" :key="pt" class="package-tag">{{ pt.trim() }}</view>
         </template>
+        <text v-if="trialQuantityDisplay" class="text-secondary">{{ trialQuantityDisplay }}</text>
       </view>
       <view class="flex-center" v-if="currentStage">
         <text class="text-primary">{{ currentStage }}</text>
@@ -71,6 +72,20 @@ const props = defineProps<{ batch: Batch }>();
 defineEmits<{ click: [] }>();
 
 const isTrial = computed(() => props.batch.batchType === "trial");
+
+const trialQuantityDisplay = computed(() => {
+  if (!isTrial.value) return "";
+  if (props.batch.quantityDetail) {
+    try {
+      const parsed = JSON.parse(props.batch.quantityDetail);
+      const parts = Object.entries(parsed)
+        .filter(([, v]) => Number(v) > 0)
+        .map(([unit, val]) => `${val}${unit}`);
+      if (parts.length > 0) return parts.join(" ");
+    } catch { /* fallback */ }
+  }
+  return props.batch.quantity ? `${props.batch.quantity}` : "";
+});
 
 const appStore = useAppStore();
 

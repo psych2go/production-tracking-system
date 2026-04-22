@@ -1,5 +1,14 @@
 import { prisma } from "../config/database.js";
 
+function sumQuantityDetail(detail: string): number {
+  try {
+    const parsed = JSON.parse(detail);
+    return Object.values(parsed).reduce((sum: number, v) => sum + Number(v), 0);
+  } catch {
+    return 0;
+  }
+}
+
 export async function listBatches(filters: {
   status?: string;
   productId?: number;
@@ -67,6 +76,7 @@ export async function createBatch(data: {
   batchNo?: string;
   productModel?: string;
   quantity?: number;
+  quantityDetail?: string;
   packageType?: string;
   customerCode?: string;
   orderNo?: string;
@@ -79,14 +89,17 @@ export async function createBatch(data: {
 }) {
   return prisma.$transaction(async (tx) => {
     if (data.batchType === "trial") {
-      // Trial batch: auto-generate batchNo, no product, quantity=0
       const batchNo = await generateTrialBatchNo(tx);
+      const quantity = data.quantityDetail
+        ? sumQuantityDetail(data.quantityDetail)
+        : (data.quantity ?? 0);
 
       return tx.batch.create({
         data: {
           batchNo,
           batchType: "trial",
-          quantity: data.quantity ?? 0,
+          quantity,
+          quantityDetail: data.quantityDetail,
           packageType: data.packageType,
           customerDelivery: data.customerDelivery ? new Date(data.customerDelivery) : undefined,
           trialContent: data.trialContent,
@@ -149,6 +162,7 @@ export async function updateBatch(id: number, data: {
   batchNo?: string;
   productModel?: string;
   quantity?: number;
+  quantityDetail?: string;
   trialContent?: string;
   customerCode?: string | null;
   orderNo?: string | null;
@@ -174,8 +188,15 @@ export async function updateBatch(id: number, data: {
     };
 
     if (data.batchNo !== undefined) updateData.batchNo = data.batchNo;
-    if (data.quantity !== undefined) updateData.quantity = data.quantity;
     if (data.trialContent !== undefined) updateData.trialContent = data.trialContent;
+    if (data.quantityDetail !== undefined) {
+      updateData.quantityDetail = data.quantityDetail;
+      updateData.quantity = data.quantityDetail
+        ? sumQuantityDetail(data.quantityDetail)
+        : (data.quantity ?? 0);
+    } else if (data.quantity !== undefined) {
+      updateData.quantity = data.quantity;
+    }
 
     if (data.productModel !== undefined) {
       const product = await tx.product.upsert({

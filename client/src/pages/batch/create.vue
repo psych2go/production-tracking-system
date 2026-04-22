@@ -106,7 +106,16 @@
 
         <view class="form-group mt-md">
           <text class="form-label">数量</text>
-          <input v-model="form.trialQuantity" type="number" placeholder="请输入数量" class="form-input" />
+          <view class="quantity-row">
+            <view class="quantity-field">
+              <input v-model="form.trialQtyTiao" type="number" placeholder="0" class="form-input" />
+              <text class="quantity-unit">条</text>
+            </view>
+            <view class="quantity-field">
+              <input v-model="form.trialQtyZhi" type="number" placeholder="0" class="form-input" />
+              <text class="quantity-unit">只</text>
+            </view>
+          </view>
         </view>
 
         <view class="form-group mt-md">
@@ -163,7 +172,8 @@ const form = ref({
   notes: "",
   // Trial fields
   trialContent: "",
-  trialQuantity: "",
+  trialQtyTiao: "",
+  trialQtyZhi: "",
   deadline: "",
 });
 
@@ -250,10 +260,17 @@ async function submit() {
         notes: form.value.notes || undefined,
       });
     } else {
+      const qtyTiao = form.value.trialQtyTiao ? Number(form.value.trialQtyTiao) : 0;
+      const qtyZhi = form.value.trialQtyZhi ? Number(form.value.trialQtyZhi) : 0;
+      const detail: Record<string, number> = {};
+      if (qtyTiao > 0) detail["条"] = qtyTiao;
+      if (qtyZhi > 0) detail["只"] = qtyZhi;
+
       await batchApi.create({
         batchType: "trial",
         trialContent: form.value.trialContent,
-        quantity: form.value.trialQuantity ? Number(form.value.trialQuantity) : 0,
+        quantity: qtyTiao + qtyZhi,
+        quantityDetail: Object.keys(detail).length > 0 ? JSON.stringify(detail) : undefined,
         packageType: selectedPackageTypes.value.size > 0
           ? Array.from(selectedPackageTypes.value).join(",") || undefined
           : undefined,
@@ -369,5 +386,26 @@ onMounted(async () => {
     border-color: #0083ff;
     color: #0083ff;
   }
+}
+.quantity-row {
+  display: flex;
+  gap: 16rpx;
+}
+.quantity-field {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.quantity-field .form-input {
+  width: 100%;
+  padding-right: 60rpx;
+  box-sizing: border-box;
+}
+.quantity-unit {
+  position: absolute;
+  right: 24rpx;
+  font-size: 26rpx;
+  color: #999;
 }
 </style>

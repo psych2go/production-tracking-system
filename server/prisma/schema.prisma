@@ -53,6 +53,7 @@ model Batch {
   customerDelivery   DateTime? @map("customer_delivery")
   productionDelivery DateTime? @map("production_delivery")
   trialContent       String?   @map("trial_content")
+  quantityDetail     String?   @map("quantity_detail")
   notes            String?
   createdBy        Int?      @map("created_by")
   createdAt        DateTime  @default(now()) @map("created_at")
