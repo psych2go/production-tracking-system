@@ -60,6 +60,7 @@ export declare function getScheduleQueue(stageId: number): Promise<{
         orderNo: string | null;
         customerDelivery: Date | null;
         productionDelivery: Date | null;
+        quantityDetail: string | null;
         notes: string | null;
         createdBy: number | null;
     };

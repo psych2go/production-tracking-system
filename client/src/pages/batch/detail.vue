@@ -519,20 +519,16 @@ onLoad(async (query) => {
 }
 .quantity-field {
   flex: 1;
-  position: relative;
   display: flex;
   align-items: center;
+  gap: 8rpx;
 }
 .quantity-field .form-input {
-  width: 100%;
-  padding-right: 60rpx;
-  box-sizing: border-box;
+  flex: 1;
 }
 .quantity-unit {
-  position: absolute;
-  right: 24rpx;
   font-size: 26rpx;
   color: #999;
-  pointer-events: none;
+  white-space: nowrap;
 }
 </style>

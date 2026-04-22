@@ -62,6 +62,7 @@ export declare function listBatches(filters: {
         orderNo: string | null;
         customerDelivery: Date | null;
         productionDelivery: Date | null;
+        quantityDetail: string | null;
         notes: string | null;
         createdBy: number | null;
     })[];
@@ -127,6 +128,7 @@ export declare function getBatchDetail(id: number): Promise<({
     orderNo: string | null;
     customerDelivery: Date | null;
     productionDelivery: Date | null;
+    quantityDetail: string | null;
     notes: string | null;
     createdBy: number | null;
 }) | null>;
@@ -135,6 +137,7 @@ export declare function createBatch(data: {
     batchNo?: string;
     productModel?: string;
     quantity?: number;
+    quantityDetail?: string;
     packageType?: string;
     customerCode?: string;
     orderNo?: string;
@@ -160,6 +163,7 @@ export declare function createBatch(data: {
     orderNo: string | null;
     customerDelivery: Date | null;
     productionDelivery: Date | null;
+    quantityDetail: string | null;
     notes: string | null;
     createdBy: number | null;
 }>;
@@ -169,6 +173,7 @@ export declare function updateBatch(id: number, data: {
     batchNo?: string;
     productModel?: string;
     quantity?: number;
+    quantityDetail?: string;
     trialContent?: string;
     customerCode?: string | null;
     orderNo?: string | null;
@@ -192,6 +197,7 @@ export declare function updateBatch(id: number, data: {
     orderNo: string | null;
     customerDelivery: Date | null;
     productionDelivery: Date | null;
+    quantityDetail: string | null;
     notes: string | null;
     createdBy: number | null;
 }>;

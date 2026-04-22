@@ -88,7 +88,7 @@
               <text class="text-secondary text-sm">{{ batch.packageType }}</text>
             </view>
             <view class="flex-between mt-sm">
-              <text class="text-sm text-secondary">数量: {{ batch.quantity }}</text>
+              <text v-if="batch.batchType !== 'trial'" class="text-sm text-secondary">数量: {{ batch.quantity }}</text>
               <view v-if="getCurrentStage(batch)" class="current-stage-hint-inline">
                 <text class="text-sm">当前: {{ getCurrentStage(batch)?.name }}</text>
               </view>

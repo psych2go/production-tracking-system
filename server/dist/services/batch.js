@@ -5,6 +5,15 @@ exports.getBatchDetail = getBatchDetail;
 exports.createBatch = createBatch;
 exports.updateBatch = updateBatch;
 const database_js_1 = require("../config/database.js");
+function sumQuantityDetail(detail) {
+    try {
+        const parsed = JSON.parse(detail);
+        return Object.values(parsed).reduce((sum, v) => sum + Number(v), 0);
+    }
+    catch {
+        return 0;
+    }
+}
 async function listBatches(filters) {
     const { status, productId, keyword, customerCode, packageType, batchType, page = 1, pageSize = 20 } = filters;
     const where = {};
@@ -61,13 +70,16 @@ async function getBatchDetail(id) {
 async function createBatch(data) {
     return database_js_1.prisma.$transaction(async (tx) => {
         if (data.batchType === "trial") {
-            // Trial batch: auto-generate batchNo, no product, quantity=0
             const batchNo = await generateTrialBatchNo(tx);
+            const quantity = data.quantityDetail
+                ? sumQuantityDetail(data.quantityDetail)
+                : (data.quantity ?? 0);
             return tx.batch.create({
                 data: {
                     batchNo,
                     batchType: "trial",
-                    quantity: data.quantity ?? 0,
+                    quantity,
+                    quantityDetail: data.quantityDetail,
                     packageType: data.packageType,
                     customerDelivery: data.customerDelivery ? new Date(data.customerDelivery) : undefined,
                     trialContent: data.trialContent,
@@ -135,10 +147,17 @@ async function updateBatch(id, data) {
         };
         if (data.batchNo !== undefined)
             updateData.batchNo = data.batchNo;
-        if (data.quantity !== undefined)
-            updateData.quantity = data.quantity;
         if (data.trialContent !== undefined)
             updateData.trialContent = data.trialContent;
+        if (data.quantityDetail !== undefined) {
+            updateData.quantityDetail = data.quantityDetail;
+            updateData.quantity = data.quantityDetail
+                ? sumQuantityDetail(data.quantityDetail)
+                : (data.quantity ?? 0);
+        }
+        else if (data.quantity !== undefined) {
+            updateData.quantity = data.quantity;
+        }
         if (data.productModel !== undefined) {
             const product = await tx.product.upsert({
                 where: { model: data.productModel },
