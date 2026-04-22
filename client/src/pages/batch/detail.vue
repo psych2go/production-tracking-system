@@ -533,5 +533,6 @@ onLoad(async (query) => {
   right: 24rpx;
   font-size: 26rpx;
   color: #999;
+  pointer-events: none;
 }
 </style>
