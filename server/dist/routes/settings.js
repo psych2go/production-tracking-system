@@ -77,6 +77,16 @@ exports.settingsRoutes.post("/package-types", auth_js_1.authGuard, (0, auth_js_1
         next(err);
     }
 });
+// Update package type
+exports.settingsRoutes.put("/package-types/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, audit_js_1.auditLog)("update", "package_type"), async (req, res, next) => {
+    try {
+        const pt = await (0, settings_js_1.updatePackageType)(parseInt(req.params.id), req.body);
+        res.json(pt);
+    }
+    catch (err) {
+        next(err);
+    }
+});
 // Delete package type
 exports.settingsRoutes.delete("/package-types/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, audit_js_1.auditLog)("delete", "package_type"), async (req, res, next) => {
     try {

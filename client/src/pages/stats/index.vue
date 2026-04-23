@@ -31,7 +31,7 @@
         <scroll-view scroll-x class="mt-sm" v-if="onlineProducts.length">
           <view class="online-table">
             <view class="online-header">
-              <text class="online-col online-col-no">批号</text>
+              <text class="online-col online-col-no">生产批号</text>
               <text class="online-col online-col-model">产品型号</text>
               <text class="online-col online-col-qty">数量</text>
               <text class="online-col online-col-pkg">封装形式</text>
@@ -464,7 +464,7 @@ function goBatchDetail(id: number) {
   justify-content: center;
 }
 .online-col-no { width: 180rpx; justify-content: flex-start; font-weight: 500; }
-.online-col-model { width: 160rpx; }
+.online-col-model { width: 220rpx; }
 .online-col-qty { width: 100rpx; }
 .online-col-pkg { width: 200rpx; }
 .online-col-customer { width: 140rpx; }

@@ -51,6 +51,17 @@ export declare function createPackageType(data: {
     category: string;
     sortOrder: number;
 }>;
+export declare function updatePackageType(id: number, data: {
+    name?: string;
+    category?: string;
+    sortOrder?: number;
+}): Promise<{
+    id: number;
+    name: string;
+    createdAt: Date;
+    category: string;
+    sortOrder: number;
+}>;
 export declare function deletePackageType(id: number): Promise<{
     id: number;
     name: string;

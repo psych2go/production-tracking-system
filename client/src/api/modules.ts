@@ -111,6 +111,8 @@ export const settingsApi = {
   listPackageTypes: () => api.get<PackageType[]>("/api/settings/package-types"),
   createPackageType: (data: { name: string; category?: string; sortOrder?: number }) =>
     api.post<PackageType>("/api/settings/package-types", data),
+  updatePackageType: (id: number, data: { name?: string; category?: string; sortOrder?: number }) =>
+    api.put<PackageType>(`/api/settings/package-types/${id}`, data),
   deletePackageType: (id: number) => api.delete(`/api/settings/package-types/${id}`),
 
   // Customer codes

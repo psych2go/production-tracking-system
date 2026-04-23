@@ -5,6 +5,7 @@ exports.updateStage = updateStage;
 exports.deleteStage = deleteStage;
 exports.listPackageTypes = listPackageTypes;
 exports.createPackageType = createPackageType;
+exports.updatePackageType = updatePackageType;
 exports.deletePackageType = deletePackageType;
 exports.listCustomerCodes = listCustomerCodes;
 exports.createCustomerCode = createCustomerCode;
@@ -36,6 +37,9 @@ async function createPackageType(data) {
             sortOrder: data.sortOrder,
         },
     });
+}
+async function updatePackageType(id, data) {
+    return database_js_1.prisma.packageType.update({ where: { id }, data });
 }
 async function deletePackageType(id) {
     const pt = await database_js_1.prisma.packageType.findUnique({ where: { id } });

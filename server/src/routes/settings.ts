@@ -3,7 +3,7 @@ import { z } from "zod";
 import { authGuard, roleGuard } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
-import { createStage, updateStage, deleteStage, listPackageTypes, createPackageType, deletePackageType, listCustomerCodes, createCustomerCode, deleteCustomerCode } from "../services/settings.js";
+import { createStage, updateStage, deleteStage, listPackageTypes, createPackageType, updatePackageType, deletePackageType, listCustomerCodes, createCustomerCode, deleteCustomerCode } from "../services/settings.js";
 
 export const settingsRoutes = Router();
 
@@ -105,6 +105,22 @@ settingsRoutes.post(
     try {
       const pt = await createPackageType(req.body);
       res.status(201).json(pt);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Update package type
+settingsRoutes.put(
+  "/package-types/:id",
+  authGuard,
+  roleGuard("admin"),
+  auditLog("update", "package_type"),
+  async (req, res, next) => {
+    try {
+      const pt = await updatePackageType(parseInt(req.params.id as string), req.body);
+      res.json(pt);
     } catch (err) {
       next(err);
     }

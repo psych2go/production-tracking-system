@@ -53,6 +53,13 @@ export async function createPackageType(data: {
   });
 }
 
+export async function updatePackageType(
+  id: number,
+  data: { name?: string; category?: string; sortOrder?: number }
+) {
+  return prisma.packageType.update({ where: { id }, data });
+}
+
 export async function deletePackageType(id: number) {
   const pt = await prisma.packageType.findUnique({ where: { id } });
   if (!pt) throw new Error("封装形式不存在");
