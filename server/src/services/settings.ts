@@ -36,7 +36,13 @@ export async function deleteStage(id: number) {
 // ===== Package Type CRUD =====
 
 export async function listPackageTypes() {
-  return prisma.packageType.findMany({ orderBy: { sortOrder: "asc" } });
+  const all = await prisma.packageType.findMany();
+  return all.sort((a, b) => {
+    if (a.category !== b.category) return (a.category || "").localeCompare(b.category || "");
+    const numA = parseInt(a.name.match(/\d+/)?.[0] || "0", 10);
+    const numB = parseInt(b.name.match(/\d+/)?.[0] || "0", 10);
+    return numA - numB;
+  });
 }
 
 export async function createPackageType(data: {

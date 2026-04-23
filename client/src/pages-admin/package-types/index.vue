@@ -12,7 +12,6 @@
         <view v-for="pt in group.items" :key="pt.id" class="type-row">
           <view class="type-info">
             <text class="text-bold">{{ pt.name }}</text>
-            <text class="text-secondary text-sm">{{ pt.sortOrder }}</text>
           </view>
           <view class="type-actions">
             <text class="text-primary text-sm" @click="openEditForm(pt)">编辑</text>
@@ -42,10 +41,6 @@
           <view class="form-input picker-value">{{ formData.category || '请选择系列' }}</view>
         </picker>
       </view>
-      <view class="form-group mt-md">
-        <text class="form-label">排序号</text>
-        <input v-model="formData.sortOrder" type="number" placeholder="数字越小越靠前" class="form-input" />
-      </view>
       <button class="btn-primary mt-lg" :loading="saving" @click="submitForm">保存</button>
     </view>
   </view>
@@ -66,7 +61,6 @@ const editingId = ref<number | null>(null);
 const formData = ref({
   name: "",
   category: "",
-  sortOrder: "",
 });
 
 const groupedTypes = computed(() => {
@@ -89,7 +83,7 @@ function onCategoryChange(e: any) {
 
 function openAddForm() {
   editingId.value = null;
-  formData.value = { name: "", category: "", sortOrder: "" };
+  formData.value = { name: "", category: "" };
   showForm.value = true;
 }
 
@@ -98,7 +92,6 @@ function openEditForm(pt: PackageType) {
   formData.value = {
     name: pt.name,
     category: pt.category || "",
-    sortOrder: pt.sortOrder != null ? String(pt.sortOrder) : "",
   };
   showForm.value = true;
 }
@@ -126,7 +119,6 @@ async function submitForm() {
     const payload = {
       name: formData.value.name.trim(),
       category: formData.value.category || undefined,
-      sortOrder: formData.value.sortOrder ? Number(formData.value.sortOrder) : undefined,
     };
     if (editingId.value) {
       await settingsApi.updatePackageType(editingId.value, payload);

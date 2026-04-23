@@ -27,7 +27,14 @@ async function deleteStage(id) {
 }
 // ===== Package Type CRUD =====
 async function listPackageTypes() {
-    return database_js_1.prisma.packageType.findMany({ orderBy: { sortOrder: "asc" } });
+    const all = await database_js_1.prisma.packageType.findMany();
+    return all.sort((a, b) => {
+        if (a.category !== b.category)
+            return (a.category || "").localeCompare(b.category || "");
+        const numA = parseInt(a.name.match(/\d+/)?.[0] || "0", 10);
+        const numB = parseInt(b.name.match(/\d+/)?.[0] || "0", 10);
+        return numA - numB;
+    });
 }
 async function createPackageType(data) {
     return database_js_1.prisma.packageType.create({
