@@ -20,14 +20,15 @@
       <text class="text-sm text-secondary">{{ batch.trialContent }}</text>
     </view>
     <view v-if="isTrial && (trialQuantityDisplay || batch.packageType || currentStage)" class="batch-stats flex-between mt-xs">
-      <view style="display:flex;flex-wrap:wrap;gap:8rpx;align-items:center;">
-        <template v-if="batch.packageType">
+      <view>
+        <view v-if="batch.packageType" style="display:flex;flex-wrap:wrap;gap:8rpx;align-items:center;">
           <view v-for="pt in batch.packageType.split(',')" :key="pt" class="package-tag">{{ pt.trim() }}</view>
-        </template>
+        </view>
         <text v-if="trialQuantityDisplay" class="text-secondary">{{ trialQuantityDisplay }}</text>
       </view>
-      <view class="flex-center" v-if="currentStage">
-        <text class="text-primary">{{ currentStage }}</text>
+      <view class="flex-center">
+        <text v-if="currentStage" class="text-primary">{{ currentStage }}</text>
+        <text v-else class="text-secondary">待开始</text>
       </view>
     </view>
     <view v-if="!isTrial" class="batch-info mt-sm">
