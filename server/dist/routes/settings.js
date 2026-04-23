@@ -87,4 +87,38 @@ exports.settingsRoutes.delete("/package-types/:id", auth_js_1.authGuard, (0, aut
         next(err);
     }
 });
+// ===== Customer Code Routes =====
+const createCustomerCodeSchema = zod_1.z.object({
+    code: zod_1.z.string().min(1, "客户代码不能为空"),
+});
+// List customer codes
+exports.settingsRoutes.get("/customer-codes", auth_js_1.authGuard, async (_req, res, next) => {
+    try {
+        const codes = await (0, settings_js_1.listCustomerCodes)();
+        res.json(codes);
+    }
+    catch (err) {
+        next(err);
+    }
+});
+// Create customer code
+exports.settingsRoutes.post("/customer-codes", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, audit_js_1.auditLog)("create", "customer_code"), (0, validator_js_1.validate)(createCustomerCodeSchema), async (req, res, next) => {
+    try {
+        const cc = await (0, settings_js_1.createCustomerCode)(req.body);
+        res.status(201).json(cc);
+    }
+    catch (err) {
+        next(err);
+    }
+});
+// Delete customer code
+exports.settingsRoutes.delete("/customer-codes/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, audit_js_1.auditLog)("delete", "customer_code"), async (req, res, next) => {
+    try {
+        const cc = await (0, settings_js_1.deleteCustomerCode)(parseInt(req.params.id));
+        res.json(cc);
+    }
+    catch (err) {
+        next(err);
+    }
+});
 //# sourceMappingURL=settings.js.map

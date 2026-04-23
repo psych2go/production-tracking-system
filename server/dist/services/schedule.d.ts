@@ -1,6 +1,7 @@
 /**
  * Get the schedule queue for a specific stage.
- * Returns batches that have completed all previous stages but haven't completed this stage.
+ * Shows batches whose latest completed stage is this stage (i.e. currently "at" this station).
+ * Batches with no progress show in the first stage only.
  * Auto-syncs the ScheduleOrder table (insert missing, remove stale).
  */
 export declare function getScheduleQueue(stageId: number): Promise<{

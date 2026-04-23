@@ -6,6 +6,9 @@ exports.deleteStage = deleteStage;
 exports.listPackageTypes = listPackageTypes;
 exports.createPackageType = createPackageType;
 exports.deletePackageType = deletePackageType;
+exports.listCustomerCodes = listCustomerCodes;
+exports.createCustomerCode = createCustomerCode;
+exports.deleteCustomerCode = deleteCustomerCode;
 const database_js_1 = require("../config/database.js");
 async function createStage(data) {
     return database_js_1.prisma.processStage.create({ data });
@@ -43,5 +46,22 @@ async function deletePackageType(id) {
         throw new Error(`该封装形式已有 ${batchCount} 个批次使用，无法删除`);
     }
     return database_js_1.prisma.packageType.delete({ where: { id } });
+}
+// ===== Customer Code CRUD =====
+async function listCustomerCodes() {
+    return database_js_1.prisma.customerCode.findMany({ orderBy: { code: "asc" } });
+}
+async function createCustomerCode(data) {
+    return database_js_1.prisma.customerCode.create({ data: { code: data.code } });
+}
+async function deleteCustomerCode(id) {
+    const cc = await database_js_1.prisma.customerCode.findUnique({ where: { id } });
+    if (!cc)
+        throw new Error("客户代码不存在");
+    const batchCount = await database_js_1.prisma.batch.count({ where: { customerCode: cc.code } });
+    if (batchCount > 0) {
+        throw new Error(`该客户代码已有 ${batchCount} 个批次使用，无法删除`);
+    }
+    return database_js_1.prisma.customerCode.delete({ where: { id } });
 }
 //# sourceMappingURL=settings.js.map

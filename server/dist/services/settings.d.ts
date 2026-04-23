@@ -58,4 +58,21 @@ export declare function deletePackageType(id: number): Promise<{
     category: string;
     sortOrder: number;
 }>;
+export declare function listCustomerCodes(): Promise<{
+    id: number;
+    createdAt: Date;
+    code: string;
+}[]>;
+export declare function createCustomerCode(data: {
+    code: string;
+}): Promise<{
+    id: number;
+    createdAt: Date;
+    code: string;
+}>;
+export declare function deleteCustomerCode(id: number): Promise<{
+    id: number;
+    createdAt: Date;
+    code: string;
+}>;
 //# sourceMappingURL=settings.d.ts.map
