@@ -13,7 +13,7 @@
 
 ## 技术栈
 
-Express 4 + TypeScript + Prisma 6 + SQLite | uni-app 3 (Vue 3) + Pinia | JWT + 企业微信 OAuth | Zod | uCharts | xlsx
+Express 4 + TypeScript + Prisma 6 + SQLite | uni-app 3 (Vue 3) + Pinia + SCSS | JWT + 企业微信 OAuth | Zod | uCharts | xlsx
 
 ## 快速开始
 
@@ -55,12 +55,13 @@ server/src/
   services/     # 业务逻辑
   middleware/    # 认证、审计、Zod 校验、错误处理
   config/       # 配置与 Prisma 单例
+server/tests/   # 集成测试（Vitest）
 server/prisma/
-  schema.prisma # 数据模型（8 个）
-  seed.ts       # 16 道工序 + 22 种封装形式 + dev_admin
+  schema.prisma # 数据模型（9 个）
+  seed.ts       # 16 道工序 + 25 种封装形式 + dev_admin
 client/src/
   pages/        # 首页/录入/批次/排单/统计/我的
-  pages-admin/  # 产品/用户/设置/封装形式/审计
+  pages-admin/  # 产品/用户/设置/封装形式/客户代码/审计
   components/   # StageTimeline/BatchCard/Charts
   api/ store/ utils/ styles/ types/
 ```
