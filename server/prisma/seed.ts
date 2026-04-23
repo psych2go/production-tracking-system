@@ -88,6 +88,22 @@ async function main() {
 
   console.log(`Seeded ${PACKAGE_TYPES.length} package types.`);
 
+  // Seed customer codes
+  const CUSTOMER_CODES = [
+    "HIC", "SJ", "XIC", "JSC20", "JSC21", "JSC22",
+    "GS01-J", "LN02-J", "ZD47", "ZK01-J", "ZK02-J", "ZK03-J", "XA53-J",
+  ];
+
+  console.log("Seeding customer codes...");
+  for (const code of CUSTOMER_CODES) {
+    await prisma.customerCode.upsert({
+      where: { code },
+      update: {},
+      create: { code },
+    });
+  }
+  console.log(`Seeded ${CUSTOMER_CODES.length} customer codes.`);
+
   // Create a default admin user for development
   const admin = await prisma.user.upsert({
     where: { wwUserId: "dev_admin" },

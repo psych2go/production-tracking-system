@@ -64,3 +64,25 @@ export async function deletePackageType(id: number) {
 
   return prisma.packageType.delete({ where: { id } });
 }
+
+// ===== Customer Code CRUD =====
+
+export async function listCustomerCodes() {
+  return prisma.customerCode.findMany({ orderBy: { code: "asc" } });
+}
+
+export async function createCustomerCode(data: { code: string }) {
+  return prisma.customerCode.create({ data: { code: data.code } });
+}
+
+export async function deleteCustomerCode(id: number) {
+  const cc = await prisma.customerCode.findUnique({ where: { id } });
+  if (!cc) throw new Error("客户代码不存在");
+
+  const batchCount = await prisma.batch.count({ where: { customerCode: cc.code } });
+  if (batchCount > 0) {
+    throw new Error(`该客户代码已有 ${batchCount} 个批次使用，无法删除`);
+  }
+
+  return prisma.customerCode.delete({ where: { id } });
+}

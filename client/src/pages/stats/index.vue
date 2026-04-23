@@ -87,7 +87,7 @@
               <text class="online-col trial-col-no">{{ batch.batchNo }}</text>
               <text class="online-col trial-col-content">{{ batch.trialContent || '-' }}</text>
               <text class="online-col trial-col-pkg">{{ batch.packageType || '-' }}</text>
-              <text class="online-col trial-col-qty">{{ batch.quantity || '-' }}</text>
+              <text class="online-col trial-col-qty">{{ formatTrialQty(batch) }}</text>
               <text class="online-col trial-col-deadline">{{ batch.customerDelivery ? batch.customerDelivery.slice(0, 10) : '-' }}</text>
               <text class="online-col trial-col-notes">{{ batch.notes || '-' }}</text>
               <text class="online-col trial-col-stage">{{ getCurrentStage(batch) }}</text>
@@ -209,6 +209,19 @@ const onlineBatches = ref<Batch[]>([]);
 const onlineProducts = computed(() => onlineBatches.value.filter(b => b.batchType === "product"));
 const onlineTrials = computed(() => onlineBatches.value.filter(b => b.batchType === "trial"));
 
+function formatTrialQty(batch: Batch): string {
+  if (batch.quantityDetail) {
+    try {
+      const parsed = JSON.parse(batch.quantityDetail);
+      const parts: string[] = [];
+      if (parsed["条"] && Number(parsed["条"]) > 0) parts.push(`${parsed["条"]}条`);
+      if (parsed["只"] && Number(parsed["只"]) > 0) parts.push(`${parsed["只"]}只`);
+      if (parts.length) return parts.join("+");
+    } catch { /* fallback */ }
+  }
+  return batch.quantity ? String(batch.quantity) : "-";
+}
+
 function getCurrentStage(batch: Batch): string {
   if (!appStore.stages.length || !batch.progressRecords?.length) return '未开始';
   const completed = batch.progressRecords
@@ -253,16 +266,33 @@ function onTimeRange(e: { detail: { value: number } }) {
 function onExport() {
   const type = activeTab.value;
   const range = getDateRange();
-  const baseUrl = statsApi.exportExcel(type, range);
+  const exportInfo = statsApi.exportExcel(type, range);
   const token = userStore.token;
-  const separator = baseUrl.includes("?") ? "&" : "?";
-  const url = `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
   // #ifdef H5
-  window.open(url, "_blank");
+  // Use fetch + blob to avoid leaking token in URL
+  fetch(exportInfo.url, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error("导出失败");
+      return res.blob();
+    })
+    .then((blob) => {
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `${type}_report.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    })
+    .catch(() => uni.showToast({ title: "导出失败", icon: "none" }));
   // #endif
   // #ifndef H5
   uni.downloadFile({
-    url,
+    url: exportInfo.url,
+    header: { Authorization: `Bearer ${token}` },
     success: (res) => {
       if (res.statusCode === 200) {
         uni.openDocument({ filePath: res.tempFilePath, fileType: "xlsx" });
@@ -449,7 +479,7 @@ function goBatchDetail(id: number) {
 .trial-col-no { width: 180rpx; justify-content: flex-start; font-weight: 500; }
 .trial-col-content { width: 400rpx; justify-content: flex-start; }
 .trial-col-pkg { width: 400rpx; }
-.trial-col-qty { width: 100rpx; }
+.trial-col-qty { width: 200rpx; }
 .trial-col-deadline { width: 180rpx; }
 .trial-col-notes { width: 180rpx; justify-content: flex-start; }
 .trial-col-stage { width: 140rpx; color: #0083ff; font-weight: 500; }

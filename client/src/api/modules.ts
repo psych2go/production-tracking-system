@@ -1,5 +1,5 @@
 import { api } from "./index";
-import type { User, Product, Batch, ProcessStage, ProgressRecord, PaginatedResult, DashboardData, ProcessDurationData, ProductionTrendData, AnomalyItem, AuditLog, PackageType, ScheduleItem } from "../types";
+import type { User, Product, Batch, ProcessStage, ProgressRecord, PaginatedResult, DashboardData, ProcessDurationData, ProductionTrendData, AnomalyItem, AuditLog, PackageType, CustomerCode, ScheduleItem } from "../types";
 
 // Auth
 export const authApi = {
@@ -47,6 +47,8 @@ export const batchApi = {
     api.post<Batch>("/api/batches", data),
   update: (id: number, data: Record<string, unknown>) =>
     api.put<Batch>(`/api/batches/${id}`, data),
+  remove: (id: number) =>
+    api.delete<{ success: boolean }>(`/api/batches/${id}`),
 };
 
 // Progress
@@ -91,7 +93,7 @@ export const statsApi = {
     query.set("type", type);
     if (params?.startDate) query.set("startDate", params.startDate);
     if (params?.endDate) query.set("endDate", params.endDate);
-    return `/api/statistics/export/excel?${query.toString()}`;
+    return { url: `/api/statistics/export/excel?${query.toString()}`, method: "GET" as const };
   },
 };
 
@@ -109,6 +111,12 @@ export const settingsApi = {
   createPackageType: (data: { name: string; category?: string; sortOrder?: number }) =>
     api.post<PackageType>("/api/settings/package-types", data),
   deletePackageType: (id: number) => api.delete(`/api/settings/package-types/${id}`),
+
+  // Customer codes
+  listCustomerCodes: () => api.get<CustomerCode[]>("/api/settings/customer-codes"),
+  createCustomerCode: (data: { code: string }) =>
+    api.post<CustomerCode>("/api/settings/customer-codes", data),
+  deleteCustomerCode: (id: number) => api.delete(`/api/settings/customer-codes/${id}`),
 };
 
 // Audit

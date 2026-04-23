@@ -18,6 +18,7 @@
         { "path": "products/index", "style": { "navigationBarTitleText": "产品管理" } },
         { "path": "package-types/index", "style": { "navigationBarTitleText": "封装形式管理" } },
         { "path": "settings/index", "style": { "navigationBarTitleText": "工序管理" } },
+        { "path": "customer-codes/index", "style": { "navigationBarTitleText": "客户代码管理" } },
         { "path": "audit/index", "style": { "navigationBarTitleText": "审计日志" } }
       ]
     }

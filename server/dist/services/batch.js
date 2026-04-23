@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.listBatches = listBatches;
 exports.getBatchDetail = getBatchDetail;
 exports.createBatch = createBatch;
+exports.deleteBatch = deleteBatch;
 exports.updateBatch = updateBatch;
 const database_js_1 = require("../config/database.js");
 function sumQuantityDetail(detail) {
@@ -79,46 +80,51 @@ async function createBatch(data) {
                     batchNo,
                     batchType: "trial",
                     quantity,
-                    quantityDetail: data.quantityDetail,
-                    packageType: data.packageType,
+                    quantityDetail: data.quantityDetail || undefined,
+                    packageType: data.packageType || undefined,
                     customerDelivery: data.customerDelivery ? new Date(data.customerDelivery) : undefined,
                     trialContent: data.trialContent,
-                    notes: data.notes,
+                    notes: data.notes || undefined,
                     createdBy: data.createdBy,
                 },
             });
         }
-        // Product batch: existing logic
+        // Product batch
         const product = await tx.product.upsert({
             where: { model: data.productModel },
             update: {},
             create: { model: data.productModel },
         });
+        const existing = await tx.batch.findFirst({
+            where: { batchNo: data.batchNo, productId: product.id },
+        });
+        if (existing) {
+            throw new Error(`批号「${data.batchNo}」+ 型号「${data.productModel}」已存在，不可重复创建`);
+        }
         return tx.batch.create({
             data: {
                 batchNo: data.batchNo,
                 batchType: "product",
                 productId: product.id,
                 quantity: data.quantity,
-                packageType: data.packageType,
-                customerCode: data.customerCode,
-                orderNo: data.orderNo,
+                packageType: data.packageType || undefined,
+                customerCode: data.customerCode || undefined,
+                orderNo: data.orderNo || undefined,
                 customerDelivery: data.customerDelivery ? new Date(data.customerDelivery) : undefined,
                 productionDelivery: data.productionDelivery ? new Date(data.productionDelivery) : undefined,
-                priority: data.priority,
-                notes: data.notes,
+                priority: data.priority || undefined,
+                notes: data.notes || undefined,
                 createdBy: data.createdBy,
             },
         });
     });
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function generateTrialBatchNo(tx) {
+async function generateTrialBatchNo(tx, retries = 3) {
     const today = new Date();
     const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
     const prefix = `S${dateStr}-`;
     const lastBatch = await tx.batch.findFirst({
-        where: { batchNo: { startsWith: prefix } },
+        where: { batchNo: { startsWith: prefix }, batchType: "trial" },
         orderBy: { batchNo: "desc" },
         select: { batchNo: true },
     });
@@ -127,7 +133,29 @@ async function generateTrialBatchNo(tx) {
         const lastSeq = parseInt(lastBatch.batchNo.split("-").pop() || "0", 10);
         seq = lastSeq + 1;
     }
-    return `${prefix}${String(seq).padStart(3, "0")}`;
+    const batchNo = `${prefix}${String(seq).padStart(3, "0")}`;
+    // Concurrent conflict protection: retry if the generated batchNo already exists
+    if (retries > 0) {
+        const existing = await tx.batch.findFirst({
+            where: { batchNo, batchType: "trial" },
+            select: { id: true },
+        });
+        if (existing) {
+            return generateTrialBatchNo(tx, retries - 1);
+        }
+    }
+    return batchNo;
+}
+async function deleteBatch(id) {
+    const batch = await database_js_1.prisma.batch.findUnique({ where: { id } });
+    if (!batch)
+        throw new Error("批次不存在");
+    await database_js_1.prisma.$transaction([
+        database_js_1.prisma.progressRecord.deleteMany({ where: { batchId: id } }),
+        database_js_1.prisma.scheduleOrder.deleteMany({ where: { batchId: id } }),
+        database_js_1.prisma.batch.delete({ where: { id } }),
+    ]);
+    return { id };
 }
 async function updateBatch(id, data) {
     return database_js_1.prisma.$transaction(async (tx) => {
@@ -165,6 +193,18 @@ async function updateBatch(id, data) {
                 create: { model: data.productModel },
             });
             updateData.productId = product.id;
+        }
+        // Check batchNo + productId uniqueness when either field is being updated
+        const finalBatchNo = data.batchNo !== undefined ? data.batchNo : undefined;
+        const finalProductId = updateData.productId !== undefined ? updateData.productId : undefined;
+        if (finalBatchNo !== undefined && finalProductId !== undefined) {
+            const existing = await tx.batch.findFirst({
+                where: { batchNo: finalBatchNo, productId: finalProductId, id: { not: id } },
+                select: { id: true },
+            });
+            if (existing) {
+                throw new Error(`批号「${finalBatchNo}」+ 型号「${data.productModel}」已存在，不可重复创建`);
+            }
         }
         return tx.batch.update({
             where: { id },

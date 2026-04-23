@@ -123,6 +123,11 @@ export interface PackageType {
   sortOrder: number;
 }
 
+export interface CustomerCode {
+  id: number;
+  code: string;
+}
+
 export interface ScheduleItem {
   orderNum: number;
   batchId: number;

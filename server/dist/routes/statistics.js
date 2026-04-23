@@ -65,12 +65,12 @@ router.get("/grouped", auth_js_1.authGuard, async (req, res, next) => {
 });
 router.get("/export/excel", async (req, res, next) => {
     try {
-        // Accept token via query param for file downloads (browsers can't set headers on direct downloads)
-        const token = req.query.token || req.headers.authorization?.replace("Bearer ", "");
-        if (!token) {
+        const authHeader = req.headers.authorization;
+        if (!authHeader?.startsWith("Bearer ")) {
             res.status(401).json({ error: "未提供认证令牌" });
             return;
         }
+        const token = authHeader.slice(7);
         try {
             jsonwebtoken_1.default.verify(token, index_js_1.config.jwt.secret);
         }

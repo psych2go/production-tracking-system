@@ -19,6 +19,9 @@
           <view v-if="isAdmin" class="edit-btn" @click="toggleEdit">
             <text>{{ editing ? '取消' : '编辑' }}</text>
           </view>
+          <view v-if="isAdmin && !editing" class="delete-btn" @click="confirmDelete">
+            <text>删除</text>
+          </view>
           <view class="status-tag" :style="{ color: getStatusColor(batch.status) }">
             {{ statusLabel(batch.status) }}
           </view>
@@ -54,7 +57,9 @@
           </view>
           <view class="form-group mt-md">
             <text class="form-label">客户代码</text>
-            <input v-model="editForm.customerCode" class="form-input" placeholder="可选" />
+            <picker :range="customerCodeOptions" @change="onEditCustomerCodeChange">
+              <view class="form-input picker-value">{{ editForm.customerCode || '请选择客户代码' }}</view>
+            </picker>
           </view>
           <view class="form-group mt-md">
             <text class="form-label">订单编号</text>
@@ -212,13 +217,14 @@ import { useUserStore } from "../../store/user";
 import { batchApi, settingsApi } from "../../api/modules";
 import { STATUS_LABELS, PRIORITIES } from "../../utils/constants";
 import { formatDate, formatDateShort } from "../../utils/format";
-import type { Batch, PackageType } from "../../types";
+import type { Batch, PackageType, CustomerCode } from "../../types";
 import StageTimeline from "../../components/StageTimeline.vue";
 
 const appStore = useAppStore();
 const userStore = useUserStore();
 const batch = ref<Batch | null>(null);
 const packageTypes = ref<PackageType[]>([]);
+const customerCodes = ref<CustomerCode[]>([]);
 
 const editing = ref(false);
 const saving = ref(false);
@@ -274,6 +280,12 @@ const overdueDays = computed(() => {
 });
 
 const packageTypeNames = computed(() => packageTypes.value.map((pt) => pt.name));
+
+const customerCodeOptions = computed(() => customerCodes.value.map((cc) => cc.code));
+
+function onEditCustomerCodeChange(e: any) {
+  editForm.value.customerCode = customerCodes.value[e.detail.value]?.code ?? "";
+}
 
 const quantityDisplay = computed(() => {
   if (!batch.value) return "-";
@@ -403,6 +415,24 @@ function goRecordProgress() {
   });
 }
 
+async function confirmDelete() {
+  if (!batch.value) return;
+  const displayName = batch.value.product?.model || batch.value.trialContent || batch.value.batchNo;
+  const res = await uni.showModal({
+    title: "确认删除",
+    content: `确定要删除「${displayName}」吗？此操作不可恢复。`,
+  });
+  if (res.cancel) return;
+
+  try {
+    await batchApi.remove(batch.value.id);
+    uni.showToast({ title: "已删除", icon: "success" });
+    setTimeout(() => uni.navigateBack(), 1000);
+  } catch (e: unknown) {
+    uni.showToast({ title: (e as Error).message, icon: "none" });
+  }
+}
+
 onLoad(async (query) => {
   if (query?.id) {
     try {
@@ -411,10 +441,11 @@ onLoad(async (query) => {
       uni.showToast({ title: "加载失败", icon: "none" });
     }
   }
-  // Load package types for edit mode
+  // Load package types and customer codes for edit mode
   if (isAdmin.value) {
     try {
       packageTypes.value = await settingsApi.listPackageTypes();
+      customerCodes.value = await settingsApi.listCustomerCodes();
     } catch { /* non-critical */ }
   }
 });
@@ -453,6 +484,14 @@ onLoad(async (query) => {
   border-radius: 8rpx;
   font-size: 26rpx;
   color: #0083ff;
+  margin-right: 16rpx;
+}
+.delete-btn {
+  padding: 8rpx 20rpx;
+  border: 2rpx solid #ccc;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+  color: #999;
   margin-right: 16rpx;
 }
 .btn-primary {

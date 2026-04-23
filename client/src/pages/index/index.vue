@@ -114,18 +114,58 @@
           </view>
         </view>
       </view>
+
+      <!-- Schedule queue -->
+      <view class="section-block mt-md">
+        <view class="section-header">
+          <text class="section-title text-bold">排单队列</text>
+        </view>
+        <view class="section-body">
+          <scroll-view scroll-x class="sq-stage-scroll">
+            <view
+              v-for="stage in regularStages"
+              :key="stage.id"
+              class="sq-stage-chip"
+              :class="{ active: expandedScheduleStage === stage.id }"
+              @click="toggleScheduleStage(stage.id)"
+            >
+              {{ stage.name }}
+              <text class="sq-count" v-if="scheduleCounts[stage.id]">{{ scheduleCounts[stage.id] }}</text>
+            </view>
+          </scroll-view>
+          <view v-if="expandedScheduleStage && scheduleQueue.length" class="card mt-sm">
+            <view
+              v-for="item in scheduleQueue"
+              :key="item.batchId"
+              class="sq-item"
+              @click="goBatchDetail(item.batchId)"
+            >
+              <view class="sq-badge">{{ item.orderNum }}</view>
+              <view class="sq-info">
+                <view class="flex-center">
+                  <text class="text-bold">{{ item.batch.batchNo }}</text>
+                  <text v-if="item.batch.product?.model" class="ml-sm">{{ item.batch.product.model }}</text>
+                  <text v-if="item.batch.batchType === 'trial'" class="trial-tag">试验</text>
+                  <view v-if="item.batch.priority === 'urgent'" class="urgent-tag">紧急</view>
+                </view>
+                <text v-if="item.batch.packageType" class="text-sm text-secondary sq-sub">{{ item.batch.packageType }}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { onPullDownRefresh } from "@dcloudio/uni-app";
 import { useUserStore } from "../../store/user";
 import { useAppStore } from "../../store/app";
-import { progressApi } from "../../api/modules";
+import { progressApi, scheduleApi } from "../../api/modules";
 import { formatTime } from "../../utils/format";
-import type { DashboardData } from "../../types";
+import type { DashboardData, ScheduleItem } from "../../types";
 import BatchCard from "../../components/BatchCard.vue";
 
 const userStore = useUserStore();
@@ -133,6 +173,41 @@ const appStore = useAppStore();
 const dashboard = ref<DashboardData | null>(null);
 const loading = ref(false);
 const collapsed = ref({ alerts: false, batches: false, activity: false });
+
+// Schedule queue
+const regularStages = computed(() => appStore.stages.filter(s => s.code !== "completed"));
+const expandedScheduleStage = ref<number | null>(null);
+const scheduleQueue = ref<ScheduleItem[]>([]);
+const scheduleCounts = ref<Record<number, number>>({});
+
+async function toggleScheduleStage(stageId: number) {
+  if (expandedScheduleStage.value === stageId) {
+    expandedScheduleStage.value = null;
+    scheduleQueue.value = [];
+    return;
+  }
+  expandedScheduleStage.value = stageId;
+  try {
+    scheduleQueue.value = await scheduleApi.getQueue(stageId);
+  } catch {
+    scheduleQueue.value = [];
+  }
+}
+
+async function loadScheduleCounts() {
+  for (const stage of regularStages.value) {
+    try {
+      const data = await scheduleApi.getQueue(stage.id);
+      scheduleCounts.value[stage.id] = data.length;
+    } catch { /* ignore */ }
+  }
+  // Refresh expanded queue if open
+  if (expandedScheduleStage.value) {
+    try {
+      scheduleQueue.value = await scheduleApi.getQueue(expandedScheduleStage.value);
+    } catch { /* ignore */ }
+  }
+}
 
 async function handleLogin() {
   if (loading.value) return;
@@ -172,11 +247,13 @@ onMounted(async () => {
   if (userStore.isLoggedIn) {
     await appStore.loadStages();
     await loadData();
+    loadScheduleCounts();
   }
 });
 
 onPullDownRefresh(async () => {
   await loadData();
+  loadScheduleCounts();
   uni.stopPullDownRefresh();
 });
 </script>
@@ -311,5 +388,81 @@ onPullDownRefresh(async () => {
   padding: 4rpx 16rpx;
   border: 1rpx solid #0083ff;
   border-radius: 20rpx;
+}
+
+/* Schedule queue */
+.sq-stage-scroll {
+  white-space: nowrap;
+}
+.sq-stage-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 12rpx 24rpx;
+  background: #f5f5f5;
+  color: #666;
+  border-radius: 24rpx;
+  font-size: 26rpx;
+  margin-right: 12rpx;
+  min-height: 56rpx;
+  &.active {
+    background: #0083ff;
+    color: #fff;
+    .sq-count { background: rgba(255,255,255,0.3); color: #fff; }
+  }
+}
+.sq-count {
+  background: #0083ff;
+  color: #fff;
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 16rpx;
+  margin-left: 8rpx;
+  min-width: 32rpx;
+  text-align: center;
+}
+.sq-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+  &:last-child { border-bottom: none; }
+}
+.sq-badge {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: #0083ff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.sq-info {
+  flex: 1;
+  min-width: 0;
+}
+.sq-sub {
+  display: block;
+  margin-top: 4rpx;
+}
+.trial-tag {
+  font-size: 22rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  background: #fff7e6;
+  color: #ff9900;
+  margin-left: 8rpx;
+}
+.urgent-tag {
+  background: #fa5151;
+  color: #fff;
+  font-size: 22rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+  margin-left: 8rpx;
 }
 </style>

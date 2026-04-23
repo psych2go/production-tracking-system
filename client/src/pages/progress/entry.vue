@@ -44,7 +44,7 @@
             全部
           </view>
           <view
-            v-for="pt in packageTypes"
+            v-for="pt in activePackageTypes"
             :key="pt.id"
             class="stage-chip"
             :class="{ active: selectedPackageType === pt.name }"
@@ -89,6 +89,7 @@
             </view>
             <view class="flex-between mt-sm">
               <text v-if="batch.batchType !== 'trial'" class="text-sm text-secondary">数量: {{ batch.quantity }}</text>
+              <text v-else class="text-sm text-secondary"></text>
               <view v-if="getCurrentStage(batch)" class="current-stage-hint-inline">
                 <text class="text-sm">当前: {{ getCurrentStage(batch)?.name }}</text>
               </view>
@@ -210,6 +211,11 @@ const packageBatchCounts = computed(() => {
   return counts;
 });
 
+/** Only show package types that have active batches */
+const activePackageTypes = computed(() =>
+  packageTypes.value.filter(pt => pt.name in packageBatchCounts.value)
+);
+
 /** Filter batches by selected stage, package type, and keyword */
 const filteredBatches = computed(() => {
   let result = batches.value;
@@ -274,6 +280,16 @@ function selectBatch(batch: Batch) {
 async function confirmStage(stage: ProcessStage) {
   if (submitting.value) return;
 
+  // Front-end guard: already completed
+  if (isStageCompleted(stage.id)) {
+    uni.showModal({
+      title: "不可重复流转",
+      content: `「${stage.name}」工序已完成流转，不能再次流转。`,
+      showCancel: false,
+    });
+    return;
+  }
+
   const res = await uni.showModal({
     title: "确认流转",
     content: `确认将 ${selectedBatch.value?.product?.model ?? selectedBatch.value?.trialContent ?? selectedBatch.value?.batchNo} 流转到「${stage.name}」工序？`,
@@ -293,7 +309,7 @@ async function confirmStage(stage: ProcessStage) {
     step.value = 1;
     await searchBatches();
   } catch (e: unknown) {
-    uni.showToast({ title: (e as Error).message, icon: "none" });
+    uni.showModal({ title: "流转失败", content: (e as Error).message, showCancel: false });
   } finally {
     submitting.value = false;
   }

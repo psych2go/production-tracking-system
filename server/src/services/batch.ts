@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/database.js";
 
 function sumQuantityDetail(detail: string): number {
@@ -116,6 +117,13 @@ export async function createBatch(data: {
       create: { model: data.productModel! },
     });
 
+    const existing = await tx.batch.findFirst({
+      where: { batchNo: data.batchNo!, productId: product.id },
+    });
+    if (existing) {
+      throw new Error(`批号「${data.batchNo}」+ 型号「${data.productModel}」已存在，不可重复创建`);
+    }
+
     return tx.batch.create({
       data: {
         batchNo: data.batchNo!,
@@ -135,14 +143,13 @@ export async function createBatch(data: {
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function generateTrialBatchNo(tx: any): Promise<string> {
+async function generateTrialBatchNo(tx: Prisma.TransactionClient, retries = 3): Promise<string> {
   const today = new Date();
   const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
   const prefix = `S${dateStr}-`;
 
   const lastBatch = await tx.batch.findFirst({
-    where: { batchNo: { startsWith: prefix } },
+    where: { batchNo: { startsWith: prefix }, batchType: "trial" },
     orderBy: { batchNo: "desc" },
     select: { batchNo: true },
   });
@@ -153,7 +160,33 @@ async function generateTrialBatchNo(tx: any): Promise<string> {
     seq = lastSeq + 1;
   }
 
-  return `${prefix}${String(seq).padStart(3, "0")}`;
+  const batchNo = `${prefix}${String(seq).padStart(3, "0")}`;
+
+  // Concurrent conflict protection: retry if the generated batchNo already exists
+  if (retries > 0) {
+    const existing = await tx.batch.findFirst({
+      where: { batchNo, batchType: "trial" },
+      select: { id: true },
+    });
+    if (existing) {
+      return generateTrialBatchNo(tx, retries - 1);
+    }
+  }
+
+  return batchNo;
+}
+
+export async function deleteBatch(id: number) {
+  const batch = await prisma.batch.findUnique({ where: { id } });
+  if (!batch) throw new Error("批次不存在");
+
+  await prisma.$transaction([
+    prisma.progressRecord.deleteMany({ where: { batchId: id } }),
+    prisma.scheduleOrder.deleteMany({ where: { batchId: id } }),
+    prisma.batch.delete({ where: { id } }),
+  ]);
+
+  return { id };
 }
 
 export async function updateBatch(id: number, data: {
@@ -205,6 +238,19 @@ export async function updateBatch(id: number, data: {
         create: { model: data.productModel },
       });
       updateData.productId = product.id;
+    }
+
+    // Check batchNo + productId uniqueness when either field is being updated
+    const finalBatchNo = data.batchNo !== undefined ? data.batchNo : undefined;
+    const finalProductId = updateData.productId !== undefined ? updateData.productId : undefined;
+    if (finalBatchNo !== undefined && finalProductId !== undefined) {
+      const existing = await tx.batch.findFirst({
+        where: { batchNo: finalBatchNo, productId: finalProductId, id: { not: id } },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new Error(`批号「${finalBatchNo}」+ 型号「${data.productModel}」已存在，不可重复创建`);
+      }
     }
 
     return tx.batch.update({

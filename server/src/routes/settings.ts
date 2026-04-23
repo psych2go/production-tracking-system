@@ -3,7 +3,7 @@ import { z } from "zod";
 import { authGuard, roleGuard } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
-import { createStage, updateStage, deleteStage, listPackageTypes, createPackageType, deletePackageType } from "../services/settings.js";
+import { createStage, updateStage, deleteStage, listPackageTypes, createPackageType, deletePackageType, listCustomerCodes, createCustomerCode, deleteCustomerCode } from "../services/settings.js";
 
 export const settingsRoutes = Router();
 
@@ -121,6 +121,59 @@ settingsRoutes.delete(
     try {
       const pt = await deletePackageType(parseInt(req.params.id as string));
       res.json(pt);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ===== Customer Code Routes =====
+
+const createCustomerCodeSchema = z.object({
+  code: z.string().min(1, "客户代码不能为空"),
+});
+
+// List customer codes
+settingsRoutes.get(
+  "/customer-codes",
+  authGuard,
+  async (_req, res, next) => {
+    try {
+      const codes = await listCustomerCodes();
+      res.json(codes);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Create customer code
+settingsRoutes.post(
+  "/customer-codes",
+  authGuard,
+  roleGuard("admin"),
+  auditLog("create", "customer_code"),
+  validate(createCustomerCodeSchema),
+  async (req, res, next) => {
+    try {
+      const cc = await createCustomerCode(req.body);
+      res.status(201).json(cc);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Delete customer code
+settingsRoutes.delete(
+  "/customer-codes/:id",
+  authGuard,
+  roleGuard("admin"),
+  auditLog("delete", "customer_code"),
+  async (req, res, next) => {
+    try {
+      const cc = await deleteCustomerCode(parseInt(req.params.id as string));
+      res.json(cc);
     } catch (err) {
       next(err);
     }

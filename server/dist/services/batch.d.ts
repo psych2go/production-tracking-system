@@ -167,6 +167,9 @@ export declare function createBatch(data: {
     notes: string | null;
     createdBy: number | null;
 }>;
+export declare function deleteBatch(id: number): Promise<{
+    id: number;
+}>;
 export declare function updateBatch(id: number, data: {
     status?: string;
     priority?: string;

@@ -24,6 +24,10 @@ async function updateProduct(id, data) {
     return database_js_1.prisma.product.update({ where: { id }, data });
 }
 async function deleteProduct(id) {
+    const batchCount = await database_js_1.prisma.batch.count({ where: { productId: id } });
+    if (batchCount > 0) {
+        throw new Error(`该产品已有 ${batchCount} 个批次引用，无法删除`);
+    }
     return database_js_1.prisma.product.update({ where: { id }, data: { isActive: false } });
 }
 //# sourceMappingURL=product.js.map

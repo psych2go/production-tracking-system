@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { listBatches, getBatchDetail, createBatch, updateBatch } from "../services/batch.js";
+import { listBatches, getBatchDetail, createBatch, updateBatch, deleteBatch } from "../services/batch.js";
 import { authGuard, roleGuard, AuthRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
@@ -95,10 +95,19 @@ router.post("/", authGuard, roleGuard("admin"), auditLog("create", "batch"), val
   }
 });
 
-router.put("/:id", authGuard, auditLog("update", "batch"), validate(updateSchema), async (req, res, next) => {
+router.put("/:id", authGuard, roleGuard("admin"), auditLog("update", "batch"), validate(updateSchema), async (req, res, next) => {
   try {
     const batch = await updateBatch(parseInt(req.params.id as string), req.body);
     res.json(batch);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/:id", authGuard, roleGuard("admin"), auditLog("delete", "batch"), async (req: AuthRequest, res, next) => {
+  try {
+    await deleteBatch(parseInt(req.params.id as string));
+    res.json({ success: true });
   } catch (err) {
     next(err);
   }

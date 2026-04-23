@@ -22,5 +22,9 @@ export async function updateProduct(id: number, data: { model?: string; name?: s
 }
 
 export async function deleteProduct(id: number) {
+  const batchCount = await prisma.batch.count({ where: { productId: id } });
+  if (batchCount > 0) {
+    throw new Error(`该产品已有 ${batchCount} 个批次引用，无法删除`);
+  }
   return prisma.product.update({ where: { id }, data: { isActive: false } });
 }

@@ -9,16 +9,25 @@ export async function upsertProgress(data: {
   notes?: string;
 }) {
   return prisma.$transaction(async (tx) => {
-    const record = await tx.progressRecord.upsert({
+    // Check if already completed this stage
+    const existing = await tx.progressRecord.findUnique({
       where: {
         batchId_stageId: { batchId: data.batchId, stageId: data.stageId },
       },
-      update: {
-        operatorId: data.operatorId,
-        status: data.status ?? "completed",
-        notes: data.notes,
-      },
-      create: {
+      include: { stage: true },
+    });
+    if (existing) {
+      throw new Error(
+        `批次已流转过「${existing.stage.name}」工序（${existing.createdAt ? new Date(existing.createdAt).toLocaleString("zh-CN") : ""}），不可重复流转。如需修改请删除批次后重新录入。`
+      );
+    }
+
+    const batch = await tx.batch.findUnique({ where: { id: data.batchId } });
+    if (!batch) throw new Error("批次不存在");
+    if (batch.status !== "active") throw new Error("批次已结束，不可流转");
+
+    const record = await tx.progressRecord.create({
+      data: {
         batchId: data.batchId,
         stageId: data.stageId,
         operatorId: data.operatorId,

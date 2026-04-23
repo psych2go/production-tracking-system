@@ -28,6 +28,10 @@
         <text>封装形式管理</text>
         <text class="menu-arrow">></text>
       </view>
+      <view class="menu-item" @click="go('/pages-admin/customer-codes/index')">
+        <text>客户代码管理</text>
+        <text class="menu-arrow">></text>
+      </view>
       <view class="menu-item" @click="go('/pages-admin/users/index')">
         <text>用户管理</text>
         <text class="menu-arrow">></text>

@@ -92,10 +92,19 @@ router.post("/", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, aud
         next(err);
     }
 });
-router.put("/:id", auth_js_1.authGuard, (0, audit_js_1.auditLog)("update", "batch"), (0, validator_js_1.validate)(updateSchema), async (req, res, next) => {
+router.put("/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, audit_js_1.auditLog)("update", "batch"), (0, validator_js_1.validate)(updateSchema), async (req, res, next) => {
     try {
         const batch = await (0, batch_js_1.updateBatch)(parseInt(req.params.id), req.body);
         res.json(batch);
+    }
+    catch (err) {
+        next(err);
+    }
+});
+router.delete("/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, audit_js_1.auditLog)("delete", "batch"), async (req, res, next) => {
+    try {
+        await (0, batch_js_1.deleteBatch)(parseInt(req.params.id));
+        res.json({ success: true });
     }
     catch (err) {
         next(err);

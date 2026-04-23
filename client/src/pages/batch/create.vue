@@ -47,7 +47,9 @@
 
         <view class="form-group mt-md">
           <text class="form-label">客户代码</text>
-          <input v-model="form.customerCode" placeholder="请输入客户代码" class="form-input" />
+          <picker :range="customerCodeOptions" @change="onCustomerCodeChange">
+            <view class="form-input picker-value">{{ form.customerCode || '请选择客户代码' }}</view>
+          </picker>
         </view>
 
         <view class="form-group mt-md">
@@ -145,9 +147,10 @@
 import { ref, computed, onMounted } from "vue";
 import { batchApi, settingsApi } from "../../api/modules";
 import { PRIORITIES } from "../../utils/constants";
-import type { PackageType } from "../../types";
+import type { PackageType, CustomerCode } from "../../types";
 
 const packageTypes = ref<PackageType[]>([]);
+const customerCodes = ref<CustomerCode[]>([]);
 const submitting = ref(false);
 const validationErrors = ref<string[]>([]);
 
@@ -191,6 +194,12 @@ const selectedPriorityLabel = computed(() => {
 });
 
 const packageTypeNames = computed(() => packageTypes.value.map((pt) => pt.name));
+
+const customerCodeOptions = computed(() => customerCodes.value.map((cc) => cc.code));
+
+function onCustomerCodeChange(e: any) {
+  form.value.customerCode = customerCodes.value[e.detail.value]?.code ?? "";
+}
 
 function onPriorityChange(e: any) {
   form.value.priority = priorities[e.detail.value]?.value ?? "normal";
@@ -281,7 +290,8 @@ async function submit() {
     uni.showToast({ title: "创建成功", icon: "success" });
     setTimeout(() => uni.navigateBack(), 1000);
   } catch (e: unknown) {
-    uni.showToast({ title: (e as Error).message, icon: "none" });
+    const msg = (e as Error).message;
+    uni.showModal({ title: "创建失败", content: msg, showCancel: false });
   } finally {
     submitting.value = false;
   }
@@ -290,6 +300,7 @@ async function submit() {
 onMounted(async () => {
   try {
     packageTypes.value = await settingsApi.listPackageTypes();
+    customerCodes.value = await settingsApi.listCustomerCodes();
   } catch (e: unknown) {
     uni.showToast({ title: (e as Error).message, icon: "none" });
   }
