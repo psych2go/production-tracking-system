@@ -41,7 +41,7 @@ model Product {
 
 model Batch {
   id         Int      @id @default(autoincrement())
-  batchNo    String   @unique(map: "batch_no") @map("batch_no")
+  batchNo    String   @map("batch_no")
   batchType  String   @default("product") @map("batch_type") // product, trial
   productId  Int?     @map("product_id")
   quantity   Int      @default(0)

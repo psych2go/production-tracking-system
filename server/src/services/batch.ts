@@ -99,17 +99,17 @@ export async function createBatch(data: {
           batchNo,
           batchType: "trial",
           quantity,
-          quantityDetail: data.quantityDetail,
-          packageType: data.packageType,
+          quantityDetail: data.quantityDetail || undefined,
+          packageType: data.packageType || undefined,
           customerDelivery: data.customerDelivery ? new Date(data.customerDelivery) : undefined,
           trialContent: data.trialContent,
-          notes: data.notes,
+          notes: data.notes || undefined,
           createdBy: data.createdBy,
         },
       });
     }
 
-    // Product batch: existing logic
+    // Product batch
     const product = await tx.product.upsert({
       where: { model: data.productModel! },
       update: {},
@@ -122,13 +122,13 @@ export async function createBatch(data: {
         batchType: "product",
         productId: product.id,
         quantity: data.quantity!,
-        packageType: data.packageType,
-        customerCode: data.customerCode,
-        orderNo: data.orderNo,
+        packageType: data.packageType || undefined,
+        customerCode: data.customerCode || undefined,
+        orderNo: data.orderNo || undefined,
         customerDelivery: data.customerDelivery ? new Date(data.customerDelivery) : undefined,
         productionDelivery: data.productionDelivery ? new Date(data.productionDelivery) : undefined,
-        priority: data.priority,
-        notes: data.notes,
+        priority: data.priority || undefined,
+        notes: data.notes || undefined,
         createdBy: data.createdBy,
       },
     });

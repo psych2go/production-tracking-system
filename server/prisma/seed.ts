@@ -49,6 +49,12 @@ const PACKAGE_TYPES = [
   { name: "LQFP64L (7×7)",   category: "LQFP", sortOrder: 34 },
   { name: "LQFP100L",       category: "LQFP", sortOrder: 35 },
   { name: "LQFP128L",       category: "LQFP", sortOrder: 36 },
+  // QFN 系列
+  { name: "QFN64L", category: "QFN", sortOrder: 40 },
+  // DFN 系列
+  { name: "DFN12L", category: "DFN", sortOrder: 45 },
+  // 其它
+  { name: "PowerSO20", category: "其它", sortOrder: 50 },
 ];
 
 async function main() {
