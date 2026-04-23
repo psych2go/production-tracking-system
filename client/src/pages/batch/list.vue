@@ -51,7 +51,17 @@
       @click="goDetail(batch.id)"
     />
 
-    <view v-if="!filteredBatches.length" class="card text-center mt-lg">
+    <view v-if="loadingMore" class="load-more-tip">
+      <text class="text-secondary text-sm">加载中...</text>
+    </view>
+    <view v-else-if="hasMore && filteredBatches.length" class="load-more-tip" @click="loadMore">
+      <text class="text-primary text-sm">点击加载更多</text>
+    </view>
+    <view v-else-if="!hasMore && filteredBatches.length" class="load-more-tip">
+      <text class="text-secondary text-sm">已加载全部</text>
+    </view>
+
+    <view v-if="!filteredBatches.length && !loading" class="card text-center mt-lg">
       <text class="text-secondary">{{ keyword || smartFilter ? '无匹配批次' : '暂无批次' }}</text>
     </view>
 
@@ -60,7 +70,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { onShow } from "@dcloudio/uni-app";
+import { onShow, onReachBottom } from "@dcloudio/uni-app";
 import { useUserStore } from "../../store/user";
 import { batchApi } from "../../api/modules";
 import type { Batch } from "../../types";
@@ -71,6 +81,10 @@ const batches = ref<Batch[]>([]);
 const keyword = ref("");
 const currentTab = ref("active");
 const smartFilter = ref("");
+const currentPage = ref(1);
+const hasMore = ref(false);
+const loading = ref(false);
+const loadingMore = ref(false);
 
 const tabs = [
   { label: "正在加工", value: "active" },
@@ -116,16 +130,45 @@ async function loadCounts() {
 }
 
 async function loadData() {
+  loading.value = true;
+  currentPage.value = 1;
   try {
     const res = await batchApi.list({
       status: currentTab.value || undefined,
       keyword: keyword.value || undefined,
+      page: 1,
     });
     batches.value = res.items;
+    hasMore.value = res.items.length < res.total;
   } catch (e: unknown) {
     uni.showToast({ title: (e as Error).message, icon: "none" });
+  } finally {
+    loading.value = false;
   }
 }
+
+async function loadMore() {
+  if (loadingMore.value || !hasMore.value) return;
+  loadingMore.value = true;
+  currentPage.value++;
+  try {
+    const res = await batchApi.list({
+      status: currentTab.value || undefined,
+      keyword: keyword.value || undefined,
+      page: currentPage.value,
+    });
+    batches.value = [...batches.value, ...res.items];
+    hasMore.value = batches.value.length < res.total;
+  } catch (e: unknown) {
+    uni.showToast({ title: (e as Error).message, icon: "none" });
+  } finally {
+    loadingMore.value = false;
+  }
+}
+
+onReachBottom(() => {
+  if (hasMore.value && !loadingMore.value) loadMore();
+});
 
 function goDetail(id: number) {
   uni.navigateTo({ url: `/pages/batch/detail?id=${id}` });
@@ -237,5 +280,9 @@ onShow(async () => {
   color: #0083ff;
   white-space: nowrap;
   font-weight: 500;
+}
+.load-more-tip {
+  text-align: center;
+  padding: 24rpx 0;
 }
 </style>

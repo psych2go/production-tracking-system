@@ -114,7 +114,6 @@ async function getDashboardData() {
             },
         },
         orderBy: { createdAt: "desc" },
-        take: 20,
     });
     // Get anomalies (batch delay only)
     let anomalies = [];

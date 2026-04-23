@@ -31,7 +31,7 @@ export const productApi = {
 
 // Batches
 export const batchApi = {
-  list: (params?: { status?: string; productId?: number; keyword?: string; customerCode?: string; packageType?: string; batchType?: string; page?: number }) => {
+  list: (params?: { status?: string; productId?: number; keyword?: string; customerCode?: string; packageType?: string; batchType?: string; page?: number; pageSize?: number }) => {
     const query = new URLSearchParams();
     if (params?.status) query.set("status", params.status);
     if (params?.productId) query.set("productId", String(params.productId));
@@ -40,6 +40,7 @@ export const batchApi = {
     if (params?.packageType) query.set("packageType", params.packageType);
     if (params?.batchType) query.set("batchType", params.batchType);
     if (params?.page) query.set("page", String(params.page));
+    if (params?.pageSize) query.set("pageSize", String(params.pageSize));
     return api.get<PaginatedResult<Batch>>(`/api/batches?${query.toString()}`);
   },
   get: (id: number) => api.get<Batch>(`/api/batches/${id}`),

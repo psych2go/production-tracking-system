@@ -16,7 +16,7 @@ function sumQuantityDetail(detail) {
     }
 }
 async function listBatches(filters) {
-    const { status, productId, keyword, customerCode, packageType, batchType, page = 1, pageSize = 20 } = filters;
+    const { status, productId, keyword, customerCode, packageType, batchType, page = 1, pageSize = 50 } = filters;
     const where = {};
     if (status)
         where.status = status;

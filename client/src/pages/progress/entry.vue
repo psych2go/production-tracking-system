@@ -265,7 +265,7 @@ function onBatchInput() {
 
 async function searchBatches() {
   try {
-    const res = await batchApi.list({ status: "active", keyword: batchKeyword.value || undefined });
+    const res = await batchApi.list({ status: "active", keyword: batchKeyword.value || undefined, pageSize: 9999 });
     batches.value = res.items;
   } catch (e: unknown) {
     uni.showToast({ title: (e as Error).message, icon: "none" });

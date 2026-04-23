@@ -62,7 +62,7 @@ router.get("/", auth_js_1.authGuard, async (req, res, next) => {
             packageType: req.query.packageType,
             batchType: req.query.batchType,
             page: parseInt(req.query.page) || 1,
-            pageSize: parseInt(req.query.pageSize) || 20,
+            pageSize: parseInt(req.query.pageSize) || 50,
         });
         res.json(result);
     }

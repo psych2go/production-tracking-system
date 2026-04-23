@@ -312,7 +312,7 @@ async function loadData() {
   try {
     switch (activeTab.value) {
       case "online": {
-        const res = await batchApi.list({ status: "active" });
+        const res = await batchApi.list({ status: "active", pageSize: 9999 });
         onlineBatches.value = res.items;
         break;
       }

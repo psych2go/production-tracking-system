@@ -20,7 +20,7 @@ export async function listBatches(filters: {
   page?: number;
   pageSize?: number;
 }) {
-  const { status, productId, keyword, customerCode, packageType, batchType, page = 1, pageSize = 20 } = filters;
+  const { status, productId, keyword, customerCode, packageType, batchType, page = 1, pageSize = 50 } = filters;
 
   const where: Record<string, unknown> = {};
   if (status) where.status = status;
