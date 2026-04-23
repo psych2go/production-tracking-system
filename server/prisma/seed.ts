@@ -57,14 +57,14 @@ const PACKAGE_TYPES = [
   { name: "PowerSO20", category: "其它", sortOrder: 50 },
 ];
 
+const CUSTOMER_CODES = [
+  "HIC", "SJ", "XIC", "JSC20", "JSC21", "JSC22",
+  "GS01-J", "LN02-J", "ZD47", "ZK01-J", "ZK02-J", "ZK03-J", "XA53-J",
+];
+
 async function main() {
+  // === Process Stages: upsert, never delete (preserves foreign keys) ===
   console.log("Seeding process stages...");
-
-  // Delete existing stages first to avoid stageOrder unique conflicts on re-order
-  await prisma.progressRecord.deleteMany();
-  await prisma.scheduleOrder.deleteMany();
-  await prisma.processStage.deleteMany();
-
   for (const stage of STAGES) {
     await prisma.processStage.upsert({
       where: { code: stage.code },
@@ -72,12 +72,10 @@ async function main() {
       create: stage,
     });
   }
-
   console.log(`Seeded ${STAGES.length} process stages.`);
 
-  // Seed package types
+  // === Package Types: upsert, never delete ===
   console.log("Seeding package types...");
-
   for (const pt of PACKAGE_TYPES) {
     await prisma.packageType.upsert({
       where: { name: pt.name },
@@ -85,15 +83,9 @@ async function main() {
       create: pt,
     });
   }
-
   console.log(`Seeded ${PACKAGE_TYPES.length} package types.`);
 
-  // Seed customer codes
-  const CUSTOMER_CODES = [
-    "HIC", "SJ", "XIC", "JSC20", "JSC21", "JSC22",
-    "GS01-J", "LN02-J", "ZD47", "ZK01-J", "ZK02-J", "ZK03-J", "XA53-J",
-  ];
-
+  // === Customer Codes: upsert, never delete ===
   console.log("Seeding customer codes...");
   for (const code of CUSTOMER_CODES) {
     await prisma.customerCode.upsert({
@@ -104,7 +96,7 @@ async function main() {
   }
   console.log(`Seeded ${CUSTOMER_CODES.length} customer codes.`);
 
-  // Create a default admin user for development
+  // === Dev admin user: upsert ===
   const admin = await prisma.user.upsert({
     where: { wwUserId: "dev_admin" },
     update: {
@@ -118,7 +110,6 @@ async function main() {
       department: "研发部",
     },
   });
-
   console.log(`Created dev admin user: ${admin.name}`);
 }
 
