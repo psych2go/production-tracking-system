@@ -174,18 +174,11 @@ const regularStages = computed(() =>
 /** Compute batch count per stage: count batches whose CURRENT (latest completed) stage is this one */
 const stageBatchCounts = computed(() => {
   const counts: Record<number, number> = {};
-  if (!dashboard.value?.activeBatchList) return counts;
-  for (const batch of dashboard.value.activeBatchList) {
-    const records = batch.progressRecords || [];
-    if (!records.length) continue;
-    // Find the latest completed record by stageOrder
-    const sorted = [...records].sort((a, b) => {
-      const oa = appStore.stages.find(s => s.id === a.stageId)?.stageOrder ?? 0;
-      const ob = appStore.stages.find(s => s.id === b.stageId)?.stageOrder ?? 0;
-      return ob - oa;
-    });
-    const latestStageId = sorted[0].stageId;
-    counts[latestStageId] = (counts[latestStageId] || 0) + 1;
+  for (const batch of batches.value) {
+    const current = getCurrentStage(batch);
+    if (current) {
+      counts[current.id] = (counts[current.id] || 0) + 1;
+    }
   }
   return counts;
 });
@@ -199,11 +192,10 @@ const selectedPackageType = ref("");
 const submitting = ref(false);
 const packageTypes = ref<PackageType[]>([]);
 
-/** Count batches per package type (from dashboard active batches) */
+/** Count batches per package type */
 const packageBatchCounts = computed(() => {
   const counts: Record<string, number> = {};
-  if (!dashboard.value?.activeBatchList) return counts;
-  for (const batch of dashboard.value.activeBatchList) {
+  for (const batch of batches.value) {
     if (batch.packageType) {
       counts[batch.packageType] = (counts[batch.packageType] || 0) + 1;
     }
