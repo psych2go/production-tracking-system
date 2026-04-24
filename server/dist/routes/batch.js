@@ -7,6 +7,7 @@ const batch_js_1 = require("../services/batch.js");
 const auth_js_1 = require("../middleware/auth.js");
 const validator_js_1 = require("../middleware/validator.js");
 const audit_js_1 = require("../middleware/audit.js");
+const parseId_js_1 = require("../utils/parseId.js");
 const router = (0, express_1.Router)();
 // Product batch schema
 const createProductSchema = zod_1.z.object({
@@ -56,7 +57,7 @@ router.get("/", auth_js_1.authGuard, async (req, res, next) => {
     try {
         const result = await (0, batch_js_1.listBatches)({
             status: req.query.status,
-            productId: req.query.productId ? parseInt(req.query.productId) : undefined,
+            productId: req.query.productId ? (0, parseId_js_1.parseId)(req.query.productId) : undefined,
             keyword: req.query.keyword,
             customerCode: req.query.customerCode,
             packageType: req.query.packageType,
@@ -72,7 +73,7 @@ router.get("/", auth_js_1.authGuard, async (req, res, next) => {
 });
 router.get("/:id", auth_js_1.authGuard, async (req, res, next) => {
     try {
-        const batch = await (0, batch_js_1.getBatchDetail)(parseInt(req.params.id));
+        const batch = await (0, batch_js_1.getBatchDetail)((0, parseId_js_1.parseId)(req.params.id));
         if (!batch) {
             res.status(404).json({ error: "批次不存在" });
             return;
@@ -94,7 +95,7 @@ router.post("/", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, aud
 });
 router.put("/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, audit_js_1.auditLog)("update", "batch"), (0, validator_js_1.validate)(updateSchema), async (req, res, next) => {
     try {
-        const batch = await (0, batch_js_1.updateBatch)(parseInt(req.params.id), req.body);
+        const batch = await (0, batch_js_1.updateBatch)((0, parseId_js_1.parseId)(req.params.id), req.body);
         res.json(batch);
     }
     catch (err) {
@@ -103,7 +104,7 @@ router.put("/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, a
 });
 router.delete("/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, audit_js_1.auditLog)("delete", "batch"), async (req, res, next) => {
     try {
-        await (0, batch_js_1.deleteBatch)(parseInt(req.params.id));
+        await (0, batch_js_1.deleteBatch)((0, parseId_js_1.parseId)(req.params.id));
         res.json({ success: true });
     }
     catch (err) {

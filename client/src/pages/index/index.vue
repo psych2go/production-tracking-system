@@ -195,12 +195,9 @@ async function toggleScheduleStage(stageId: number) {
 }
 
 async function loadScheduleCounts() {
-  for (const stage of regularStages.value) {
-    try {
-      const data = await scheduleApi.getQueue(stage.id);
-      scheduleCounts.value[stage.id] = data.length;
-    } catch { /* ignore */ }
-  }
+  try {
+    scheduleCounts.value = await scheduleApi.getCounts();
+  } catch { /* ignore */ }
   // Refresh expanded queue if open
   if (expandedScheduleStage.value) {
     try {
@@ -226,9 +223,7 @@ async function handleLogin() {
 async function loadData() {
   try {
     dashboard.value = await progressApi.dashboard();
-  } catch (e: unknown) {
-    console.error("Failed to load dashboard:", e);
-  }
+  } catch { /* dashboard is non-critical */ }
 }
 
 function goBatchDetail(id: number) {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { listProducts, createProduct, updateProduct, deleteProduct } from "../services/product.js";
 import { authGuard, roleGuard } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
+import { parseId } from "../utils/parseId.js";
 
 const router = Router();
 
@@ -39,7 +40,7 @@ router.post("/", authGuard, roleGuard("admin"), validate(createSchema), async (r
 
 router.put("/:id", authGuard, roleGuard("admin"), validate(updateSchema), async (req, res, next) => {
   try {
-    const product = await updateProduct(parseInt(req.params.id as string), req.body);
+    const product = await updateProduct(parseId(req.params.id), req.body);
     res.json(product);
   } catch (err) {
     next(err);
@@ -48,7 +49,7 @@ router.put("/:id", authGuard, roleGuard("admin"), validate(updateSchema), async 
 
 router.delete("/:id", authGuard, roleGuard("admin"), async (req, res, next) => {
   try {
-    await deleteProduct(parseInt(req.params.id as string));
+    await deleteProduct(parseId(req.params.id));
     res.json({ success: true });
   } catch (err) {
     next(err);

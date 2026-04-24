@@ -1,6 +1,4 @@
 import { Router } from "express";
-import jwt from "jsonwebtoken";
-import { config } from "../config/index.js";
 import {
   getProcessDurations,
   getProductionTrend,
@@ -9,13 +7,14 @@ import {
   exportExcel,
 } from "../services/statistics.js";
 import { authGuard } from "../middleware/auth.js";
+import { parseId } from "../utils/parseId.js";
 
 const router = Router();
 
 router.get("/durations", authGuard, async (req, res, next) => {
   try {
     const data = await getProcessDurations({
-      stageId: req.query.stageId ? parseInt(req.query.stageId as string) : undefined,
+      stageId: req.query.stageId ? parseId(req.query.stageId as string) : undefined,
       startDate: req.query.startDate as string | undefined,
       endDate: req.query.endDate as string | undefined,
     });
@@ -65,21 +64,8 @@ router.get("/grouped", authGuard, async (req, res, next) => {
   }
 });
 
-router.get("/export/excel", async (req, res, next) => {
+router.get("/export/excel", authGuard, async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      res.status(401).json({ error: "未提供认证令牌" });
-      return;
-    }
-    const token = authHeader.slice(7);
-    try {
-      jwt.verify(token, config.jwt.secret);
-    } catch {
-      res.status(401).json({ error: "认证令牌无效" });
-      return;
-    }
-
     const type = (req.query.type as string) || "durations";
     const buffer = await exportExcel({
       type,

@@ -1,19 +1,15 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.statisticsRoutes = void 0;
 const express_1 = require("express");
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const index_js_1 = require("../config/index.js");
 const statistics_js_1 = require("../services/statistics.js");
 const auth_js_1 = require("../middleware/auth.js");
+const parseId_js_1 = require("../utils/parseId.js");
 const router = (0, express_1.Router)();
 router.get("/durations", auth_js_1.authGuard, async (req, res, next) => {
     try {
         const data = await (0, statistics_js_1.getProcessDurations)({
-            stageId: req.query.stageId ? parseInt(req.query.stageId) : undefined,
+            stageId: req.query.stageId ? (0, parseId_js_1.parseId)(req.query.stageId) : undefined,
             startDate: req.query.startDate,
             endDate: req.query.endDate,
         });
@@ -63,21 +59,8 @@ router.get("/grouped", auth_js_1.authGuard, async (req, res, next) => {
         next(err);
     }
 });
-router.get("/export/excel", async (req, res, next) => {
+router.get("/export/excel", auth_js_1.authGuard, async (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader?.startsWith("Bearer ")) {
-            res.status(401).json({ error: "未提供认证令牌" });
-            return;
-        }
-        const token = authHeader.slice(7);
-        try {
-            jsonwebtoken_1.default.verify(token, index_js_1.config.jwt.secret);
-        }
-        catch {
-            res.status(401).json({ error: "认证令牌无效" });
-            return;
-        }
         const type = req.query.type || "durations";
         const buffer = await (0, statistics_js_1.exportExcel)({
             type,

@@ -10,6 +10,12 @@ function sumQuantityDetail(detail: string): number {
   }
 }
 
+async function validatePackageType(tx: Prisma.TransactionClient, packageType: string | undefined | null) {
+  if (!packageType) return;
+  const exists = await tx.packageType.findUnique({ where: { name: packageType } });
+  if (!exists) throw new Error(`封装形式「${packageType}」不存在，请先在设置中创建`);
+}
+
 export async function listBatches(filters: {
   status?: string;
   productId?: number;
@@ -95,6 +101,8 @@ export async function createBatch(data: {
         ? sumQuantityDetail(data.quantityDetail)
         : (data.quantity ?? 0);
 
+      await validatePackageType(tx, data.packageType);
+
       return tx.batch.create({
         data: {
           batchNo,
@@ -111,6 +119,8 @@ export async function createBatch(data: {
     }
 
     // Product batch
+    await validatePackageType(tx, data.packageType);
+
     const product = await tx.product.upsert({
       where: { model: data.productModel! },
       update: {},
@@ -143,7 +153,7 @@ export async function createBatch(data: {
   });
 }
 
-async function generateTrialBatchNo(tx: Prisma.TransactionClient, retries = 3): Promise<string> {
+async function generateTrialBatchNo(tx: Prisma.TransactionClient): Promise<string> {
   const today = new Date();
   const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
   const prefix = `S${dateStr}-`;
@@ -160,20 +170,18 @@ async function generateTrialBatchNo(tx: Prisma.TransactionClient, retries = 3): 
     seq = lastSeq + 1;
   }
 
-  const batchNo = `${prefix}${String(seq).padStart(3, "0")}`;
-
-  // Concurrent conflict protection: retry if the generated batchNo already exists
-  if (retries > 0) {
+  // Increment until we find an unused batchNo (handles concurrent inserts)
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const batchNo = `${prefix}${String(seq).padStart(3, "0")}`;
     const existing = await tx.batch.findFirst({
       where: { batchNo, batchType: "trial" },
       select: { id: true },
     });
-    if (existing) {
-      return generateTrialBatchNo(tx, retries - 1);
-    }
+    if (!existing) return batchNo;
+    seq++;
   }
 
-  return batchNo;
+  throw new Error("无法生成唯一试验批号，请重试");
 }
 
 export async function deleteBatch(id: number) {
@@ -205,6 +213,9 @@ export async function updateBatch(id: number, data: {
   notes?: string;
 }) {
   return prisma.$transaction(async (tx) => {
+    const batch = await tx.batch.findUnique({ where: { id } });
+    if (!batch) throw new Error("批次不存在");
+
     const updateData: Record<string, unknown> = {
       status: data.status,
       priority: data.priority,
@@ -231,6 +242,10 @@ export async function updateBatch(id: number, data: {
       updateData.quantity = data.quantity;
     }
 
+    // Validate packageType against PackageType table
+    const newPackageType = data.packageType !== undefined ? data.packageType : batch.packageType;
+    await validatePackageType(tx, newPackageType);
+
     if (data.productModel !== undefined) {
       const product = await tx.product.upsert({
         where: { model: data.productModel },
@@ -240,16 +255,16 @@ export async function updateBatch(id: number, data: {
       updateData.productId = product.id;
     }
 
-    // Check batchNo + productId uniqueness when either field is being updated
-    const finalBatchNo = data.batchNo !== undefined ? data.batchNo : undefined;
-    const finalProductId = updateData.productId !== undefined ? updateData.productId : undefined;
-    if (finalBatchNo !== undefined && finalProductId !== undefined) {
+    // Check batchNo + productId uniqueness when batchNo or productModel changes
+    const finalBatchNo = data.batchNo !== undefined ? data.batchNo : batch.batchNo;
+    const finalProductId = updateData.productId !== undefined ? updateData.productId as number : batch.productId;
+    if (data.batchNo !== undefined || data.productModel !== undefined) {
       const existing = await tx.batch.findFirst({
         where: { batchNo: finalBatchNo, productId: finalProductId, id: { not: id } },
         select: { id: true },
       });
       if (existing) {
-        throw new Error(`批号「${finalBatchNo}」+ 型号「${data.productModel}」已存在，不可重复创建`);
+        throw new Error(`批号「${finalBatchNo}」+ 型号「${data.productModel || ""}」已存在，不可重复创建`);
       }
     }
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authGuard, roleGuard } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
+import { parseId } from "../utils/parseId.js";
 import { createStage, updateStage, deleteStage, listPackageTypes, createPackageType, updatePackageType, deletePackageType, listCustomerCodes, createCustomerCode, deleteCustomerCode } from "../services/settings.js";
 
 export const settingsRoutes = Router();
@@ -48,7 +49,7 @@ settingsRoutes.put(
   validate(updateStageSchema),
   async (req, res, next) => {
     try {
-      const stage = await updateStage(parseInt(req.params.id as string), req.body);
+      const stage = await updateStage(parseId(req.params.id), req.body);
       res.json(stage);
     } catch (err) {
       next(err);
@@ -64,7 +65,7 @@ settingsRoutes.delete(
   auditLog("delete", "stage"),
   async (req, res, next) => {
     try {
-      const stage = await deleteStage(parseInt(req.params.id as string));
+      const stage = await deleteStage(parseId(req.params.id));
       res.json(stage);
     } catch (err) {
       next(err);
@@ -76,6 +77,12 @@ settingsRoutes.delete(
 
 const createPackageTypeSchema = z.object({
   name: z.string().min(1, "封装形式名称不能为空"),
+  category: z.string().optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+const updatePackageTypeSchema = z.object({
+  name: z.string().min(1, "封装形式名称不能为空").optional(),
   category: z.string().optional(),
   sortOrder: z.number().int().optional(),
 });
@@ -117,9 +124,10 @@ settingsRoutes.put(
   authGuard,
   roleGuard("admin"),
   auditLog("update", "package_type"),
+  validate(updatePackageTypeSchema),
   async (req, res, next) => {
     try {
-      const pt = await updatePackageType(parseInt(req.params.id as string), req.body);
+      const pt = await updatePackageType(parseId(req.params.id), req.body);
       res.json(pt);
     } catch (err) {
       next(err);
@@ -135,7 +143,7 @@ settingsRoutes.delete(
   auditLog("delete", "package_type"),
   async (req, res, next) => {
     try {
-      const pt = await deletePackageType(parseInt(req.params.id as string));
+      const pt = await deletePackageType(parseId(req.params.id));
       res.json(pt);
     } catch (err) {
       next(err);
@@ -188,7 +196,7 @@ settingsRoutes.delete(
   auditLog("delete", "customer_code"),
   async (req, res, next) => {
     try {
-      const cc = await deleteCustomerCode(parseInt(req.params.id as string));
+      const cc = await deleteCustomerCode(parseId(req.params.id));
       res.json(cc);
     } catch (err) {
       next(err);

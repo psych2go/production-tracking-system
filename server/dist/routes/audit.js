@@ -4,11 +4,12 @@ exports.auditRoutes = void 0;
 const express_1 = require("express");
 const auth_js_1 = require("../middleware/auth.js");
 const audit_js_1 = require("../services/audit.js");
+const parseId_js_1 = require("../utils/parseId.js");
 exports.auditRoutes = (0, express_1.Router)();
 exports.auditRoutes.get("/logs", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), async (req, res, next) => {
     try {
         const result = await (0, audit_js_1.listAuditLogs)({
-            userId: req.query.userId ? parseInt(req.query.userId) : undefined,
+            userId: req.query.userId ? (0, parseId_js_1.parseId)(req.query.userId) : undefined,
             action: req.query.action,
             entity: req.query.entity,
             startDate: req.query.startDate,

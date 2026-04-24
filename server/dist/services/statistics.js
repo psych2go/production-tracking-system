@@ -6,12 +6,14 @@ exports.getAnomalies = getAnomalies;
 exports.getGroupedStatistics = getGroupedStatistics;
 exports.exportExcel = exportExcel;
 const database_js_1 = require("../config/database.js");
+const ALLOWED_GROUP_BY = ["customerCode", "packageType"];
 // --- Process Durations ---
 async function getProcessDurations(filters) {
     const { stageId, startDate, endDate } = filters;
     const where = {};
     if (stageId)
         where.stageId = stageId;
+    // Default to last 90 days if no date range specified
     if (startDate || endDate) {
         const createdAt = {};
         if (startDate)
@@ -19,6 +21,11 @@ async function getProcessDurations(filters) {
         if (endDate)
             createdAt.lte = new Date(endDate);
         where.createdAt = createdAt;
+    }
+    else {
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        where.createdAt = { gte: ninetyDaysAgo };
     }
     const records = await database_js_1.prisma.progressRecord.findMany({
         where,
@@ -150,7 +157,11 @@ async function getAnomalies() {
 }
 // --- Grouped Statistics (by customerCode / packageType) ---
 async function getGroupedStatistics(filters) {
-    const { groupBy, startDate, endDate } = filters;
+    const groupBy = filters.groupBy;
+    if (!ALLOWED_GROUP_BY.includes(groupBy)) {
+        throw new Error("groupBy 必须为 customerCode 或 packageType");
+    }
+    const { startDate, endDate } = filters;
     const batchWhere = {};
     if (startDate || endDate) {
         const createdAt = {};
@@ -184,16 +195,12 @@ async function getGroupedStatistics(filters) {
     }));
 }
 // --- Helper: get current stage from progress records ---
-function getCurrentStageFromRecords(records, stages) {
+function getCurrentStageFromRecords(records) {
     if (!records.length)
         return "未开始";
     const completed = records
         .filter(r => r.status === "completed")
-        .sort((a, b) => {
-        const oa = stages.find(s => s.id === a.stageId)?.stageOrder ?? 0;
-        const ob = stages.find(s => s.id === b.stageId)?.stageOrder ?? 0;
-        return ob - oa;
-    });
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return completed[0]?.stage?.name || "未开始";
 }
 // --- Excel Export ---
@@ -226,7 +233,6 @@ async function exportExcel(filters) {
             break;
         }
         case "online": {
-            const stages = await database_js_1.prisma.processStage.findMany({ orderBy: { stageOrder: "asc" } });
             const batches = await database_js_1.prisma.batch.findMany({
                 where: { status: "active" },
                 include: {
@@ -238,7 +244,7 @@ async function exportExcel(filters) {
             const wb = XLSX.utils.book_new();
             // Product sheet
             const productRows = batches.filter(b => b.batchType === "product").map(b => {
-                const currentStage = getCurrentStageFromRecords(b.progressRecords, stages);
+                const currentStage = getCurrentStageFromRecords(b.progressRecords);
                 return {
                     批号: b.batchNo,
                     产品型号: b.product?.model || "",
@@ -257,7 +263,7 @@ async function exportExcel(filters) {
             }
             // Trial sheet
             const trialRows = batches.filter(b => b.batchType === "trial").map(b => {
-                const currentStage = getCurrentStageFromRecords(b.progressRecords, stages);
+                const currentStage = getCurrentStageFromRecords(b.progressRecords);
                 return {
                     批号: b.batchNo,
                     试验内容: b.trialContent || "",

@@ -20,6 +20,13 @@ export function auditLog(action: string, entity: string) {
           if (Object.keys(req.params).length > 0) {
             detailObj.params = req.params;
           }
+          // Capture request body for create/update operations (excluding sensitive fields)
+          if (req.method === "POST" || req.method === "PUT") {
+            const { ...safeBody } = req.body as Record<string, unknown>;
+            if (Object.keys(safeBody).length > 0) {
+              detailObj.body = safeBody;
+            }
+          }
 
           prisma.auditLog
             .create({

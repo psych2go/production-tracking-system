@@ -7,13 +7,15 @@ const auth_js_1 = require("../services/auth.js");
 const auth_js_2 = require("../middleware/auth.js");
 const validator_js_1 = require("../middleware/validator.js");
 const audit_js_1 = require("../middleware/audit.js");
+const rateLimit_js_1 = require("../middleware/rateLimit.js");
 const index_js_1 = require("../config/index.js");
 const router = (0, express_1.Router)();
 const callbackSchema = zod_1.z.object({
     code: zod_1.z.string().min(1),
 });
+const authLimiter = (0, rateLimit_js_1.rateLimit)({ windowMs: 60_000, max: 10 });
 // WeChat Work OAuth callback
-router.post("/ww/callback", (0, audit_js_1.auditLog)("login", "auth"), (0, validator_js_1.validate)(callbackSchema), async (req, res, next) => {
+router.post("/ww/callback", authLimiter, (0, audit_js_1.auditLog)("login", "auth"), (0, validator_js_1.validate)(callbackSchema), async (req, res, next) => {
     try {
         const { token, user } = await (0, auth_js_1.handleWwCallback)(req.body.code);
         res.json({ token, user });
@@ -37,7 +39,7 @@ router.get("/me", auth_js_2.authGuard, async (req, res, next) => {
     }
 });
 // Dev login (development only)
-router.post("/dev-login", async (_req, res, next) => {
+router.post("/dev-login", authLimiter, async (_req, res, next) => {
     if (index_js_1.config.nodeEnv !== "development") {
         res.status(403).json({ error: "开发登录仅在开发环境可用" });
         return;

@@ -97,7 +97,8 @@ describe("Batch Routes", () => {
           packageType: "SOP8L",
         });
 
-      expect(res.status).toBe(500); // Prisma unique constraint error
+      expect(res.status).toBe(400); // Service throws duplicate error with Chinese message
+      expect(res.body.error).toContain("已存在");
     });
 
     it("should reject missing required fields", async () => {

@@ -88,7 +88,7 @@ describe("Settings Routes", () => {
         .delete(`/api/settings/package-types/${pt!.id}`)
         .set("Authorization", `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(400);
     });
   });
 });

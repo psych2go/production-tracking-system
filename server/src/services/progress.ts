@@ -117,17 +117,18 @@ export async function getDashboardData() {
     },
   });
 
-  // Batches currently in progress (with latest stage info)
+  // Batches currently in progress (with latest stage info, capped at 50)
   const activeBatchList = await prisma.batch.findMany({
     where: { status: "active" },
     include: {
       product: true,
       progressRecords: {
         include: { stage: true },
-        orderBy: { stage: { stageOrder: "desc" } },
+        orderBy: { createdAt: "desc" },
       },
     },
     orderBy: { createdAt: "desc" },
+    take: 50,
   });
 
   // Get anomalies (batch delay only)
@@ -152,16 +153,21 @@ export async function getStages() {
   return prisma.processStage.findMany({ orderBy: { stageOrder: "asc" } });
 }
 
-export async function getStageProducts(stageId: number) {
-  // Get all batches that have a progress record at this stage
-  const records = await prisma.progressRecord.findMany({
-    where: { stageId },
-    include: {
-      batch: { include: { product: true, creator: { select: { name: true } } } },
-      stage: true,
-      operator: { select: { id: true, name: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  return records;
+export async function getStageProducts(stageId: number, page = 1, pageSize = 50) {
+  const where = { stageId };
+  const [items, total] = await Promise.all([
+    prisma.progressRecord.findMany({
+      where,
+      include: {
+        batch: { include: { product: true, creator: { select: { name: true } } } },
+        stage: true,
+        operator: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.progressRecord.count({ where }),
+  ]);
+  return { items, total, page, pageSize };
 }

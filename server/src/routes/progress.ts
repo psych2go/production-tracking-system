@@ -10,6 +10,7 @@ import {
 import { authGuard, AuthRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
+import { parseId } from "../utils/parseId.js";
 
 const router = Router();
 
@@ -43,7 +44,10 @@ router.get("/stages", authGuard, async (_req, res, next) => {
 // Get products at a specific stage
 router.get("/stages/:stageId/products", authGuard, async (req, res, next) => {
   try {
-    const records = await getStageProducts(parseInt(req.params.stageId as string));
+    const records = await getStageProducts(
+      parseId(req.params.stageId, "工序ID"),
+      parseInt(req.query.page as string) || 1,
+    );
     res.json(records);
   } catch (err) {
     next(err);
@@ -54,9 +58,9 @@ router.get("/stages/:stageId/products", authGuard, async (req, res, next) => {
 router.get("/", authGuard, async (req, res, next) => {
   try {
     const result = await listProgress({
-      batchId: req.query.batchId ? parseInt(req.query.batchId as string) : undefined,
-      stageId: req.query.stageId ? parseInt(req.query.stageId as string) : undefined,
-      operatorId: req.query.operatorId ? parseInt(req.query.operatorId as string) : undefined,
+      batchId: req.query.batchId ? parseId(req.query.batchId as string) : undefined,
+      stageId: req.query.stageId ? parseId(req.query.stageId as string) : undefined,
+      operatorId: req.query.operatorId ? parseId(req.query.operatorId as string) : undefined,
       page: parseInt(req.query.page as string) || 1,
       pageSize: parseInt(req.query.pageSize as string) || 20,
     });

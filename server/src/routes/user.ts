@@ -4,6 +4,7 @@ import { listUsers, updateUser, deactivateUser } from "../services/user.js";
 import { authGuard, roleGuard } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
+import { parseId } from "../utils/parseId.js";
 
 const router = Router();
 
@@ -29,7 +30,7 @@ router.get("/", authGuard, roleGuard("admin"), async (req, res, next) => {
 
 router.put("/:id", authGuard, roleGuard("admin"), auditLog("update", "user"), validate(updateSchema), async (req, res, next) => {
   try {
-    const user = await updateUser(parseInt(req.params.id as string), req.body);
+    const user = await updateUser(parseId(req.params.id), req.body);
     res.json(user);
   } catch (err) {
     next(err);
@@ -38,7 +39,7 @@ router.put("/:id", authGuard, roleGuard("admin"), auditLog("update", "user"), va
 
 router.delete("/:id", authGuard, roleGuard("admin"), async (req, res, next) => {
   try {
-    const user = await deactivateUser(parseInt(req.params.id as string));
+    const user = await deactivateUser(parseId(req.params.id));
     res.json(user);
   } catch (err) {
     next(err);

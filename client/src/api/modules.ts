@@ -138,6 +138,7 @@ export const auditApi = {
 
 // Schedule
 export const scheduleApi = {
+  getCounts: () => api.get<Record<number, number>>("/api/schedule/counts"),
   getQueue: (stageId: number) =>
     api.get<ScheduleItem[]>(`/api/schedule/${stageId}`),
   reorder: (stageId: number, batchId: number, direction: "up" | "down") =>

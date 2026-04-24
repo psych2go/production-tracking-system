@@ -52,8 +52,8 @@ export declare function listBatches(filters: {
         updatedAt: Date;
         status: string;
         productId: number | null;
-        customerCode: string | null;
         packageType: string | null;
+        customerCode: string | null;
         batchType: string;
         trialContent: string | null;
         batchNo: string;
@@ -118,8 +118,8 @@ export declare function getBatchDetail(id: number): Promise<({
     updatedAt: Date;
     status: string;
     productId: number | null;
-    customerCode: string | null;
     packageType: string | null;
+    customerCode: string | null;
     batchType: string;
     trialContent: string | null;
     batchNo: string;
@@ -153,8 +153,8 @@ export declare function createBatch(data: {
     updatedAt: Date;
     status: string;
     productId: number | null;
-    customerCode: string | null;
     packageType: string | null;
+    customerCode: string | null;
     batchType: string;
     trialContent: string | null;
     batchNo: string;
@@ -190,8 +190,8 @@ export declare function updateBatch(id: number, data: {
     updatedAt: Date;
     status: string;
     productId: number | null;
-    customerCode: string | null;
     packageType: string | null;
+    customerCode: string | null;
     batchType: string;
     trialContent: string | null;
     batchNo: string;

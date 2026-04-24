@@ -4,6 +4,7 @@ import { handleWwCallback, getMe } from "../services/auth.js";
 import { authGuard, AuthRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
+import { rateLimit } from "../middleware/rateLimit.js";
 import { config } from "../config/index.js";
 
 const router = Router();
@@ -12,8 +13,10 @@ const callbackSchema = z.object({
   code: z.string().min(1),
 });
 
+const authLimiter = rateLimit({ windowMs: 60_000, max: 10 });
+
 // WeChat Work OAuth callback
-router.post("/ww/callback", auditLog("login", "auth"), validate(callbackSchema), async (req, res, next) => {
+router.post("/ww/callback", authLimiter, auditLog("login", "auth"), validate(callbackSchema), async (req, res, next) => {
   try {
     const { token, user } = await handleWwCallback(req.body.code);
     res.json({ token, user });
@@ -37,7 +40,7 @@ router.get("/me", authGuard, async (req: AuthRequest, res, next) => {
 });
 
 // Dev login (development only)
-router.post("/dev-login", async (_req, res, next) => {
+router.post("/dev-login", authLimiter, async (_req, res, next) => {
   if (config.nodeEnv !== "development") {
     res.status(403).json({ error: "开发登录仅在开发环境可用" });
     return;

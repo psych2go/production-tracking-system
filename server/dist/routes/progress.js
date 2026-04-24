@@ -7,6 +7,7 @@ const progress_js_1 = require("../services/progress.js");
 const auth_js_1 = require("../middleware/auth.js");
 const validator_js_1 = require("../middleware/validator.js");
 const audit_js_1 = require("../middleware/audit.js");
+const parseId_js_1 = require("../utils/parseId.js");
 const router = (0, express_1.Router)();
 const progressSchema = zod_1.z.object({
     batchId: zod_1.z.number().int().positive(),
@@ -37,7 +38,7 @@ router.get("/stages", auth_js_1.authGuard, async (_req, res, next) => {
 // Get products at a specific stage
 router.get("/stages/:stageId/products", auth_js_1.authGuard, async (req, res, next) => {
     try {
-        const records = await (0, progress_js_1.getStageProducts)(parseInt(req.params.stageId));
+        const records = await (0, progress_js_1.getStageProducts)((0, parseId_js_1.parseId)(req.params.stageId, "工序ID"), parseInt(req.query.page) || 1);
         res.json(records);
     }
     catch (err) {
@@ -48,9 +49,9 @@ router.get("/stages/:stageId/products", auth_js_1.authGuard, async (req, res, ne
 router.get("/", auth_js_1.authGuard, async (req, res, next) => {
     try {
         const result = await (0, progress_js_1.listProgress)({
-            batchId: req.query.batchId ? parseInt(req.query.batchId) : undefined,
-            stageId: req.query.stageId ? parseInt(req.query.stageId) : undefined,
-            operatorId: req.query.operatorId ? parseInt(req.query.operatorId) : undefined,
+            batchId: req.query.batchId ? (0, parseId_js_1.parseId)(req.query.batchId) : undefined,
+            stageId: req.query.stageId ? (0, parseId_js_1.parseId)(req.query.stageId) : undefined,
+            operatorId: req.query.operatorId ? (0, parseId_js_1.parseId)(req.query.operatorId) : undefined,
             page: parseInt(req.query.page) || 1,
             pageSize: parseInt(req.query.pageSize) || 20,
         });

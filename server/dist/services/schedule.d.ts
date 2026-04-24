@@ -1,7 +1,6 @@
 /**
  * Get the schedule queue for a specific stage.
  * Shows batches whose latest completed stage is this stage (i.e. currently "at" this station).
- * Batches with no progress show in the first stage only.
  * Auto-syncs the ScheduleOrder table (insert missing, remove stale).
  */
 export declare function getScheduleQueue(stageId: number): Promise<{
@@ -51,8 +50,8 @@ export declare function getScheduleQueue(stageId: number): Promise<{
         updatedAt: Date;
         status: string;
         productId: number | null;
-        customerCode: string | null;
         packageType: string | null;
+        customerCode: string | null;
         batchType: string;
         trialContent: string | null;
         batchNo: string;
@@ -66,6 +65,11 @@ export declare function getScheduleQueue(stageId: number): Promise<{
         createdBy: number | null;
     };
 }[]>;
+/**
+ * Get batch counts for all stages in a single call.
+ * Returns { stageId: count } for stages that have batches waiting.
+ */
+export declare function getScheduleCounts(): Promise<Record<number, number>>;
 /**
  * Reorder a batch in the schedule queue (move up or down).
  * Only accessible by admin.

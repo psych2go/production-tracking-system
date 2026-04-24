@@ -6,6 +6,7 @@ const zod_1 = require("zod");
 const product_js_1 = require("../services/product.js");
 const auth_js_1 = require("../middleware/auth.js");
 const validator_js_1 = require("../middleware/validator.js");
+const parseId_js_1 = require("../utils/parseId.js");
 const router = (0, express_1.Router)();
 const createSchema = zod_1.z.object({
     model: zod_1.z.string().min(1, "型号不能为空"),
@@ -38,7 +39,7 @@ router.post("/", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, val
 });
 router.put("/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, validator_js_1.validate)(updateSchema), async (req, res, next) => {
     try {
-        const product = await (0, product_js_1.updateProduct)(parseInt(req.params.id), req.body);
+        const product = await (0, product_js_1.updateProduct)((0, parseId_js_1.parseId)(req.params.id), req.body);
         res.json(product);
     }
     catch (err) {
@@ -47,7 +48,7 @@ router.put("/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, v
 });
 router.delete("/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), async (req, res, next) => {
     try {
-        await (0, product_js_1.deleteProduct)(parseInt(req.params.id));
+        await (0, product_js_1.deleteProduct)((0, parseId_js_1.parseId)(req.params.id));
         res.json({ success: true });
     }
     catch (err) {

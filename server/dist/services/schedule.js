@@ -1,55 +1,33 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getScheduleQueue = getScheduleQueue;
+exports.getScheduleCounts = getScheduleCounts;
 exports.reorderSchedule = reorderSchedule;
 const database_js_1 = require("../config/database.js");
 /**
  * Get the schedule queue for a specific stage.
  * Shows batches whose latest completed stage is this stage (i.e. currently "at" this station).
- * Batches with no progress show in the first stage only.
  * Auto-syncs the ScheduleOrder table (insert missing, remove stale).
  */
 async function getScheduleQueue(stageId) {
     const stage = await database_js_1.prisma.processStage.findUnique({ where: { id: stageId } });
     if (!stage)
         throw new Error("工序不存在");
-    // Build stageId → stageOrder mapping
-    const allStages = await database_js_1.prisma.processStage.findMany({
-        select: { id: true, stageOrder: true },
-        orderBy: { stageOrder: "asc" },
-    });
-    const stageOrderMap = new Map(allStages.map((s) => [s.id, s.stageOrder]));
-    // Find all active batches with their progress records
-    const activeBatches = await database_js_1.prisma.batch.findMany({
-        where: { status: "active" },
-        include: {
-            progressRecords: true,
-            product: true,
-            creator: { select: { id: true, name: true } },
-        },
-    });
-    // Filter: batch's latest completed stage IS this stage
-    const eligibleBatchIds = activeBatches
-        .filter((batch) => {
-        const completedStageIds = batch.progressRecords
-            .filter((r) => r.status === "completed")
-            .map((r) => r.stageId);
-        if (completedStageIds.length === 0) {
-            return false;
-        }
-        // Find the latest completed stage (highest stageOrder)
-        let latestStageId = completedStageIds[0];
-        let latestOrder = stageOrderMap.get(latestStageId) ?? 0;
-        for (const sid of completedStageIds.slice(1)) {
-            const order = stageOrderMap.get(sid) ?? 0;
-            if (order > latestOrder) {
-                latestOrder = order;
-                latestStageId = sid;
-            }
-        }
-        return latestStageId === stageId;
-    })
-        .map((b) => b.id);
+    // Efficiently find batch IDs whose latest completed stage is this stage
+    // using a raw SQL query instead of loading all active batches into memory
+    const eligibleRows = await database_js_1.prisma.$queryRaw `
+    SELECT b.id
+    FROM batches b
+    WHERE b.status = 'active'
+    AND (
+      SELECT pr.stage_id
+      FROM progress_records pr
+      WHERE pr.batch_id = b.id AND pr.status = 'completed'
+      ORDER BY pr.created_at DESC
+      LIMIT 1
+    ) = ${stageId}
+  `;
+    const eligibleBatchIds = eligibleRows.map((r) => r.id);
     // Sync ScheduleOrder table
     const existingOrders = await database_js_1.prisma.scheduleOrder.findMany({
         where: { stageId },
@@ -110,6 +88,38 @@ async function getScheduleQueue(stageId) {
         batchId: o.batchId,
         batch: o.batch,
     }));
+}
+/**
+ * Get batch counts for all stages in a single call.
+ * Returns { stageId: count } for stages that have batches waiting.
+ */
+async function getScheduleCounts() {
+    const stages = await database_js_1.prisma.processStage.findMany({
+        where: { code: { not: "completed" } },
+        select: { id: true },
+    });
+    // Single query to find all batches' latest completed stages
+    const latestStages = await database_js_1.prisma.$queryRaw `
+    SELECT b.id as batchId, (
+      SELECT pr.stage_id
+      FROM progress_records pr
+      WHERE pr.batch_id = b.id AND pr.status = 'completed'
+      ORDER BY pr.created_at DESC
+      LIMIT 1
+    ) as stageId
+    FROM batches b
+    WHERE b.status = 'active'
+  `;
+    const counts = {};
+    for (const stage of stages) {
+        counts[stage.id] = 0;
+    }
+    for (const row of latestStages) {
+        if (row.stageId != null && counts[row.stageId] !== undefined) {
+            counts[row.stageId]++;
+        }
+    }
+    return counts;
 }
 /**
  * Reorder a batch in the schedule queue (move up or down).

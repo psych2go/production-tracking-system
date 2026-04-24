@@ -4,6 +4,7 @@ import { listBatches, getBatchDetail, createBatch, updateBatch, deleteBatch } fr
 import { authGuard, roleGuard, AuthRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
+import { parseId } from "../utils/parseId.js";
 
 const router = Router();
 
@@ -59,7 +60,7 @@ router.get("/", authGuard, async (req, res, next) => {
   try {
     const result = await listBatches({
       status: req.query.status as string,
-      productId: req.query.productId ? parseInt(req.query.productId as string) : undefined,
+      productId: req.query.productId ? parseId(req.query.productId as string) : undefined,
       keyword: req.query.keyword as string,
       customerCode: req.query.customerCode as string,
       packageType: req.query.packageType as string,
@@ -75,7 +76,7 @@ router.get("/", authGuard, async (req, res, next) => {
 
 router.get("/:id", authGuard, async (req, res, next) => {
   try {
-    const batch = await getBatchDetail(parseInt(req.params.id as string));
+    const batch = await getBatchDetail(parseId(req.params.id));
     if (!batch) {
       res.status(404).json({ error: "批次不存在" });
       return;
@@ -97,7 +98,7 @@ router.post("/", authGuard, roleGuard("admin"), auditLog("create", "batch"), val
 
 router.put("/:id", authGuard, roleGuard("admin"), auditLog("update", "batch"), validate(updateSchema), async (req, res, next) => {
   try {
-    const batch = await updateBatch(parseInt(req.params.id as string), req.body);
+    const batch = await updateBatch(parseId(req.params.id), req.body);
     res.json(batch);
   } catch (err) {
     next(err);
@@ -106,7 +107,7 @@ router.put("/:id", authGuard, roleGuard("admin"), auditLog("update", "batch"), v
 
 router.delete("/:id", authGuard, roleGuard("admin"), auditLog("delete", "batch"), async (req: AuthRequest, res, next) => {
   try {
-    await deleteBatch(parseInt(req.params.id as string));
+    await deleteBatch(parseId(req.params.id));
     res.json({ success: true });
   } catch (err) {
     next(err);

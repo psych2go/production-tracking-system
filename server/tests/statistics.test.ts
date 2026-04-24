@@ -104,7 +104,7 @@ describe("Statistics Routes", () => {
         .get("/api/statistics/export/excel?type=invalid")
         .set("Authorization", `Bearer ${adminToken}`);
 
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(400);
     });
   });
 });

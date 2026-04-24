@@ -29,9 +29,9 @@ describe("Progress Routes", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.stats).toBeDefined();
-      expect(res.body.stats.activeBatches).toBeGreaterThanOrEqual(0);
-      expect(res.body.stats.todayRecords).toBeGreaterThanOrEqual(0);
-      expect(res.body.stats.totalBatches).toBeGreaterThanOrEqual(1);
+      expect(res.body.stats.activeProductBatches).toBeGreaterThanOrEqual(0);
+      expect(res.body.stats.activeProductQuantity).toBeGreaterThanOrEqual(0);
+      expect(res.body.stats.totalTrialBatches).toBeGreaterThanOrEqual(0);
       expect(res.body.recentActivity).toBeInstanceOf(Array);
       expect(res.body.activeBatchList).toBeInstanceOf(Array);
       expect(res.body.anomalies).toBeInstanceOf(Array);
@@ -67,21 +67,21 @@ describe("Progress Routes", () => {
       expect(res.body.createdAt).toBeDefined();
     });
 
-    it("should update existing progress record (upsert)", async () => {
+    it("should reject duplicate progress record (same batch + stage)", async () => {
       // Create first
       await request(app)
         .post("/api/progress")
         .set("Authorization", `Bearer ${workerToken}`)
         .send({ batchId, stageId });
 
-      // Update
+      // Attempt duplicate
       const res = await request(app)
         .post("/api/progress")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ batchId, stageId, notes: "二次更新" });
 
-      expect(res.status).toBe(201);
-      expect(res.body.notes).toBe("二次更新");
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("不可重复流转");
 
       // Should still be only 1 record
       const count = await prisma.progressRecord.count({
@@ -148,7 +148,8 @@ describe("Progress Routes", () => {
         .set("Authorization", `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body).toBeInstanceOf(Array);
+      expect(res.body.items).toBeInstanceOf(Array);
+      expect(res.body.total).toBeGreaterThanOrEqual(0);
     });
   });
 });

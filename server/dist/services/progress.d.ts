@@ -56,8 +56,8 @@ export declare function listProgress(filters: {
             updatedAt: Date;
             status: string;
             productId: number | null;
-            customerCode: string | null;
             packageType: string | null;
+            customerCode: string | null;
             batchType: string;
             trialContent: string | null;
             batchNo: string;
@@ -124,8 +124,8 @@ export declare function getDashboardData(): Promise<{
             updatedAt: Date;
             status: string;
             productId: number | null;
-            customerCode: string | null;
             packageType: string | null;
+            customerCode: string | null;
             batchType: string;
             trialContent: string | null;
             batchNo: string;
@@ -205,8 +205,8 @@ export declare function getDashboardData(): Promise<{
         updatedAt: Date;
         status: string;
         productId: number | null;
-        customerCode: string | null;
         packageType: string | null;
+        customerCode: string | null;
         batchType: string;
         trialContent: string | null;
         batchNo: string;
@@ -237,65 +237,70 @@ export declare function getStages(): Promise<{
     stageOrder: number;
     isQcStage: boolean;
 }[]>;
-export declare function getStageProducts(stageId: number): Promise<({
-    batch: {
-        product: {
+export declare function getStageProducts(stageId: number, page?: number, pageSize?: number): Promise<{
+    items: ({
+        batch: {
+            product: {
+                id: number;
+                name: string | null;
+                isActive: boolean;
+                createdAt: Date;
+                updatedAt: Date;
+                model: string;
+                description: string | null;
+            } | null;
+            creator: {
+                name: string;
+            } | null;
+        } & {
             id: number;
-            name: string | null;
-            isActive: boolean;
             createdAt: Date;
             updatedAt: Date;
-            model: string;
-            description: string | null;
-        } | null;
-        creator: {
+            status: string;
+            productId: number | null;
+            packageType: string | null;
+            customerCode: string | null;
+            batchType: string;
+            trialContent: string | null;
+            batchNo: string;
+            quantity: number;
+            priority: string;
+            orderNo: string | null;
+            customerDelivery: Date | null;
+            productionDelivery: Date | null;
+            quantityDetail: string | null;
+            notes: string | null;
+            createdBy: number | null;
+        };
+        stage: {
+            id: number;
             name: string;
-        } | null;
+            code: string;
+            description: string | null;
+            stageOrder: number;
+            isQcStage: boolean;
+        };
+        operator: {
+            id: number;
+            name: string;
+        };
     } & {
         id: number;
         createdAt: Date;
         updatedAt: Date;
         status: string;
-        productId: number | null;
-        customerCode: string | null;
-        packageType: string | null;
-        batchType: string;
-        trialContent: string | null;
-        batchNo: string;
-        quantity: number;
-        priority: string;
-        orderNo: string | null;
-        customerDelivery: Date | null;
-        productionDelivery: Date | null;
-        quantityDetail: string | null;
         notes: string | null;
-        createdBy: number | null;
-    };
-    stage: {
-        id: number;
-        name: string;
-        code: string;
-        description: string | null;
-        stageOrder: number;
-        isQcStage: boolean;
-    };
-    operator: {
-        id: number;
-        name: string;
-    };
-} & {
-    id: number;
-    createdAt: Date;
-    updatedAt: Date;
-    status: string;
-    notes: string | null;
-    batchId: number;
-    stageId: number;
-    operatorId: number;
-    inputQuantity: number | null;
-    outputQuantity: number | null;
-    defectQuantity: number;
-    defectType: string | null;
-    defectNotes: string | null;
-})[]>;
+        batchId: number;
+        stageId: number;
+        operatorId: number;
+        inputQuantity: number | null;
+        outputQuantity: number | null;
+        defectQuantity: number;
+        defectType: string | null;
+        defectNotes: string | null;
+    })[];
+    total: number;
+    page: number;
+    pageSize: number;
+}>;
 //# sourceMappingURL=progress.d.ts.map
