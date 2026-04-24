@@ -53,12 +53,13 @@ npm run dev:mp-weixin    # 微信小程序开发
 server/src/
   routes/       # API 路由（auth/user/product/batch/progress/statistics/settings/audit/schedule）
   services/     # 业务逻辑
-  middleware/    # 认证、审计、Zod 校验、错误处理
+  middleware/    # 认证、限流、审计、Zod 校验、错误处理
+  utils/        # 工具函数（parseId）
   config/       # 配置与 Prisma 单例
 server/tests/   # 集成测试（Vitest）
 server/prisma/
   schema.prisma # 数据模型（9 个）
-  seed.ts       # 16 道工序 + 25 种封装形式 + dev_admin
+  seed.ts       # 16 道工序 + 27 种封装形式 + 13 个客户代码 + dev_admin
 client/src/
   pages/        # 首页/录入/批次/排单/统计/我的
   pages-admin/  # 产品/用户/设置/封装形式/客户代码/审计
