@@ -30,6 +30,14 @@ export const useUserStore = defineStore("user", () => {
     uni.setStorageSync("token", res.token);
   }
 
+  async function passwordLogin(password: string) {
+    const res = await authApi.passwordLogin(password);
+    token.value = res.token;
+    userInfo.value = res.user;
+    isLoggedIn.value = true;
+    uni.setStorageSync("token", res.token);
+  }
+
   async function wwLogin(code: string) {
     const res = await authApi.wwCallback(code);
     token.value = res.token;
@@ -49,5 +57,5 @@ export const useUserStore = defineStore("user", () => {
     return userInfo.value?.role === "admin";
   }
 
-  return { token, userInfo, isLoggedIn, checkAuth, devLogin, wwLogin, logout, isAdmin };
+  return { token, userInfo, isLoggedIn, checkAuth, devLogin, passwordLogin, wwLogin, logout, isAdmin };
 });

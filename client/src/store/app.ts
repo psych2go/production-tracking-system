@@ -6,12 +6,10 @@ import { STATUS_COLORS } from "../utils/constants";
 
 export const useAppStore = defineStore("app", () => {
   const stages = ref<ProcessStage[]>([]);
-  const stagesLoaded = ref(false);
 
   async function loadStages() {
-    if (stagesLoaded.value) return stages.value;
+    if (stages.value.length) return stages.value;
     stages.value = await progressApi.stages();
-    stagesLoaded.value = true;
     return stages.value;
   }
 
@@ -24,5 +22,5 @@ export const useAppStore = defineStore("app", () => {
     return labels[priority] || priority;
   }
 
-  return { stages, stagesLoaded, loadStages, getStatusColor, getPriorityLabel };
+  return { stages, loadStages, getStatusColor, getPriorityLabel };
 });

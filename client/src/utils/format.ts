@@ -1,3 +1,5 @@
+import type { ProcessStage } from "../types";
+
 /**
  * 格式化日期为 "YYYY-MM-DD HH:mm"
  */
@@ -23,4 +25,15 @@ export function formatTime(dateStr: string): string {
  */
 export function formatDateShort(dateStr: string): string {
   return formatDate(dateStr).slice(0, 10);
+}
+
+/**
+ * 获取批次当前所在工序（按最新流转时间，不是按工序序号）
+ */
+export function getCurrentStage(batch: { progressRecords?: { status: string; createdAt: string; stage?: ProcessStage }[] }): ProcessStage | null {
+  if (!batch.progressRecords?.length) return null;
+  const completed = batch.progressRecords
+    .filter(r => r.status === "completed")
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return completed[0]?.stage ?? null;
 }

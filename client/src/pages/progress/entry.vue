@@ -120,21 +120,23 @@
             :class="{
               done: isStageCompleted(stage.id),
               current: isCurrentStage(stage.id),
+              suggested: isSuggestedStage(stage.id),
             }"
             @click="confirmStage(stage)"
           >
-            <view class="stage-order" :class="{ 'order-done': isStageCompleted(stage.id), 'order-current': isCurrentStage(stage.id) }">
+            <view class="stage-order" :class="{ 'order-done': isStageCompleted(stage.id), 'order-current': isCurrentStage(stage.id), 'order-suggested': isSuggestedStage(stage.id) }">
               <text v-if="isStageCompleted(stage.id)" class="check-mark">&#10003;</text>
               <text v-else>{{ stage.stageOrder }}</text>
             </view>
             <text class="stage-name">{{ stage.name }}</text>
             <text v-if="isCurrentStage(stage.id)" class="text-primary text-sm">当前</text>
+            <text v-if="isSuggestedStage(stage.id)" class="suggest-tag">下一步</text>
           </view>
           <!-- 第14道「已完成」工序，闪烁显示 -->
           <view
             v-if="completedStage"
             class="stage-option stage-completed-blink"
-            :class="{ done: isStageCompleted(completedStage.id) }"
+            :class="{ done: isStageCompleted(completedStage.id), suggested: isSuggestedStage(completedStage.id) }"
             @click="confirmStage(completedStage)"
           >
             <view class="stage-order" :class="{ 'order-done': isStageCompleted(completedStage.id) }">
@@ -142,6 +144,7 @@
               <text v-else>14</text>
             </view>
             <text class="stage-name">已完成</text>
+            <text v-if="isSuggestedStage(completedStage.id)" class="suggest-tag">下一步</text>
           </view>
         </view>
       </view>
@@ -150,16 +153,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, nextTick } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import { useUserStore } from "../../store/user";
 import { useAppStore } from "../../store/app";
 import { batchApi, progressApi, settingsApi } from "../../api/modules";
-import type { Batch, PackageType, ProcessStage, DashboardData } from "../../types";
+import { getCurrentStage } from "../../utils/format";
+import type { Batch, PackageType, ProcessStage } from "../../types";
 
 const userStore = useUserStore();
 const appStore = useAppStore();
-const dashboard = ref<DashboardData | null>(null);
 
 /** 已完成工序（code === "completed"） */
 const completedStage = computed(() =>
@@ -223,23 +226,45 @@ const filteredBatches = computed(() => {
   return result;
 });
 
-/** Get the current (latest completed) stage for a batch */
-function getCurrentStage(batch: Batch): ProcessStage | null {
-  if (!appStore.stages.length || !batch.progressRecords?.length) return null;
-  const completed = batch.progressRecords
-    .filter((r) => r.status === "completed")
-    .sort((a, b) => {
-      const oa = appStore.stages.find((s) => s.id === a.stageId)?.stageOrder ?? 0;
-      const ob = appStore.stages.find((s) => s.id === b.stageId)?.stageOrder ?? 0;
-      return ob - oa;
-    });
-  return completed[0]?.stage ?? null;
-}
+/** 推荐下一步工序 */
+const suggestedStage = computed(() => {
+  if (!selectedBatch.value) return null;
+  const current = getCurrentStage(selectedBatch.value);
+  if (!current) return regularStages.value[0] ?? null;
+  const nextStages = regularStages.value
+    .filter(s => s.stageOrder > current.stageOrder)
+    .sort((a, b) => a.stageOrder - b.stageOrder);
+  if (nextStages.length > 0) return nextStages[0];
+  return completedStage.value;
+});
 
 function isCurrentStage(stageId: number): boolean {
   if (!selectedBatch.value) return false;
   const current = getCurrentStage(selectedBatch.value);
   return current?.id === stageId;
+}
+
+function isSuggestedStage(stageId: number): boolean {
+  return suggestedStage.value?.id === stageId;
+}
+
+function scrollToSuggestedStage() {
+  nextTick(() => {
+    setTimeout(() => {
+      uni.createSelectorQuery()
+        .select('.stage-option.suggested')
+        .boundingClientRect((rect) => {
+          const info = Array.isArray(rect) ? rect[0] : rect;
+          if (info && info.top != null) {
+            uni.pageScrollTo({
+              scrollTop: info.top - 40,
+              duration: 300,
+            });
+          }
+        })
+        .exec();
+    }, 150);
+  });
 }
 
 function isStageCompleted(stageId: number): boolean {
@@ -267,6 +292,7 @@ async function searchBatches() {
 function selectBatch(batch: Batch) {
   selectedBatch.value = batch;
   step.value = 2;
+  scrollToSuggestedStage();
 }
 
 async function confirmStage(stage: ProcessStage) {
@@ -310,7 +336,6 @@ async function confirmStage(stage: ProcessStage) {
 onShow(async () => {
   if (userStore.isLoggedIn) {
     searchBatches();
-    try { dashboard.value = await progressApi.dashboard(); } catch { /* ignore */ }
     if (!packageTypes.value.length) {
       try { packageTypes.value = await settingsApi.listPackageTypes(); } catch { /* ignore */ }
     }
@@ -382,6 +407,7 @@ onMounted(() => {
   min-height: 88rpx;
   &.done { opacity: 0.5; }
   &.current { border-color: #0083ff; background: #f0f7ff; border-width: 3rpx; }
+  &.suggested { border-color: #ff9900; background: #fffbf0; border-width: 3rpx; border-style: dashed; }
 }
 .stage-order {
   width: 52rpx;
@@ -396,8 +422,17 @@ onMounted(() => {
   flex-shrink: 0;
   &.order-done { background: #07c160; color: #fff; }
   &.order-current { background: #0083ff; color: #fff; }
+  &.order-suggested { background: #ff9900; color: #fff; }
 }
 .check-mark { color: #fff; font-size: 24rpx; }
+.suggest-tag {
+  font-size: 22rpx;
+  padding: 4rpx 16rpx;
+  background: #ff9900;
+  color: #fff;
+  border-radius: 16rpx;
+  white-space: nowrap;
+}
 .stage-name { flex: 1; }
 .stage-completed-blink {
   border-color: #07c160;

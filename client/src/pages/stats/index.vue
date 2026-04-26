@@ -57,7 +57,7 @@
               </text>
               <text class="online-col online-col-delivery">{{ batch.customerDelivery ? batch.customerDelivery.slice(0, 10) : '-' }}</text>
               <text class="online-col online-col-delivery">{{ batch.productionDelivery ? batch.productionDelivery.slice(0, 10) : '-' }}</text>
-              <text class="online-col online-col-stage">{{ getCurrentStage(batch) }}</text>
+              <text class="online-col online-col-stage">{{ getBatchStageName(batch) }}</text>
               <text class="online-col online-col-notes">{{ batch.notes || '-' }}</text>
               <text class="online-col online-col-date">{{ batch.createdAt.slice(0, 10) }}</text>
             </view>
@@ -90,7 +90,7 @@
               <text class="online-col trial-col-qty">{{ formatTrialQty(batch) }}</text>
               <text class="online-col trial-col-deadline">{{ batch.customerDelivery ? batch.customerDelivery.slice(0, 10) : '-' }}</text>
               <text class="online-col trial-col-notes">{{ batch.notes || '-' }}</text>
-              <text class="online-col trial-col-stage">{{ getCurrentStage(batch) }}</text>
+              <text class="online-col trial-col-stage">{{ getBatchStageName(batch) }}</text>
               <text class="online-col trial-col-date">{{ batch.createdAt.slice(0, 10) }}</text>
             </view>
           </view>
@@ -173,6 +173,7 @@ import { ref, computed, onMounted } from "vue";
 import { statsApi, batchApi } from "../../api/modules";
 import { useAppStore } from "../../store/app";
 import { useUserStore } from "../../store/user";
+import { getCurrentStage } from "../../utils/format";
 import type { Batch, ProcessDurationData, ProductionTrendData, AnomalyItem } from "../../types";
 import Charts from "../../components/Charts.vue";
 
@@ -222,16 +223,8 @@ function formatTrialQty(batch: Batch): string {
   return batch.quantity ? String(batch.quantity) : "-";
 }
 
-function getCurrentStage(batch: Batch): string {
-  if (!appStore.stages.length || !batch.progressRecords?.length) return '未开始';
-  const completed = batch.progressRecords
-    .filter((r) => r.status === "completed")
-    .sort((a, b) => {
-      const oa = appStore.stages.find((s) => s.id === a.stageId)?.stageOrder ?? 0;
-      const ob = appStore.stages.find((s) => s.id === b.stageId)?.stageOrder ?? 0;
-      return ob - oa;
-    });
-  return completed[0]?.stage?.name || '未开始';
+function getBatchStageName(batch: Batch): string {
+  return getCurrentStage(batch)?.name || '未开始';
 }
 
 const durationData = computed(() => ({

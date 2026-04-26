@@ -67,7 +67,7 @@
 import type { Batch } from "../types";
 import { computed } from "vue";
 import { useAppStore } from "../store/app";
-import { formatDateShort } from "../utils/format";
+import { formatDateShort, getCurrentStage } from "../utils/format";
 
 const props = defineProps<{ batch: Batch }>();
 defineEmits<{ click: [] }>();
@@ -90,13 +90,7 @@ const trialQuantityDisplay = computed(() => {
 
 const appStore = useAppStore();
 
-const currentStage = computed(() => {
-  if (!props.batch.progressRecords?.length) return null;
-  const latest = props.batch.progressRecords
-    .filter((r) => r.status === "completed")
-    .sort((a, b) => (b.stage?.stageOrder ?? 0) - (a.stage?.stageOrder ?? 0))[0];
-  return latest?.stage?.name ?? null;
-});
+const currentStage = computed(() => getCurrentStage(props.batch)?.name ?? null);
 
 const progressPercent = computed(() => {
   if (!props.batch.progressRecords?.length) return 0;

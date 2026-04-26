@@ -4,6 +4,7 @@ import type { User, Product, Batch, ProcessStage, ProgressRecord, PaginatedResul
 // Auth
 export const authApi = {
   devLogin: () => api.post<{ token: string; user: User }>("/api/auth/dev-login"),
+  passwordLogin: (password: string) => api.post<{ token: string; user: User }>("/api/auth/password-login", { password }),
   wwCallback: (code: string) => api.post<{ token: string; user: User }>("/api/auth/ww/callback", { code }),
   getMe: () => api.get<User>("/api/auth/me"),
 };

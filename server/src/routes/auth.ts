@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { handleWwCallback, getMe } from "../services/auth.js";
+import { handleWwCallback, getMe, handlePasswordLogin } from "../services/auth.js";
 import { authGuard, AuthRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
@@ -11,6 +11,10 @@ const router = Router();
 
 const callbackSchema = z.object({
   code: z.string().min(1),
+});
+
+const passwordSchema = z.object({
+  password: z.string().min(1),
 });
 
 const authLimiter = rateLimit({ windowMs: 60_000, max: 10 });
@@ -34,6 +38,16 @@ router.get("/me", authGuard, async (req: AuthRequest, res, next) => {
       return;
     }
     res.json(user);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Password login
+router.post("/password-login", authLimiter, auditLog("login", "auth"), validate(passwordSchema), async (req, res, next) => {
+  try {
+    const { token, user } = await handlePasswordLogin(req.body.password);
+    res.json({ token, user });
   } catch (err) {
     next(err);
   }

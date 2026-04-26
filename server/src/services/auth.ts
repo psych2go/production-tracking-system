@@ -106,3 +106,26 @@ export async function handleWwCallback(code: string) {
 export async function getMe(userId: number) {
   return prisma.user.findUnique({ where: { id: userId } });
 }
+
+export async function handlePasswordLogin(password: string) {
+  if (!config.loginPassword) {
+    throw new Error("系统未设置登录密码，请在服务端配置 LOGIN_PASSWORD");
+  }
+  if (password !== config.loginPassword) {
+    throw new Error("密码错误");
+  }
+
+  const user = await prisma.user.upsert({
+    where: { wwUserId: "password_admin" },
+    update: {},
+    create: { wwUserId: "password_admin", name: "管理员", role: "admin", department: "生产部" },
+  });
+
+  const token = generateToken({
+    id: user.id,
+    wwUserId: user.wwUserId,
+    name: user.name,
+    role: user.role,
+  });
+  return { token, user };
+}

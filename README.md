@@ -33,6 +33,17 @@ npm install && npm run dev:h5
 
 开发环境首页点击"登录"即可使用管理员账号。
 
+### 密码保护
+
+在 `.env` 中设置 `LOGIN_PASSWORD` 即可启用密码登录（无需企业微信）：
+
+```bash
+# server/.env
+LOGIN_PASSWORD=your-password-here
+```
+
+启动后访问系统，输入密码即可登录。
+
 ### 常用命令
 
 ```bash
@@ -165,6 +176,7 @@ cd ../client && npm install && npm run build:h5
 | `WW_CORP_ID` | 企业微信 CorpID | - |
 | `WW_CORP_SECRET` | 企业微信 Secret | - |
 | `CLIENT_URL` | 前端地址（CORS） | `http://localhost:5173` |
+| `LOGIN_PASSWORD` | 密码登录密码 | 空（未设置则密码登录不可用） |
 
 ## License
 

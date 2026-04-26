@@ -26,7 +26,8 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 
 ## 认证
 
-- 开发：`POST /api/auth/dev-login` → JWT（dev_admin，显示为"冯部长/研发部"）
+- 密码登录：`POST /api/auth/password-login` → JWT（需配置 `LOGIN_PASSWORD` 环境变量）
+- 开发：`POST /api/auth/dev-login` → JWT（dev_admin，显示为"开发管理员/开发部"，仅开发环境可用）
 - 生产：企业微信 OAuth 回调 → upsert 用户 → JWT
 - 认证端点限流：60 秒内最多 10 次请求
 - 401 仅在已登录时触发登出（防未登录循环重定向）

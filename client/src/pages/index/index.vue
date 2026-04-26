@@ -5,7 +5,17 @@
       <view class="card login-card">
         <text class="login-title text-lg text-bold">生产进度追踪</text>
         <text class="login-desc text-secondary mt-sm">产品加工进度管理系统</text>
-        <button class="login-btn mt-lg" @click="handleLogin" :loading="loading">登录</button>
+        <view class="login-input-wrap mt-lg">
+          <input
+            class="login-input"
+            type="text"
+            password
+            v-model="loginPassword"
+            placeholder="请输入密码"
+            @confirm="handleLogin"
+          />
+        </view>
+        <button class="login-btn mt-md" @click="handleLogin" :loading="loading">登录</button>
       </view>
     </view>
 
@@ -172,6 +182,7 @@ const userStore = useUserStore();
 const appStore = useAppStore();
 const dashboard = ref<DashboardData | null>(null);
 const loading = ref(false);
+const loginPassword = ref("");
 const collapsed = ref({ alerts: false, batches: false, activity: false });
 
 // Schedule queue
@@ -208,9 +219,13 @@ async function loadScheduleCounts() {
 
 async function handleLogin() {
   if (loading.value) return;
+  if (!loginPassword.value.trim()) {
+    uni.showToast({ title: "请输入密码", icon: "none" });
+    return;
+  }
   loading.value = true;
   try {
-    await userStore.devLogin();
+    await userStore.passwordLogin(loginPassword.value.trim());
     await appStore.loadStages();
     await loadData();
   } catch (e: unknown) {
@@ -266,6 +281,18 @@ onPullDownRefresh(async () => {
 }
 .login-title { display: block; }
 .login-desc { display: block; }
+.login-input-wrap {
+  border: 1rpx solid #ddd;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+.login-input {
+  width: 100%;
+  height: 88rpx;
+  padding: 0 24rpx;
+  font-size: 30rpx;
+  box-sizing: border-box;
+}
 .login-btn {
   background: #0083ff;
   color: #fff;
