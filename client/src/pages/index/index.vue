@@ -4,7 +4,7 @@
     <view v-if="!userStore.isLoggedIn" class="login-section">
       <view class="card login-card">
         <text class="login-title text-lg text-bold">生产进度追踪</text>
-        <text class="login-desc text-secondary mt-sm">产品加工进度管理系统</text>
+        <text class="login-desc text-secondary mt-sm">产品加工进度管理</text>
         <view class="login-input-wrap mt-lg">
           <input
             class="login-input"
