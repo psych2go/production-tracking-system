@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { onMounted, onBeforeUnmount, ref, watch } from "vue";
 import uCharts from "@qiun/ucharts";
 
 const props = withDefaults(defineProps<{
@@ -16,7 +16,8 @@ const props = withDefaults(defineProps<{
   height: 500,
 });
 
-const canvasId = ref(`chart_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`);
+let chartIdCounter = 0;
+const canvasId = ref(`chart_${Date.now()}_${++chartIdCounter}`);
 const width = ref(375);
 let chart: InstanceType<typeof uCharts> | null = null;
 
@@ -59,6 +60,13 @@ function initChart() {
 
 onMounted(() => {
   setTimeout(initChart, 100);
+});
+
+onBeforeUnmount(() => {
+  if (chart) {
+    chart.stopAnimation();
+    chart = null;
+  }
 });
 
 watch(() => props.chartData, () => {

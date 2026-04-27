@@ -75,6 +75,7 @@ import { useUserStore } from "../../store/user";
 import { batchApi } from "../../api/modules";
 import type { Batch } from "../../types";
 import BatchCard from "../../components/BatchCard.vue";
+import { isOverdue as checkOverdue } from "../../utils/format";
 
 const userStore = useUserStore();
 const batches = ref<Batch[]>([]);
@@ -99,11 +100,7 @@ const tabCounts = ref<Record<string, number>>({});
 const filteredBatches = computed(() => {
   let result = batches.value;
   if (smartFilter.value === "overdue") {
-    result = result.filter((b) =>
-      b.customerDelivery &&
-      new Date(b.customerDelivery) < new Date() &&
-      b.status === "active"
-    );
+    result = result.filter((b) => checkOverdue(b.customerDelivery, b.status));
   } else if (smartFilter.value === "urgent") {
     result = result.filter((b) => b.priority === "urgent");
   }

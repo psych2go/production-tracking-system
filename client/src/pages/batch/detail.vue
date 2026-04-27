@@ -216,7 +216,7 @@ import { useAppStore } from "../../store/app";
 import { useUserStore } from "../../store/user";
 import { batchApi, settingsApi } from "../../api/modules";
 import { STATUS_LABELS, PRIORITIES } from "../../utils/constants";
-import { formatDate, formatDateShort } from "../../utils/format";
+import { formatDate, formatDateShort, isOverdue as checkOverdue, getOverdueDays } from "../../utils/format";
 import type { Batch, PackageType, CustomerCode } from "../../types";
 import StageTimeline from "../../components/StageTimeline.vue";
 
@@ -268,16 +268,9 @@ function getStatusColor(status: string): string {
   return appStore.getStatusColor(status);
 }
 
-const isOverdue = computed(() => {
-  if (!batch.value?.customerDelivery || batch.value.status !== "active") return false;
-  return new Date(batch.value.customerDelivery) < new Date();
-});
+const isOverdue = computed(() => checkOverdue(batch.value?.customerDelivery, batch.value?.status));
 
-const overdueDays = computed(() => {
-  if (!batch.value?.customerDelivery) return 0;
-  const diff = Date.now() - new Date(batch.value.customerDelivery).getTime();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
-});
+const overdueDays = computed(() => getOverdueDays(batch.value?.customerDelivery));
 
 const packageTypeNames = computed(() => packageTypes.value.map((pt) => pt.name));
 

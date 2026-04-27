@@ -67,7 +67,7 @@
 import type { Batch } from "../types";
 import { computed } from "vue";
 import { useAppStore } from "../store/app";
-import { formatDateShort, getCurrentStage } from "../utils/format";
+import { formatDateShort, getCurrentStage, isOverdue as checkOverdue } from "../utils/format";
 
 const props = defineProps<{ batch: Batch }>();
 defineEmits<{ click: [] }>();
@@ -95,14 +95,11 @@ const currentStage = computed(() => getCurrentStage(props.batch)?.name ?? null);
 const progressPercent = computed(() => {
   if (!props.batch.progressRecords?.length) return 0;
   const completed = props.batch.progressRecords.filter((r) => r.status === "completed").length;
-  const total = appStore.stages.length || 12;
+  const total = appStore.stages.length || 16;
   return Math.round((completed / total) * 100);
 });
 
-const isOverdue = computed(() => {
-  if (!props.batch.customerDelivery || props.batch.status !== "active") return false;
-  return new Date(props.batch.customerDelivery) < new Date();
-});
+const isOverdue = computed(() => checkOverdue(props.batch.customerDelivery, props.batch.status));
 </script>
 
 <style scoped lang="scss">
