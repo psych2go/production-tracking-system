@@ -62,8 +62,13 @@ function getDuration(stageId: number): string {
     if (prevRecord?.createdAt) {
       const ms = new Date(record.createdAt).getTime() - new Date(prevRecord.createdAt).getTime();
       if (ms <= 0) return "";
-      const days = Math.floor(ms / (1000 * 60 * 60 * 24));
-      return days > 0 ? `${days}天` : "";
+      const totalMinutes = Math.floor(ms / (1000 * 60));
+      const days = Math.floor(totalMinutes / 1440);
+      const hours = Math.floor((totalMinutes % 1440) / 60);
+      const mins = totalMinutes % 60;
+      if (days > 0) return `${days}天${hours > 0 ? hours + "小时" : ""}`;
+      if (hours > 0) return `${hours}小时${mins > 0 ? mins + "分" : ""}`;
+      return `${mins}分钟`;
     }
   }
   return "";

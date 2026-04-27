@@ -6,6 +6,10 @@ import { routes } from "./routes/index.js";
 
 export const app = express();
 
+if (config.nodeEnv === "production") {
+  app.set("trust proxy", 1);
+}
+
 app.use(cors({ origin: config.cors.origin, credentials: true }));
 app.use(express.json());
 

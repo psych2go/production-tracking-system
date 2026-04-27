@@ -66,7 +66,12 @@ router.get("/grouped", authGuard, async (req, res, next) => {
 
 router.get("/export/excel", authGuard, async (req, res, next) => {
   try {
+    const validTypes = ["durations", "production", "online", "anomalies"];
     const type = (req.query.type as string) || "durations";
+    if (!validTypes.includes(type)) {
+      res.status(400).json({ error: `不支持的导出类型: ${type}` });
+      return;
+    }
     const buffer = await exportExcel({
       type,
       startDate: req.query.startDate as string | undefined,

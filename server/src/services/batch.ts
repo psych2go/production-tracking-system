@@ -217,7 +217,6 @@ export async function updateBatch(id: number, data: {
     if (!batch) throw new Error("批次不存在");
 
     const updateData: Record<string, unknown> = {
-      status: data.status,
       priority: data.priority,
       customerCode: data.customerCode,
       orderNo: data.orderNo,
@@ -233,11 +232,24 @@ export async function updateBatch(id: number, data: {
 
     if (data.batchNo !== undefined) updateData.batchNo = data.batchNo;
     if (data.trialContent !== undefined) updateData.trialContent = data.trialContent;
+
+    // Only allow archiving completed batches via update; other status changes go through progress flow
+    if (data.status !== undefined) {
+      if (data.status === "archived" && batch.status === "completed") {
+        updateData.status = "archived";
+      } else if (data.status !== batch.status) {
+        throw new Error("批次状态变更请通过工序流转操作");
+      }
+    }
+
     if (data.quantityDetail !== undefined) {
-      updateData.quantityDetail = data.quantityDetail;
-      updateData.quantity = data.quantityDetail
-        ? sumQuantityDetail(data.quantityDetail)
-        : (data.quantity ?? 0);
+      if (data.quantityDetail) {
+        updateData.quantityDetail = data.quantityDetail;
+        updateData.quantity = sumQuantityDetail(data.quantityDetail);
+      } else {
+        updateData.quantityDetail = null;
+        updateData.quantity = data.quantity ?? 0;
+      }
     } else if (data.quantity !== undefined) {
       updateData.quantity = data.quantity;
     }

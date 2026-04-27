@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { config } from "../config/index.js";
 import { prisma } from "../config/database.js";
@@ -55,7 +56,7 @@ export async function handleWwCallback(code: string) {
   const accessToken = await getWwAccessToken();
 
   // Step 1: Exchange code for user identity
-  const userUrl = `https://qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo?access_token=${accessToken}&code=${code}`;
+  const userUrl = `https://qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo?access_token=${accessToken}&code=${encodeURIComponent(code)}`;
   const userRes = await fetch(userUrl);
   const userData = (await userRes.json()) as { userid?: string; errcode?: number; errmsg?: string };
 
@@ -64,7 +65,7 @@ export async function handleWwCallback(code: string) {
   }
 
   // Step 2: Get user details
-  const detailUrl = `https://qyapi.weixin.qq.com/cgi-bin/user/get?access_token=${accessToken}&userid=${userData.userid}`;
+  const detailUrl = `https://qyapi.weixin.qq.com/cgi-bin/user/get?access_token=${accessToken}&userid=${encodeURIComponent(userData.userid)}`;
   const detailRes = await fetch(detailUrl);
   const detail = (await detailRes.json()) as {
     name?: string;
@@ -111,7 +112,9 @@ export async function handlePasswordLogin(password: string) {
   if (!config.loginPassword) {
     throw new Error("系统未设置登录密码，请在服务端配置 LOGIN_PASSWORD");
   }
-  if (password !== config.loginPassword) {
+  const pwdBuf = Buffer.from(password);
+  const secretBuf = Buffer.from(config.loginPassword);
+  if (pwdBuf.length !== secretBuf.length || !crypto.timingSafeEqual(pwdBuf, secretBuf)) {
     throw new Error("密码错误");
   }
 

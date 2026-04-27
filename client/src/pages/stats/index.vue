@@ -272,13 +272,16 @@ function onExport() {
     })
     .then((blob) => {
       const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = `${type}_report.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      try {
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `${type}_report.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } finally {
+        URL.revokeObjectURL(blobUrl);
+      }
     })
     .catch(() => uni.showToast({ title: "导出失败", icon: "none" }));
   // #endif
@@ -305,7 +308,7 @@ async function loadData() {
   try {
     switch (activeTab.value) {
       case "online": {
-        const res = await batchApi.list({ status: "active", pageSize: 9999 });
+        const res = await batchApi.list({ status: "active", pageSize: 500 });
         onlineBatches.value = res.items;
         break;
       }

@@ -142,6 +142,9 @@ export async function reorderSchedule(
   batchId: number,
   direction: "up" | "down"
 ) {
+  const stage = await prisma.processStage.findUnique({ where: { id: stageId } });
+  if (!stage) throw new Error("工序不存在");
+
   const orders = await prisma.scheduleOrder.findMany({
     where: { stageId },
     orderBy: { orderNum: "asc" },

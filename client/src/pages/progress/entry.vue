@@ -153,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import { useUserStore } from "../../store/user";
 import { useAppStore } from "../../store/app";
@@ -282,7 +282,7 @@ function onBatchInput() {
 
 async function searchBatches() {
   try {
-    const res = await batchApi.list({ status: "active", keyword: batchKeyword.value || undefined, pageSize: 9999 });
+    const res = await batchApi.list({ status: "active", keyword: batchKeyword.value || undefined, pageSize: 200 });
     batches.value = res.items;
   } catch (e: unknown) {
     uni.showToast({ title: (e as Error).message, icon: "none" });
@@ -358,6 +358,13 @@ onShow(async () => {
 
 onMounted(() => {
   appStore.loadStages();
+});
+
+onBeforeUnmount(() => {
+  if (searchTimer) {
+    clearTimeout(searchTimer);
+    searchTimer = null;
+  }
 });
 </script>
 

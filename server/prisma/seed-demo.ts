@@ -26,11 +26,13 @@ const STAGE_DURATIONS: Record<string, [number, number]> = {
   incoming_inspection: [30, 90],   // 来料检验 0.5~1.5h
   slide_inspection:    [120, 360],  // 减划 2~6h
   in_process_inspection: [40, 120], // 镜检 40min~2h
+  die_bonding_prep:    [20, 60],    // 粘片库 20~60min
   die_attach:          [60, 180],   // 粘片 1~3h
   wire_bonding:        [90, 240],   // 压焊 1.5~4h
   molding:             [120, 300],  // 塑封 2~5h
   ultrasound_scan:     [30, 60],    // 超扫 30min~1h
   deflashing:          [30, 60],    // 去溢料
+  lead_cutting:        [30, 60],    // 切筋
   plating:             [180, 480],  // 电镀 3~8h（最耗时）
   marking:             [30, 90],    // 打印
   trimming:            [30, 60],    // 冲切
@@ -117,6 +119,22 @@ function generateProgressRecords(
   }
 
   return records;
+}
+
+async function insertRecords(records: Array<{
+  batchId: number;
+  stageId: number;
+  operatorId: number;
+  inputQuantity: number;
+  outputQuantity: number;
+  defectQuantity: number;
+  status: string;
+  createdAt: Date;
+}>) {
+  if (records.length > 0) {
+    await prisma.progressRecord.createMany({ data: records });
+  }
+  return records.length;
 }
 
 async function main() {
@@ -247,7 +265,7 @@ async function main() {
         priority: cfg.priority,
         packageType: cfg.packageType,
         customerCode: cfg.customerCode,
-        expectedDelivery: cfg.expectedDelivery,
+        customerDelivery: cfg.expectedDelivery,
         createdBy: admin.id,
         createdAt: cfg.expectedDelivery,
       },
@@ -258,12 +276,10 @@ async function main() {
       cfg.expectedDelivery, -1, cfg.quantity,
     );
 
-    for (const r of records) {
-      await prisma.progressRecord.create({ data: r });
-    }
+    const count = await insertRecords(records);
 
     batchCount++;
-    recordCount += records.length;
+    recordCount += count;
   }
   console.log(`创建 ${completedBatchConfigs.length} 个已完成批次，共 ${recordCount} 条进度记录`);
 
@@ -304,9 +320,7 @@ async function main() {
       baseDate, cfg.completedStages, cfg.quantity,
     );
 
-    for (const r of records) {
-      await prisma.progressRecord.create({ data: r });
-    }
+    await insertRecords(records);
 
     batchCount++;
     activeRecordCount += records.length;
@@ -349,9 +363,7 @@ async function main() {
       baseDate, cfg.completedStages, cfg.quantity,
     );
 
-    for (const r of records) {
-      await prisma.progressRecord.create({ data: r });
-    }
+    await insertRecords(records);
 
     batchCount++;
     delayRecordCount += records.length;
@@ -395,10 +407,8 @@ async function main() {
         batch.id, allOperatorIds, stageIds, stageCodes,
         baseDate, cfg.completedStages, 100, // 试验批次数量少
       );
-      for (const r of records) {
-        await prisma.progressRecord.create({ data: r });
-      }
-      recordCount += records.length;
+      const count = await insertRecords(records);
+      recordCount += count;
     }
 
     trialCount++;

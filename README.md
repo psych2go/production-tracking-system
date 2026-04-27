@@ -70,7 +70,8 @@ server/src/
 server/tests/   # 集成测试（Vitest）
 server/prisma/
   schema.prisma # 数据模型（9 个）
-  seed.ts       # 16 道工序 + 27 种封装形式 + 13 个客户代码 + dev_admin
+  seed.ts       # 16 道工序 + 28 种封装形式 + 13 个客户代码 + dev_admin
+  seed-demo.ts  # 演示数据（~50 批次 + 进度记录）
 client/src/
   pages/        # 首页/录入/批次/排单/统计/我的
   pages-admin/  # 产品/用户/设置/封装形式/客户代码/审计

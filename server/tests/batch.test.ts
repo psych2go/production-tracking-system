@@ -159,8 +159,8 @@ describe("Batch Routes", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ status: "archived" });
 
-      expect(res.status).toBe(200);
-      expect(res.body.status).toBe("archived");
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("状态变更");
     });
 
     it("should update priority and notes", async () => {

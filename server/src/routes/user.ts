@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { listUsers, updateUser, deactivateUser } from "../services/user.js";
-import { authGuard, roleGuard } from "../middleware/auth.js";
+import { authGuard, roleGuard, AuthRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 import { parseId } from "../utils/parseId.js";
@@ -28,18 +28,28 @@ router.get("/", authGuard, roleGuard("admin"), async (req, res, next) => {
   }
 });
 
-router.put("/:id", authGuard, roleGuard("admin"), auditLog("update", "user"), validate(updateSchema), async (req, res, next) => {
+router.put("/:id", authGuard, roleGuard("admin"), auditLog("update", "user"), validate(updateSchema), async (req: AuthRequest, res, next) => {
   try {
-    const user = await updateUser(parseId(req.params.id), req.body);
+    const targetId = parseId(req.params.id);
+    if (targetId === req.user!.id) {
+      res.status(400).json({ error: "不能修改自己的角色或状态" });
+      return;
+    }
+    const user = await updateUser(targetId, req.body);
     res.json(user);
   } catch (err) {
     next(err);
   }
 });
 
-router.delete("/:id", authGuard, roleGuard("admin"), async (req, res, next) => {
+router.delete("/:id", authGuard, roleGuard("admin"), async (req: AuthRequest, res, next) => {
   try {
-    const user = await deactivateUser(parseId(req.params.id));
+    const targetId = parseId(req.params.id);
+    if (targetId === req.user!.id) {
+      res.status(400).json({ error: "不能停用自己" });
+      return;
+    }
+    const user = await deactivateUser(targetId);
     res.json(user);
   } catch (err) {
     next(err);

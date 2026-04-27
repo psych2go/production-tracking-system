@@ -5,9 +5,11 @@ import { prisma } from "../config/database.js";
 export function auditLog(action: string, entity: string) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     const originalJson = res.json.bind(res);
-    const originalSend = res.send.bind(res);
+    let logged = false;
 
     const tryLog = (body: unknown) => {
+      if (logged) return;
+      logged = true;
       if (res.statusCode >= 200 && res.statusCode < 300 && req.user) {
         try {
           const entityId = (body as Record<string, unknown>)?.id
@@ -22,7 +24,7 @@ export function auditLog(action: string, entity: string) {
           }
           // Capture request body for create/update operations (excluding sensitive fields)
           if (req.method === "POST" || req.method === "PUT") {
-            const { ...safeBody } = req.body as Record<string, unknown>;
+            const { password, ...safeBody } = req.body as Record<string, unknown>;
             if (Object.keys(safeBody).length > 0) {
               detailObj.body = safeBody;
             }
@@ -49,12 +51,6 @@ export function auditLog(action: string, entity: string) {
     res.json = function (body: unknown) {
       tryLog(body);
       return originalJson(body);
-    };
-
-    // Fallback: also intercept res.send() for routes that don't use res.json()
-    res.send = function (body: unknown) {
-      tryLog(body);
-      return originalSend(body);
     };
 
     next();
