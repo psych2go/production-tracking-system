@@ -132,6 +132,22 @@
             <text class="form-label">备注</text>
             <textarea v-model="editForm.notes" class="form-textarea" placeholder="可选" />
           </view>
+
+          <!-- Trial plan images management (edit mode) -->
+          <view class="form-group mt-md">
+            <text class="form-label">实验方案</text>
+            <view class="image-grid">
+              <view v-for="att in attachments" :key="att.id" class="image-item">
+                <image :src="att.filePath" mode="aspectFill" class="image-preview" @click="previewAttachment(att)" />
+                <view class="image-delete" @click="deleteAttachment(att.id)">
+                  <text class="text-white text-sm">x</text>
+                </view>
+              </view>
+              <view v-if="attachments.length < 9" class="image-add" @click="addTrialImage">
+                <text class="text-lg text-secondary">+</text>
+              </view>
+            </view>
+          </view>
         </template>
 
         <button class="btn-primary mt-lg" :loading="saving" @click="saveEdit">保存</button>
@@ -159,6 +175,16 @@
           <text>{{ formatDate(batch.createdAt) }}</text>
           <text class="text-secondary">备注</text>
           <text>{{ batch.notes || '-' }}</text>
+        </view>
+
+        <!-- Trial plan images (view mode, trial batches only) -->
+        <view v-if="isTrial && attachments.length > 0" class="mt-md">
+          <text class="form-label">实验方案</text>
+          <view class="image-grid mt-sm">
+            <view v-for="att in attachments" :key="att.id" class="image-item" @click="previewAttachment(att)">
+              <image :src="att.filePath" mode="aspectFill" class="image-preview" />
+            </view>
+          </view>
         </view>
 
         <!-- Product batch fields -->
@@ -214,10 +240,10 @@ import { ref, computed } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 import { useAppStore } from "../../store/app";
 import { useUserStore } from "../../store/user";
-import { batchApi, settingsApi } from "../../api/modules";
+import { batchApi, settingsApi, attachmentApi } from "../../api/modules";
 import { STATUS_LABELS, PRIORITIES } from "../../utils/constants";
 import { formatDate, formatDateShort, isOverdue as checkOverdue, getOverdueDays } from "../../utils/format";
-import type { Batch, PackageType, CustomerCode } from "../../types";
+import type { Batch, PackageType, CustomerCode, BatchAttachment } from "../../types";
 import StageTimeline from "../../components/StageTimeline.vue";
 
 const appStore = useAppStore();
@@ -225,6 +251,7 @@ const userStore = useUserStore();
 const batch = ref<Batch | null>(null);
 const packageTypes = ref<PackageType[]>([]);
 const customerCodes = ref<CustomerCode[]>([]);
+const attachments = ref<BatchAttachment[]>([]);
 
 const editing = ref(false);
 const saving = ref(false);
@@ -408,6 +435,44 @@ function goRecordProgress() {
   });
 }
 
+function previewAttachment(att: BatchAttachment) {
+  const urls = attachments.value.map((a) => a.filePath);
+  uni.previewImage({
+    current: att.filePath,
+    urls,
+  });
+}
+
+async function addTrialImage() {
+  if (!batch.value) return;
+  uni.chooseImage({
+    count: 9 - attachments.value.length,
+    sizeType: ["compressed"],
+    sourceType: ["album", "camera"],
+    success: async (res) => {
+      for (const filePath of res.tempFilePaths) {
+        try {
+          await attachmentApi.upload(batch.value!.id, filePath);
+        } catch {
+          uni.showToast({ title: "上传失败", icon: "none" });
+        }
+      }
+      // Refresh attachments
+      attachments.value = await attachmentApi.list(batch.value!.id);
+    },
+  });
+}
+
+async function deleteAttachment(attachmentId: number) {
+  if (!batch.value) return;
+  try {
+    await attachmentApi.remove(batch.value.id, attachmentId);
+    attachments.value = attachments.value.filter((a) => a.id !== attachmentId);
+  } catch {
+    uni.showToast({ title: "删除失败", icon: "none" });
+  }
+}
+
 async function confirmDelete() {
   if (!batch.value) return;
   const displayName = batch.value.product?.model || batch.value.trialContent || batch.value.batchNo;
@@ -430,6 +495,10 @@ onLoad(async (query) => {
   if (query?.id) {
     try {
       batch.value = await batchApi.get(Number(query.id));
+      // Load attachments from batch response or separately for trial batches
+      if (batch.value?.batchType === "trial") {
+        attachments.value = batch.value.attachments || await attachmentApi.list(Number(query.id));
+      }
     } catch (e: unknown) {
       uni.showToast({ title: "加载失败", icon: "none" });
     }
@@ -562,5 +631,41 @@ onLoad(async (query) => {
   font-size: 26rpx;
   color: #999;
   white-space: nowrap;
+}
+.image-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.image-item {
+  position: relative;
+  width: 160rpx;
+  height: 160rpx;
+}
+.image-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 8rpx;
+}
+.image-delete {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40rpx;
+  height: 40rpx;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 0 8rpx 0 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.image-add {
+  width: 160rpx;
+  height: 160rpx;
+  border: 2rpx dashed #ccc;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

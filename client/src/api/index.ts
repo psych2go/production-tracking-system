@@ -49,4 +49,44 @@ export const api = {
   put: <T>(url: string, data?: unknown) => request<T>({ url, method: "PUT", data }),
   delete: <T>(url: string) => request<T>({ url, method: "DELETE" }),
   getBaseUrl: () => BASE_URL,
+  uploadFile: <T>(url: string, filePath: string, name = "file"): Promise<T> => {
+    const userStore = useUserStore();
+    return new Promise((resolve, reject) => {
+      uni.uploadFile({
+        url: `${BASE_URL}${url}`,
+        filePath,
+        name,
+        header: {
+          Authorization: userStore.token ? `Bearer ${userStore.token}` : "",
+        },
+        success: (res) => {
+          if (res.statusCode === 401) {
+            if (userStore.isLoggedIn) {
+              userStore.logout();
+              uni.reLaunch({ url: "/pages/index/index" });
+            }
+            reject(new Error("登录已过期，请重新登录"));
+            return;
+          }
+          if (res.statusCode >= 400) {
+            try {
+              const errData = JSON.parse(res.data);
+              reject(new Error(errData.error || `上传失败 (${res.statusCode})`));
+            } catch {
+              reject(new Error(`上传失败 (${res.statusCode})`));
+            }
+            return;
+          }
+          try {
+            resolve(JSON.parse(res.data) as T);
+          } catch {
+            reject(new Error("响应解析失败"));
+          }
+        },
+        fail: (err) => {
+          reject(new Error(err.errMsg || "上传失败"));
+        },
+      });
+    });
+  },
 };

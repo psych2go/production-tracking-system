@@ -127,6 +127,22 @@
           </picker>
         </view>
 
+        <!-- Trial plan images -->
+        <view class="form-group mt-md">
+          <text class="form-label">实验方案</text>
+          <view class="image-grid">
+            <view v-for="(img, i) in trialImages" :key="i" class="image-item">
+              <image :src="img" mode="aspectFill" class="image-preview" @click="previewImage(i)" />
+              <view class="image-delete" @click="removeTrialImage(i)">
+                <text class="text-white text-sm">x</text>
+              </view>
+            </view>
+            <view v-if="trialImages.length < 9" class="image-add" @click="chooseTrialImage">
+              <text class="text-lg text-secondary">+</text>
+            </view>
+          </view>
+        </view>
+
         <view class="form-group mt-md">
           <text class="form-label">备注</text>
           <textarea v-model="form.notes" placeholder="备注信息（可选）" class="form-textarea" />
@@ -145,7 +161,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { batchApi, settingsApi } from "../../api/modules";
+import { batchApi, settingsApi, attachmentApi } from "../../api/modules";
 import { PRIORITIES } from "../../utils/constants";
 import type { PackageType, CustomerCode } from "../../types";
 
@@ -156,6 +172,7 @@ const validationErrors = ref<string[]>([]);
 
 // Trial batch multi-select state
 const selectedPackageTypes = ref<Set<string>>(new Set());
+const trialImages = ref<string[]>([]);
 
 const priorities = PRIORITIES;
 
@@ -231,6 +248,28 @@ function onTrialCustomerDeliveryChange(e: any) {
   form.value.deadline = e.detail.value ?? "";
 }
 
+function chooseTrialImage() {
+  uni.chooseImage({
+    count: 9 - trialImages.value.length,
+    sizeType: ["compressed"],
+    sourceType: ["album", "camera"],
+    success: (res) => {
+      trialImages.value = [...trialImages.value, ...res.tempFilePaths].slice(0, 9);
+    },
+  });
+}
+
+function removeTrialImage(index: number) {
+  trialImages.value = trialImages.value.filter((_, i) => i !== index);
+}
+
+function previewImage(index: number) {
+  uni.previewImage({
+    current: trialImages.value[index],
+    urls: trialImages.value,
+  });
+}
+
 function validate(): boolean {
   const errors: string[] = [];
 
@@ -254,6 +293,8 @@ async function submit() {
 
   submitting.value = true;
   try {
+    let createdBatch: { id: number } | null = null;
+
     if (form.value.batchType === "product") {
       await batchApi.create({
         batchType: "product",
@@ -275,7 +316,7 @@ async function submit() {
       if (qtyTiao > 0) detail["条"] = qtyTiao;
       if (qtyZhi > 0) detail["只"] = qtyZhi;
 
-      await batchApi.create({
+      createdBatch = await batchApi.create({
         batchType: "trial",
         trialContent: form.value.trialContent,
         quantity: qtyTiao + qtyZhi,
@@ -285,7 +326,18 @@ async function submit() {
           : undefined,
         customerDelivery: form.value.deadline || undefined,
         notes: form.value.notes || undefined,
-      });
+      }) as { id: number };
+
+      // Upload trial plan images
+      if (createdBatch && trialImages.value.length > 0) {
+        for (const img of trialImages.value) {
+          try {
+            await attachmentApi.upload(createdBatch.id, img);
+          } catch {
+            // Continue uploading remaining images even if one fails
+          }
+        }
+      }
     }
     uni.showToast({ title: "创建成功", icon: "success" });
     setTimeout(() => uni.navigateBack(), 1000);
@@ -415,5 +467,41 @@ onMounted(async () => {
   font-size: 26rpx;
   color: #999;
   white-space: nowrap;
+}
+.image-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.image-item {
+  position: relative;
+  width: 160rpx;
+  height: 160rpx;
+}
+.image-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 8rpx;
+}
+.image-delete {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40rpx;
+  height: 40rpx;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 0 8rpx 0 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.image-add {
+  width: 160rpx;
+  height: 160rpx;
+  border: 2rpx dashed #ccc;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

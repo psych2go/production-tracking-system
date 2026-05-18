@@ -74,6 +74,7 @@ export async function getBatchDetail(id: number) {
         include: { stage: true, operator: { select: { id: true, name: true } } },
         orderBy: { stage: { stageOrder: "asc" } },
       },
+      attachments: { orderBy: { createdAt: "asc" } },
     },
   });
 }

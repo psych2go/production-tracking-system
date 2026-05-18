@@ -1,4 +1,5 @@
 import express from "express";
+import path from "path";
 import cors from "cors";
 import { config } from "./config/index.js";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -12,6 +13,9 @@ if (config.nodeEnv === "production") {
 
 app.use(cors({ origin: config.cors.origin, credentials: true }));
 app.use(express.json());
+
+// Static file serving for uploaded files
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // API routes
 app.use("/api", routes);

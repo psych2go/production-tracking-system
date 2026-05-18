@@ -63,6 +63,7 @@ model Batch {
   creator         User?            @relation("BatchCreator", fields: [createdBy], references: [id])
   progressRecords ProgressRecord[]
   scheduleOrders  ScheduleOrder[]
+  attachments     BatchAttachment[]
 
   @@map("batches")
 }
@@ -148,4 +149,16 @@ model ScheduleOrder {
 
   @@unique([stageId, batchId], map: "schedule_stage_batch_unique")
   @@map("schedule_orders")
+}
+
+model BatchAttachment {
+  id        Int      @id @default(autoincrement())
+  batchId   Int      @map("batch_id")
+  fileName  String   @map("file_name")
+  filePath  String   @map("file_path")
+  fileSize  Int      @map("file_size")
+  createdAt DateTime @default(now()) @map("created_at")
+  batch     Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@map("batch_attachments")
 }

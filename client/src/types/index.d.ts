@@ -38,6 +38,7 @@ export interface Batch {
   product?: Product | null;
   creator?: { id: number; name: string };
   progressRecords?: ProgressRecord[];
+  attachments?: BatchAttachment[];
 }
 
 export interface ProcessStage {
@@ -132,4 +133,13 @@ export interface ScheduleItem {
   orderNum: number;
   batchId: number;
   batch: Batch;
+}
+
+export interface BatchAttachment {
+  id: number;
+  batchId: number;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  createdAt: string;
 }

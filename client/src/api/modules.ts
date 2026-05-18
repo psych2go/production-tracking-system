@@ -1,5 +1,5 @@
 import { api } from "./index";
-import type { User, Product, Batch, ProcessStage, ProgressRecord, PaginatedResult, DashboardData, ProcessDurationData, ProductionTrendData, AnomalyItem, AuditLog, PackageType, CustomerCode, ScheduleItem } from "../types";
+import type { User, Product, Batch, ProcessStage, ProgressRecord, PaginatedResult, DashboardData, ProcessDurationData, ProductionTrendData, AnomalyItem, AuditLog, PackageType, CustomerCode, ScheduleItem, BatchAttachment } from "../types";
 
 // Auth
 export const authApi = {
@@ -144,4 +144,14 @@ export const scheduleApi = {
     api.get<ScheduleItem[]>(`/api/schedule/${stageId}`),
   reorder: (stageId: number, batchId: number, direction: "up" | "down") =>
     api.put<ScheduleItem[]>(`/api/schedule/${stageId}/reorder`, { batchId, direction }),
+};
+
+// Attachments
+export const attachmentApi = {
+  list: (batchId: number) =>
+    api.get<BatchAttachment[]>(`/api/batches/${batchId}/attachments`),
+  upload: (batchId: number, filePath: string) =>
+    api.uploadFile<BatchAttachment[]>(`/api/batches/${batchId}/attachments`, filePath, "files"),
+  remove: (batchId: number, attachmentId: number) =>
+    api.delete<{ success: boolean }>(`/api/batches/${batchId}/attachments/${attachmentId}`),
 };
