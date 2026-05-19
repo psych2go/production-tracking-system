@@ -468,15 +468,23 @@ async function addTrialImage() {
     sizeType: ["compressed"],
     sourceType: ["album", "camera"],
     success: async (res) => {
+      let failCount = 0;
+      let lastError = "";
       for (const filePath of res.tempFilePaths) {
         try {
           await attachmentApi.upload(batch.value!.id, filePath);
-        } catch {
-          uni.showToast({ title: "上传失败", icon: "none" });
+        } catch (e: unknown) {
+          failCount++;
+          lastError = (e as Error).message || "";
         }
       }
+      if (failCount > 0) {
+        uni.showToast({ title: lastError || `${failCount}张上传失败`, icon: "none", duration: 3000 });
+      }
       // Refresh attachments
-      attachments.value = await attachmentApi.list(batch.value!.id);
+      try {
+        attachments.value = await attachmentApi.list(batch.value!.id);
+      } catch { /* ignore refresh error */ }
     },
   });
 }
