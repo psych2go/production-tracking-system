@@ -331,15 +331,23 @@ async function submit() {
       // Upload trial plan images
       if (createdBatch && trialImages.value.length > 0) {
         let uploadFailCount = 0;
+        let lastUploadError = "";
         for (const img of trialImages.value) {
           try {
             await attachmentApi.upload(createdBatch.id, img);
-          } catch {
+          } catch (e: unknown) {
             uploadFailCount++;
+            lastUploadError = (e as Error).message || "";
           }
         }
         if (uploadFailCount > 0) {
-          uni.showToast({ title: `${uploadFailCount}张图片上传失败`, icon: "none" });
+          uni.showModal({
+            title: "图片上传",
+            content: `${uploadFailCount}张图片上传失败${lastUploadError ? "：" + lastUploadError : ""}`,
+            showCancel: false,
+          });
+          submitting.value = false;
+          return;
         }
       }
     }

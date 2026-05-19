@@ -191,7 +191,6 @@ export async function deleteBatch(id: number) {
 
   await prisma.$transaction([
     prisma.progressRecord.deleteMany({ where: { batchId: id } }),
-    prisma.scheduleOrder.deleteMany({ where: { batchId: id } }),
     prisma.batch.delete({ where: { id } }),
   ]);
 

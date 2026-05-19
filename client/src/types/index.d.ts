@@ -129,12 +129,6 @@ export interface CustomerCode {
   code: string;
 }
 
-export interface ScheduleItem {
-  orderNum: number;
-  batchId: number;
-  batch: Batch;
-}
-
 export interface BatchAttachment {
   id: number;
   batchId: number;

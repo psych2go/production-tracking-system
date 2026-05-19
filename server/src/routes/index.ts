@@ -7,7 +7,6 @@ import { progressRoutes } from "./progress.js";
 import { statisticsRoutes } from "./statistics.js";
 import { auditRoutes } from "./audit.js";
 import { settingsRoutes } from "./settings.js";
-import { scheduleRoutes } from "./schedule.js";
 import { uploadRoutes } from "./upload.js";
 
 export const routes = Router();
@@ -21,4 +20,3 @@ routes.use("/progress", progressRoutes);
 routes.use("/statistics", statisticsRoutes);
 routes.use("/audit", auditRoutes);
 routes.use("/settings", settingsRoutes);
-routes.use("/schedule", scheduleRoutes);

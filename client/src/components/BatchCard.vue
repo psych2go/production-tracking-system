@@ -43,10 +43,6 @@
         <text v-else class="text-secondary">待开始</text>
       </view>
     </view>
-    <!-- Progress bar -->
-    <view class="progress-bar mt-sm">
-      <view class="progress-fill" :style="{ width: progressPercent + '%' }"></view>
-    </view>
     <!-- Delivery hints -->
     <view v-if="!isTrial && (batch.customerDelivery || batch.productionDelivery) && batch.status === 'active'" class="delivery-hint mt-sm">
       <text class="text-sm text-secondary">
@@ -66,7 +62,6 @@
 <script setup lang="ts">
 import type { Batch } from "../types";
 import { computed } from "vue";
-import { useAppStore } from "../store/app";
 import { formatDateShort, getCurrentStage, isOverdue as checkOverdue } from "../utils/format";
 
 const props = defineProps<{ batch: Batch }>();
@@ -88,16 +83,7 @@ const trialQuantityDisplay = computed(() => {
   return props.batch.quantity ? `${props.batch.quantity}` : "";
 });
 
-const appStore = useAppStore();
-
 const currentStage = computed(() => getCurrentStage(props.batch)?.name ?? null);
-
-const progressPercent = computed(() => {
-  if (!props.batch.progressRecords?.length) return 0;
-  const completed = props.batch.progressRecords.filter((r) => r.status === "completed").length;
-  const total = appStore.stages.length || 16;
-  return Math.round((completed / total) * 100);
-});
 
 const isOverdue = computed(() => checkOverdue(props.batch.customerDelivery, props.batch.status));
 </script>
@@ -136,18 +122,6 @@ const isOverdue = computed(() => checkOverdue(props.batch.customerDelivery, prop
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.progress-bar {
-  height: 8rpx;
-  background: #e5e5e5;
-  border-radius: 4rpx;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  background: #07c160;
-  border-radius: 4rpx;
-  transition: width 0.3s;
 }
 .delivery-hint {
   display: flex;

@@ -479,7 +479,11 @@ async function addTrialImage() {
         }
       }
       if (failCount > 0) {
-        uni.showToast({ title: lastError || `${failCount}张上传失败`, icon: "none", duration: 3000 });
+        uni.showModal({
+          title: "图片上传",
+          content: `${failCount}张图片上传失败${lastError ? "：" + lastError : ""}`,
+          showCancel: false,
+        });
       }
       // Refresh attachments
       try {
@@ -525,14 +529,13 @@ onLoad(async (query) => {
       uni.showToast({ title: "加载失败", icon: "none" });
       return;
     }
-    // Load attachments separately for trial batches (non-critical)
+    // Load attachments for trial batches (always fetch fresh from API)
     if (batch.value?.batchType === "trial") {
       try {
-        attachments.value = batch.value.attachments?.length
-          ? batch.value.attachments
-          : await attachmentApi.list(Number(query.id));
+        attachments.value = await attachmentApi.list(Number(query.id));
       } catch {
-        // attachments load failure should not block the page
+        // If API fails, try using attachments from batch detail response
+        attachments.value = batch.value.attachments || [];
       }
     }
   }

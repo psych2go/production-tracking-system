@@ -34,12 +34,6 @@
           </view>
           <text class="action-label">新建批次</text>
         </view>
-        <view class="action-item" @click="goSchedule">
-          <view class="action-circle">
-            <text class="action-icon">📋</text>
-          </view>
-          <text class="action-label">排单</text>
-        </view>
       </view>
     </view>
 
@@ -173,10 +167,6 @@ function goDetail(id: number) {
 
 function goCreate() {
   uni.navigateTo({ url: "/pages/batch/create" });
-}
-
-function goSchedule() {
-  uni.navigateTo({ url: "/pages/schedule/index" });
 }
 
 onShow(async () => {

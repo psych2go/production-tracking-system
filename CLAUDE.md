@@ -36,7 +36,7 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 
 | 角色 | 权限 |
 |------|------|
-| admin | 全部：用户/工序/封装形式/客户代码/批次管理、排单、审计日志（不可停用或降级自己） |
+| admin | 全部：用户/工序/封装形式/客户代码/批次管理、审计日志（不可停用或降级自己） |
 | worker | 进度录入、查看批次 |
 
 ## 核心业务
@@ -52,9 +52,6 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 
 ### 客户代码
 预设客户代码列表（管理员维护），创建/编辑产品批次时从列表选择。管理入口：个人中心 → 客户代码管理。
-
-### 排单
-管理员按工位排列批次加工顺序。工人可在首页查看排单队列（按工位展开/收起）。首页通过 `/api/schedule/counts` 批量获取各工位数量。默认按流转到工位的时间排序，管理员可手动调整。
 
 ### 工序流转防重复
 已流转的工序不可再次流转。前后端双重校验，后端返回明确错误信息（含工序名和流转时间）。
@@ -87,9 +84,9 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 - 试验批次数量：`quantityDetail` 存 JSON 如 `{"条":100,"只":50}`，`quantity` 存总和。显示格式 "100条 50只"，老数据 fallback 到 `quantity` 数字
 - 工序耗时：超过1天显示"X天X小时"，不足1天显示"X小时X分"或"X分钟"
 
-## 数据模型（9 个）
+## 数据模型（8 个）
 
-User、Product、Batch（产品/试验双类型）、ProcessStage、ProgressRecord（批次+工序唯一）、PackageType、CustomerCode、AuditLog、ScheduleOrder（工序+批次唯一）
+User、Product、Batch（产品/试验双类型）、ProcessStage、ProgressRecord（批次+工序唯一）、PackageType、CustomerCode、AuditLog
 
 ## 工序（16 道，4 道质检）
 

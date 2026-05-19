@@ -1,5 +1,5 @@
 import { api } from "./index";
-import type { User, Product, Batch, ProcessStage, ProgressRecord, PaginatedResult, DashboardData, ProcessDurationData, ProductionTrendData, AnomalyItem, AuditLog, PackageType, CustomerCode, ScheduleItem, BatchAttachment } from "../types";
+import type { User, Product, Batch, ProcessStage, ProgressRecord, PaginatedResult, DashboardData, ProcessDurationData, ProductionTrendData, AnomalyItem, AuditLog, PackageType, CustomerCode, BatchAttachment } from "../types";
 
 // Auth
 export const authApi = {
@@ -135,15 +135,6 @@ export const auditApi = {
     if (params?.page) query.set("page", String(params.page));
     return api.get<PaginatedResult<AuditLog>>(`/api/audit/logs?${query.toString()}`);
   },
-};
-
-// Schedule
-export const scheduleApi = {
-  getCounts: () => api.get<Record<number, number>>("/api/schedule/counts"),
-  getQueue: (stageId: number) =>
-    api.get<ScheduleItem[]>(`/api/schedule/${stageId}`),
-  reorder: (stageId: number, batchId: number, direction: "up" | "down") =>
-    api.put<ScheduleItem[]>(`/api/schedule/${stageId}/reorder`, { batchId, direction }),
 };
 
 // Attachments
