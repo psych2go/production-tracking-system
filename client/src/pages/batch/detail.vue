@@ -30,7 +30,7 @@
 
       <!-- Overdue warning -->
       <view v-if="isOverdue && !editing" class="overdue-warning mt-sm">
-        <text class="text-sm">已超过客户要求交期 {{ overdueDays }} 天</text>
+        <text class="text-sm">已超过{{ isTrial ? '要求完成时间' : '客户要求交期' }} {{ overdueDays }} 天</text>
       </view>
 
       <!-- ===== EDIT MODE ===== -->
@@ -155,39 +155,41 @@
 
       <!-- ===== VIEW MODE ===== -->
       <template v-else>
-        <!-- Trial batch fields -->
-        <view v-if="isTrial" class="info-grid mt-md">
-          <text class="text-secondary">试验内容</text>
-          <text>{{ batch.trialContent || '-' }}</text>
-          <text class="text-secondary">数量</text>
-          <text>{{ quantityDisplay }}</text>
-          <text class="text-secondary">封装形式</text>
-          <view v-if="batch.packageType" class="tag-list">
-            <text v-for="pt in batch.packageType.split(',')" :key="pt" class="info-tag">{{ pt.trim() }}</text>
+        <!-- Trial batch view -->
+        <template v-if="isTrial">
+          <view class="info-grid mt-md">
+            <text class="text-secondary">试验内容</text>
+            <text>{{ batch.trialContent || '-' }}</text>
+            <text class="text-secondary">数量</text>
+            <text>{{ quantityDisplay }}</text>
+            <text class="text-secondary">封装形式</text>
+            <view v-if="batch.packageType" class="tag-list">
+              <text v-for="pt in batch.packageType.split(',')" :key="pt" class="info-tag">{{ pt.trim() }}</text>
+            </view>
+            <text v-else>-</text>
+            <text class="text-secondary">要求完成时间</text>
+            <text :class="isOverdue ? 'text-danger' : ''">
+              {{ batch.customerDelivery ? formatDateShort(batch.customerDelivery) : '-' }}
+              <text v-if="isOverdue" class="text-sm"> (已逾期)</text>
+            </text>
+            <text class="text-secondary">创建时间</text>
+            <text>{{ formatDate(batch.createdAt) }}</text>
+            <text class="text-secondary">备注</text>
+            <text>{{ batch.notes || '-' }}</text>
           </view>
-          <text v-else>-</text>
-          <text class="text-secondary">要求完成时间</text>
-          <text :class="isOverdue ? 'text-danger' : ''">
-            {{ batch.customerDelivery ? formatDateShort(batch.customerDelivery) : '-' }}
-            <text v-if="isOverdue" class="text-sm"> (已逾期)</text>
-          </text>
-          <text class="text-secondary">创建时间</text>
-          <text>{{ formatDate(batch.createdAt) }}</text>
-          <text class="text-secondary">备注</text>
-          <text>{{ batch.notes || '-' }}</text>
-        </view>
 
-        <!-- Trial plan images (view mode, trial batches only) -->
-        <view v-if="isTrial && attachments.length > 0" class="mt-md">
-          <text class="form-label">实验方案</text>
-          <view class="image-grid mt-sm">
-            <view v-for="att in attachments" :key="att.id" class="image-item" @click="previewAttachment(att)">
-              <image :src="att.filePath" mode="aspectFill" class="image-preview" />
+          <!-- Trial plan images -->
+          <view v-if="attachments.length > 0" class="mt-md">
+            <text class="form-label">实验方案</text>
+            <view class="image-grid mt-sm">
+              <view v-for="att in attachments" :key="att.id" class="image-item" @click="previewAttachment(att)">
+                <image :src="att.filePath" mode="aspectFill" class="image-preview" />
+              </view>
             </view>
           </view>
-        </view>
+        </template>
 
-        <!-- Product batch fields -->
+        <!-- Product batch view -->
         <view v-else class="info-grid mt-md">
           <text class="text-secondary">产品型号</text>
           <text>{{ batch.product?.model || '-' }}</text>
