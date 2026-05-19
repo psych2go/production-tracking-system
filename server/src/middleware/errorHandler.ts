@@ -8,6 +8,18 @@ const HAS_CJK = /[一-鿿]/;
 export function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunction) {
   console.error(`[Error] ${err.message}`, err.stack);
 
+  // Multer file size limit
+  if ("code" in err && (err as any).code === "LIMIT_FILE_SIZE") {
+    res.status(413).json({ error: "文件大小超过10MB限制" });
+    return;
+  }
+
+  // Multer file type error
+  if ("code" in err && (err as any).code === "LIMIT_UNEXPECTED_FILE") {
+    res.status(400).json({ error: "文件数量超过限制" });
+    return;
+  }
+
   // Prisma unique constraint error
   if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
     const fields = (err.meta?.target as string[])?.join(", ") || "字段";
