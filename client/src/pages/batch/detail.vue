@@ -481,11 +481,10 @@ async function addTrialImage() {
       if (failCount > 0) {
         uni.showModal({
           title: "图片上传",
-          content: `${failCount}张图片上传失败${lastError ? "：" + lastError : ""}`,
+          content: `${failCount}张上传失败${lastError ? "：" + lastError : ""}`,
           showCancel: false,
         });
       }
-      // Refresh attachments
       try {
         attachments.value = await attachmentApi.list(batch.value!.id);
       } catch { /* ignore refresh error */ }

@@ -141,8 +141,22 @@ export const auditApi = {
 export const attachmentApi = {
   list: (batchId: number) =>
     api.get<BatchAttachment[]>(`/api/batches/${batchId}/attachments`),
-  upload: (batchId: number, filePath: string) =>
-    api.uploadFile<BatchAttachment[]>(`/api/batches/${batchId}/attachments`, filePath, "files"),
+  upload: async (batchId: number, filePath: string) => {
+    // Compress image before upload to avoid 413
+    let uploadPath = filePath;
+    try {
+      const compressed = await new Promise<string>((resolve) => {
+        uni.compressImage({
+          src: filePath,
+          quality: 80,
+          success: (res) => resolve(res.tempFilePath),
+          fail: () => resolve(filePath),
+        });
+      });
+      uploadPath = compressed;
+    } catch { /* use original */ }
+    return api.uploadFile<BatchAttachment[]>(`/api/batches/${batchId}/attachments`, uploadPath, "files");
+  },
   remove: (batchId: number, attachmentId: number) =>
     api.delete<{ success: boolean }>(`/api/batches/${batchId}/attachments/${attachmentId}`),
 };

@@ -51,9 +51,10 @@ export const api = {
   getBaseUrl: () => BASE_URL,
   uploadFile: <T>(url: string, filePath: string, name = "file"): Promise<T> => {
     const userStore = useUserStore();
+    const fullUrl = `${BASE_URL}${url}`;
     return new Promise((resolve, reject) => {
       uni.uploadFile({
-        url: `${BASE_URL}${url}`,
+        url: fullUrl,
         filePath,
         name,
         header: {
@@ -66,6 +67,14 @@ export const api = {
               uni.reLaunch({ url: "/pages/index/index" });
             }
             reject(new Error("登录已过期，请重新登录"));
+            return;
+          }
+          if (res.statusCode === 404) {
+            reject(new Error(`接口不存在 (${fullUrl})`));
+            return;
+          }
+          if (res.statusCode === 413) {
+            reject(new Error("图片太大，请选择较小的图片"));
             return;
           }
           if (res.statusCode >= 400) {

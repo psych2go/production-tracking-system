@@ -10,7 +10,7 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
 
   // Multer file size limit
   if ("code" in err && (err as any).code === "LIMIT_FILE_SIZE") {
-    res.status(413).json({ error: "文件大小超过20MB限制" });
+    res.status(413).json({ error: "文件大小超过50MB限制" });
     return;
   }
 
