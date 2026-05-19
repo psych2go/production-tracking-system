@@ -497,12 +497,19 @@ onLoad(async (query) => {
   if (query?.id) {
     try {
       batch.value = await batchApi.get(Number(query.id));
-      // Load attachments from batch response or separately for trial batches
-      if (batch.value?.batchType === "trial") {
-        attachments.value = batch.value.attachments || await attachmentApi.list(Number(query.id));
-      }
-    } catch (e: unknown) {
+    } catch {
       uni.showToast({ title: "加载失败", icon: "none" });
+      return;
+    }
+    // Load attachments separately for trial batches (non-critical)
+    if (batch.value?.batchType === "trial") {
+      try {
+        attachments.value = batch.value.attachments?.length
+          ? batch.value.attachments
+          : await attachmentApi.list(Number(query.id));
+      } catch {
+        // attachments load failure should not block the page
+      }
     }
   }
   // Load package types and customer codes for edit mode
