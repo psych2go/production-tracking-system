@@ -138,7 +138,7 @@
             <text class="form-label">实验方案</text>
             <view class="image-grid">
               <view v-for="att in attachments" :key="att.id" class="image-item">
-                <image :src="att.filePath" mode="aspectFill" class="image-preview" @click="previewAttachment(att)" />
+                <image :src="resolveImageUrl(att.filePath)" mode="aspectFill" class="image-preview" @click="previewAttachment(att)" />
                 <view class="image-delete" @click="deleteAttachment(att.id)">
                   <text class="text-white text-sm">x</text>
                 </view>
@@ -179,13 +179,14 @@
           </view>
 
           <!-- Trial plan images -->
-          <view v-if="attachments.length > 0" class="mt-md">
+          <view class="mt-md">
             <text class="form-label">实验方案</text>
-            <view class="image-grid mt-sm">
+            <view v-if="attachments.length > 0" class="image-grid mt-sm">
               <view v-for="att in attachments" :key="att.id" class="image-item" @click="previewAttachment(att)">
-                <image :src="att.filePath" mode="aspectFill" class="image-preview" />
+                <image :src="resolveImageUrl(att.filePath)" mode="aspectFill" class="image-preview" />
               </view>
             </view>
+            <text v-else class="text-secondary text-sm mt-sm" style="display:block">暂无图片</text>
           </view>
         </template>
 
@@ -437,10 +438,25 @@ function goRecordProgress() {
   });
 }
 
+function resolveImageUrl(filePath: string): string {
+  // Already an absolute URL or local temp path
+  if (filePath.startsWith("http") || filePath.startsWith("blob:") || filePath.startsWith("wxfile:")) {
+    return filePath;
+  }
+  // Server-relative path: prepend API base URL for non-H5 environments
+  // #ifdef H5
+  return filePath;
+  // #endif
+  // #ifndef H5
+  const baseUrl = (uni as any).getSystemInfoSync?.()?.apiBase || "";
+  return baseUrl + filePath;
+  // #endif
+}
+
 function previewAttachment(att: BatchAttachment) {
-  const urls = attachments.value.map((a) => a.filePath);
+  const urls = attachments.value.map((a) => resolveImageUrl(a.filePath));
   uni.previewImage({
-    current: att.filePath,
+    current: resolveImageUrl(att.filePath),
     urls,
   });
 }
@@ -648,8 +664,8 @@ onLoad(async (query) => {
 }
 .image-item {
   position: relative;
-  width: 160rpx;
-  height: 160rpx;
+  width: 200rpx;
+  height: 200rpx;
 }
 .image-preview {
   width: 100%;
@@ -660,8 +676,8 @@ onLoad(async (query) => {
   position: absolute;
   top: 0;
   right: 0;
-  width: 40rpx;
-  height: 40rpx;
+  width: 44rpx;
+  height: 44rpx;
   background: rgba(0, 0, 0, 0.5);
   border-radius: 0 8rpx 0 8rpx;
   display: flex;
@@ -669,8 +685,8 @@ onLoad(async (query) => {
   justify-content: center;
 }
 .image-add {
-  width: 160rpx;
-  height: 160rpx;
+  width: 200rpx;
+  height: 200rpx;
   border: 2rpx dashed #ccc;
   border-radius: 8rpx;
   display: flex;
