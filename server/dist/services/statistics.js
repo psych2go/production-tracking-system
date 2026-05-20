@@ -31,6 +31,7 @@ async function getProcessDurations(filters) {
         where,
         include: { stage: true },
         orderBy: { createdAt: "asc" },
+        take: 50000,
     });
     // Group by (batchId, stageId) to get duration from previous stage in same batch
     // First, group records by batchId

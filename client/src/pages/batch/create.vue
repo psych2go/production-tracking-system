@@ -251,7 +251,7 @@ function onTrialCustomerDeliveryChange(e: any) {
 function chooseTrialImage() {
   uni.chooseImage({
     count: 9 - trialImages.value.length,
-    sizeType: ["compressed"],
+    sizeType: ["original", "compressed"],
     sourceType: ["album", "camera"],
     success: (res) => {
       trialImages.value = [...trialImages.value, ...res.tempFilePaths].slice(0, 9);

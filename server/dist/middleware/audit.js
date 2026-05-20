@@ -5,8 +5,11 @@ const database_js_1 = require("../config/database.js");
 function auditLog(action, entity) {
     return (req, res, next) => {
         const originalJson = res.json.bind(res);
-        const originalSend = res.send.bind(res);
+        let logged = false;
         const tryLog = (body) => {
+            if (logged)
+                return;
+            logged = true;
             if (res.statusCode >= 200 && res.statusCode < 300 && req.user) {
                 try {
                     const entityId = body?.id
@@ -20,7 +23,7 @@ function auditLog(action, entity) {
                     }
                     // Capture request body for create/update operations (excluding sensitive fields)
                     if (req.method === "POST" || req.method === "PUT") {
-                        const { ...safeBody } = req.body;
+                        const { password, ...safeBody } = req.body;
                         if (Object.keys(safeBody).length > 0) {
                             detailObj.body = safeBody;
                         }
@@ -46,11 +49,6 @@ function auditLog(action, entity) {
         res.json = function (body) {
             tryLog(body);
             return originalJson(body);
-        };
-        // Fallback: also intercept res.send() for routes that don't use res.json()
-        res.send = function (body) {
-            tryLog(body);
-            return originalSend(body);
         };
         next();
     };

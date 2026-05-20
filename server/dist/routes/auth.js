@@ -13,6 +13,9 @@ const router = (0, express_1.Router)();
 const callbackSchema = zod_1.z.object({
     code: zod_1.z.string().min(1),
 });
+const passwordSchema = zod_1.z.object({
+    password: zod_1.z.string().min(1),
+});
 const authLimiter = (0, rateLimit_js_1.rateLimit)({ windowMs: 60_000, max: 10 });
 // WeChat Work OAuth callback
 router.post("/ww/callback", authLimiter, (0, audit_js_1.auditLog)("login", "auth"), (0, validator_js_1.validate)(callbackSchema), async (req, res, next) => {
@@ -33,6 +36,16 @@ router.get("/me", auth_js_2.authGuard, async (req, res, next) => {
             return;
         }
         res.json(user);
+    }
+    catch (err) {
+        next(err);
+    }
+});
+// Password login
+router.post("/password-login", authLimiter, (0, audit_js_1.auditLog)("login", "auth"), (0, validator_js_1.validate)(passwordSchema), async (req, res, next) => {
+    try {
+        const { token, user } = await (0, auth_js_1.handlePasswordLogin)(req.body.password);
+        res.json({ token, user });
     }
     catch (err) {
         next(err);

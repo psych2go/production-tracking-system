@@ -61,7 +61,12 @@ router.get("/grouped", auth_js_1.authGuard, async (req, res, next) => {
 });
 router.get("/export/excel", auth_js_1.authGuard, async (req, res, next) => {
     try {
+        const validTypes = ["durations", "production", "online", "anomalies"];
         const type = req.query.type || "durations";
+        if (!validTypes.includes(type)) {
+            res.status(400).json({ error: `不支持的导出类型: ${type}` });
+            return;
+        }
         const buffer = await (0, statistics_js_1.exportExcel)({
             type,
             startDate: req.query.startDate,

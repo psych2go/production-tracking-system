@@ -11,9 +11,9 @@ export declare function listBatches(filters: {
     items: ({
         progressRecords: ({
             stage: {
+                code: string;
                 id: number;
                 name: string;
-                code: string;
                 description: string | null;
                 stageOrder: number;
                 isQcStage: boolean;
@@ -73,9 +73,9 @@ export declare function listBatches(filters: {
 export declare function getBatchDetail(id: number): Promise<({
     progressRecords: ({
         stage: {
+            code: string;
             id: number;
             name: string;
-            code: string;
             description: string | null;
             stageOrder: number;
             isQcStage: boolean;
@@ -112,6 +112,14 @@ export declare function getBatchDetail(id: number): Promise<({
         id: number;
         name: string;
     } | null;
+    attachments: {
+        id: number;
+        createdAt: Date;
+        batchId: number;
+        fileName: string;
+        filePath: string;
+        fileSize: number;
+    }[];
 } & {
     id: number;
     createdAt: Date;

@@ -5,9 +5,9 @@ export declare function createStage(data: {
     isQcStage?: boolean;
     description?: string;
 }): Promise<{
+    code: string;
     id: number;
     name: string;
-    code: string;
     description: string | null;
     stageOrder: number;
     isQcStage: boolean;
@@ -18,17 +18,17 @@ export declare function updateStage(id: number, data: {
     isQcStage?: boolean;
     description?: string;
 }): Promise<{
+    code: string;
     id: number;
     name: string;
-    code: string;
     description: string | null;
     stageOrder: number;
     isQcStage: boolean;
 }>;
 export declare function deleteStage(id: number): Promise<{
+    code: string;
     id: number;
     name: string;
-    code: string;
     description: string | null;
     stageOrder: number;
     isQcStage: boolean;
@@ -70,20 +70,20 @@ export declare function deletePackageType(id: number): Promise<{
     sortOrder: number;
 }>;
 export declare function listCustomerCodes(): Promise<{
+    code: string;
     id: number;
     createdAt: Date;
-    code: string;
 }[]>;
 export declare function createCustomerCode(data: {
     code: string;
 }): Promise<{
+    code: string;
     id: number;
     createdAt: Date;
-    code: string;
 }>;
 export declare function deleteCustomerCode(id: number): Promise<{
+    code: string;
     id: number;
     createdAt: Date;
-    code: string;
 }>;
 //# sourceMappingURL=settings.d.ts.map

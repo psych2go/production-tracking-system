@@ -244,6 +244,7 @@ import { onLoad } from "@dcloudio/uni-app";
 import { useAppStore } from "../../store/app";
 import { useUserStore } from "../../store/user";
 import { batchApi, settingsApi, attachmentApi } from "../../api/modules";
+import { api } from "../../api/index";
 import { STATUS_LABELS, PRIORITIES } from "../../utils/constants";
 import { formatDate, formatDateShort, isOverdue as checkOverdue, getOverdueDays } from "../../utils/format";
 import type { Batch, PackageType, CustomerCode, BatchAttachment } from "../../types";
@@ -439,17 +440,14 @@ function goRecordProgress() {
 }
 
 function resolveImageUrl(filePath: string): string {
-  // Already an absolute URL or local temp path
   if (filePath.startsWith("http") || filePath.startsWith("blob:") || filePath.startsWith("wxfile:")) {
     return filePath;
   }
-  // Server-relative path: prepend API base URL for non-H5 environments
   // #ifdef H5
   return filePath;
   // #endif
   // #ifndef H5
-  const baseUrl = (uni as any).getSystemInfoSync?.()?.apiBase || "";
-  return baseUrl + filePath;
+  return api.getBaseUrl() + filePath;
   // #endif
 }
 
@@ -465,7 +463,7 @@ async function addTrialImage() {
   if (!batch.value) return;
   uni.chooseImage({
     count: 9 - attachments.value.length,
-    sizeType: ["compressed"],
+    sizeType: ["original", "compressed"],
     sourceType: ["album", "camera"],
     success: async (res) => {
       let failCount = 0;
@@ -516,7 +514,11 @@ async function confirmDelete() {
     uni.showToast({ title: "已删除", icon: "success" });
     setTimeout(() => uni.navigateBack(), 1000);
   } catch (e: unknown) {
-    uni.showToast({ title: (e as Error).message, icon: "none" });
+    uni.showModal({
+      title: "删除失败",
+      content: (e as Error).message || "未知错误",
+      showCancel: false,
+    });
   }
 }
 

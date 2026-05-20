@@ -7,6 +7,16 @@ const client_1 = require("@prisma/client");
 const HAS_CJK = /[一-鿿]/;
 function errorHandler(err, _req, res, _next) {
     console.error(`[Error] ${err.message}`, err.stack);
+    // Multer file size limit
+    if ("code" in err && err.code === "LIMIT_FILE_SIZE") {
+        res.status(413).json({ error: "文件大小超过50MB限制" });
+        return;
+    }
+    // Multer file type error
+    if ("code" in err && err.code === "LIMIT_UNEXPECTED_FILE") {
+        res.status(400).json({ error: "文件数量超过限制" });
+        return;
+    }
     // Prisma unique constraint error
     if (err instanceof client_1.Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         const fields = err.meta?.target?.join(", ") || "字段";

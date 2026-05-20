@@ -10,6 +10,7 @@ export declare const config: {
         corpId: string;
         corpSecret: string;
     };
+    loginPassword: string;
     cors: {
         origin: string;
     };

@@ -30,7 +30,12 @@ router.get("/", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), async (r
 });
 router.put("/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, audit_js_1.auditLog)("update", "user"), (0, validator_js_1.validate)(updateSchema), async (req, res, next) => {
     try {
-        const user = await (0, user_js_1.updateUser)((0, parseId_js_1.parseId)(req.params.id), req.body);
+        const targetId = (0, parseId_js_1.parseId)(req.params.id);
+        if (targetId === req.user.id) {
+            res.status(400).json({ error: "不能修改自己的角色或状态" });
+            return;
+        }
+        const user = await (0, user_js_1.updateUser)(targetId, req.body);
         res.json(user);
     }
     catch (err) {
@@ -39,7 +44,12 @@ router.put("/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), (0, a
 });
 router.delete("/:id", auth_js_1.authGuard, (0, auth_js_1.roleGuard)("admin"), async (req, res, next) => {
     try {
-        const user = await (0, user_js_1.deactivateUser)((0, parseId_js_1.parseId)(req.params.id));
+        const targetId = (0, parseId_js_1.parseId)(req.params.id);
+        if (targetId === req.user.id) {
+            res.status(400).json({ error: "不能停用自己" });
+            return;
+        }
+        const user = await (0, user_js_1.deactivateUser)(targetId);
         res.json(user);
     }
     catch (err) {

@@ -6,6 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateToken = generateToken;
 exports.handleWwCallback = handleWwCallback;
 exports.getMe = getMe;
+exports.handlePasswordLogin = handlePasswordLogin;
+const crypto_1 = __importDefault(require("crypto"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const index_js_1 = require("../config/index.js");
 const database_js_1 = require("../config/database.js");
@@ -53,14 +55,14 @@ async function handleWwCallback(code) {
     // Production: call WeChat Work API
     const accessToken = await getWwAccessToken();
     // Step 1: Exchange code for user identity
-    const userUrl = `https://qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo?access_token=${accessToken}&code=${code}`;
+    const userUrl = `https://qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo?access_token=${accessToken}&code=${encodeURIComponent(code)}`;
     const userRes = await fetch(userUrl);
     const userData = (await userRes.json());
     if (!userData.userid) {
         throw new Error(`企业微信认证失败: ${userData.errmsg || "code 无效或已过期"}`);
     }
     // Step 2: Get user details
-    const detailUrl = `https://qyapi.weixin.qq.com/cgi-bin/user/get?access_token=${accessToken}&userid=${userData.userid}`;
+    const detailUrl = `https://qyapi.weixin.qq.com/cgi-bin/user/get?access_token=${accessToken}&userid=${encodeURIComponent(userData.userid)}`;
     const detailRes = await fetch(detailUrl);
     const detail = (await detailRes.json());
     if (detail.errcode && detail.errcode !== 0) {
@@ -91,5 +93,27 @@ async function handleWwCallback(code) {
 }
 async function getMe(userId) {
     return database_js_1.prisma.user.findUnique({ where: { id: userId } });
+}
+async function handlePasswordLogin(password) {
+    if (!index_js_1.config.loginPassword) {
+        throw new Error("系统未设置登录密码，请在服务端配置 LOGIN_PASSWORD");
+    }
+    const pwdBuf = Buffer.from(password);
+    const secretBuf = Buffer.from(index_js_1.config.loginPassword);
+    if (pwdBuf.length !== secretBuf.length || !crypto_1.default.timingSafeEqual(pwdBuf, secretBuf)) {
+        throw new Error("密码错误");
+    }
+    const user = await database_js_1.prisma.user.upsert({
+        where: { wwUserId: "password_admin" },
+        update: {},
+        create: { wwUserId: "password_admin", name: "管理员", role: "admin", department: "生产部" },
+    });
+    const token = generateToken({
+        id: user.id,
+        wwUserId: user.wwUserId,
+        name: user.name,
+        role: user.role,
+    });
+    return { token, user };
 }
 //# sourceMappingURL=auth.js.map

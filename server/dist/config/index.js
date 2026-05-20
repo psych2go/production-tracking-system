@@ -26,6 +26,7 @@ exports.config = {
         corpId: process.env.WW_CORP_ID || "",
         corpSecret: process.env.WW_CORP_SECRET || "",
     },
+    loginPassword: process.env.LOGIN_PASSWORD || "",
     cors: {
         origin: process.env.CLIENT_URL || "http://localhost:5173",
     },

@@ -6,9 +6,9 @@ export declare function upsertProgress(data: {
     notes?: string;
 }): Promise<{
     stage: {
+        code: string;
         id: number;
         name: string;
-        code: string;
         description: string | null;
         stageOrder: number;
         isQcStage: boolean;
@@ -71,9 +71,9 @@ export declare function listProgress(filters: {
             createdBy: number | null;
         };
         stage: {
+            code: string;
             id: number;
             name: string;
-            code: string;
             description: string | null;
             stageOrder: number;
             isQcStage: boolean;
@@ -139,9 +139,9 @@ export declare function getDashboardData(): Promise<{
             createdBy: number | null;
         };
         stage: {
+            code: string;
             id: number;
             name: string;
-            code: string;
             description: string | null;
             stageOrder: number;
             isQcStage: boolean;
@@ -168,9 +168,9 @@ export declare function getDashboardData(): Promise<{
     activeBatchList: ({
         progressRecords: ({
             stage: {
+                code: string;
                 id: number;
                 name: string;
-                code: string;
                 description: string | null;
                 stageOrder: number;
                 isQcStage: boolean;
@@ -230,9 +230,9 @@ export declare function getDashboardData(): Promise<{
     }[];
 }>;
 export declare function getStages(): Promise<{
+    code: string;
     id: number;
     name: string;
-    code: string;
     description: string | null;
     stageOrder: number;
     isQcStage: boolean;
@@ -273,9 +273,9 @@ export declare function getStageProducts(stageId: number, page?: number, pageSiz
             createdBy: number | null;
         };
         stage: {
+            code: string;
             id: number;
             name: string;
-            code: string;
             description: string | null;
             stageOrder: number;
             isQcStage: boolean;

@@ -72,6 +72,7 @@ async function getBatchDetail(id) {
                 include: { stage: true, operator: { select: { id: true, name: true } } },
                 orderBy: { stage: { stageOrder: "asc" } },
             },
+            attachments: { orderBy: { createdAt: "asc" } },
         },
     });
 }
@@ -161,7 +162,6 @@ async function deleteBatch(id) {
         throw new Error("批次不存在");
     await database_js_1.prisma.$transaction([
         database_js_1.prisma.progressRecord.deleteMany({ where: { batchId: id } }),
-        database_js_1.prisma.scheduleOrder.deleteMany({ where: { batchId: id } }),
         database_js_1.prisma.batch.delete({ where: { id } }),
     ]);
     return { id };
@@ -172,7 +172,6 @@ async function updateBatch(id, data) {
         if (!batch)
             throw new Error("批次不存在");
         const updateData = {
-            status: data.status,
             priority: data.priority,
             customerCode: data.customerCode,
             orderNo: data.orderNo,
@@ -189,11 +188,24 @@ async function updateBatch(id, data) {
             updateData.batchNo = data.batchNo;
         if (data.trialContent !== undefined)
             updateData.trialContent = data.trialContent;
+        // Only allow archiving completed batches via update; other status changes go through progress flow
+        if (data.status !== undefined) {
+            if (data.status === "archived" && batch.status === "completed") {
+                updateData.status = "archived";
+            }
+            else if (data.status !== batch.status) {
+                throw new Error("批次状态变更请通过工序流转操作");
+            }
+        }
         if (data.quantityDetail !== undefined) {
-            updateData.quantityDetail = data.quantityDetail;
-            updateData.quantity = data.quantityDetail
-                ? sumQuantityDetail(data.quantityDetail)
-                : (data.quantity ?? 0);
+            if (data.quantityDetail) {
+                updateData.quantityDetail = data.quantityDetail;
+                updateData.quantity = sumQuantityDetail(data.quantityDetail);
+            }
+            else {
+                updateData.quantityDetail = null;
+                updateData.quantity = data.quantity ?? 0;
+            }
         }
         else if (data.quantity !== undefined) {
             updateData.quantity = data.quantity;
