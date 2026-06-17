@@ -156,7 +156,6 @@ const statCards = computed(() => {
   return [
     { value: s.activeProductBatches, label: "在线产品总批次", color: "#0083ff" },
     { value: s.activeProductQuantity, label: "在线产品总数量", color: "#07c160" },
-    { value: s.totalTrialBatches, label: "试验总批次", color: "#ff9900" },
   ];
 });
 
