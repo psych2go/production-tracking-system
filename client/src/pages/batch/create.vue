@@ -110,11 +110,11 @@
           <text class="form-label">数量</text>
           <view class="quantity-row">
             <view class="quantity-field">
-              <input v-model="form.trialQtyTiao" type="number" placeholder="0" class="form-input" />
+              <input v-model="form.trialQtyTiao" type="number" placeholder="0" class="qty-input" />
               <text class="quantity-unit">条</text>
             </view>
             <view class="quantity-field">
-              <input v-model="form.trialQtyZhi" type="number" placeholder="0" class="form-input" />
+              <input v-model="form.trialQtyZhi" type="number" placeholder="0" class="qty-input" />
               <text class="quantity-unit">只</text>
             </view>
           </view>
@@ -421,9 +421,25 @@ onMounted(async () => {
   }
 }
 .quantity-row { display: flex; gap: 16rpx; }
-.quantity-field { flex: 1; display: flex; align-items: center; gap: 8rpx; }
-.quantity-field .form-input { flex: 1; }
-.quantity-unit { font-size: 26rpx; color: #8a8f99; white-space: nowrap; }
+.quantity-field { flex: 1; position: relative; }
+.qty-input {
+  width: 100%;
+  height: 80rpx;
+  padding: 0 56rpx 0 20rpx;
+  border: 2rpx solid #e5e7eb;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  background: #fff;
+  box-sizing: border-box;
+}
+.quantity-unit {
+  position: absolute;
+  right: 20rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 26rpx;
+  color: #8a8f99;
+}
 .image-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
 .image-item { position: relative; width: 160rpx; height: 160rpx; }
 .image-preview { width: 100%; height: 100%; border-radius: 12rpx; }
