@@ -12,8 +12,12 @@ function sumQuantityDetail(detail: string): number {
 
 async function validatePackageType(tx: Prisma.TransactionClient, packageType: string | undefined | null) {
   if (!packageType) return;
-  const exists = await tx.packageType.findUnique({ where: { name: packageType } });
-  if (!exists) throw new Error(`封装形式「${packageType}」不存在，请先在设置中创建`);
+  // 试验批次封装形式可多选，存储为逗号分隔；逐个校验存在性
+  const names = packageType.split(",").map((s) => s.trim()).filter(Boolean);
+  for (const name of names) {
+    const exists = await tx.packageType.findUnique({ where: { name } });
+    if (!exists) throw new Error(`封装形式「${name}」不存在，请先在设置中创建`);
+  }
 }
 
 export async function listBatches(filters: {
