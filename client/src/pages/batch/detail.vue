@@ -464,7 +464,7 @@ async function addTrialImage() {
   if (!batch.value) return;
   uni.chooseImage({
     count: 9 - attachments.value.length,
-    sizeType: ["original", "compressed"],
+    sizeType: ["original"],
     sourceType: ["album", "camera"],
     success: async (res) => {
       let failCount = 0;
