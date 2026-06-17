@@ -76,14 +76,12 @@ function getDuration(stageId: number): string {
 </script>
 
 <style scoped lang="scss">
-.stage-timeline {
-  padding: 12rpx 0;
-}
+.stage-timeline { padding: 12rpx 0; }
 .stage-item {
   display: flex;
   align-items: flex-start;
   position: relative;
-  padding-bottom: 24rpx;
+  padding-bottom: 28rpx;
   padding-left: 48rpx;
 }
 .stage-dot {
@@ -93,67 +91,34 @@ function getDuration(stageId: number): string {
   width: 36rpx;
   height: 36rpx;
   border-radius: 50%;
-  background: #e5e5e5;
+  background: #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.stage-done .stage-dot {
-  background: #07c160;
-}
-.stage-current .stage-dot {
-  background: #0083ff;
-}
-.dot-check {
-  color: #fff;
-  font-size: 22rpx;
-}
-.dot-active {
-  width: 16rpx;
-  height: 16rpx;
-  background: #fff;
-  border-radius: 50%;
-}
+.stage-done .stage-dot { background: #07c160; }
+.stage-current .stage-dot { background: #0083ff; }
+.dot-check { color: #fff; font-size: 22rpx; }
+.dot-active { width: 16rpx; height: 16rpx; background: #fff; border-radius: 50%; }
 .stage-line {
   position: absolute;
   left: 17rpx;
   top: 40rpx;
   width: 2rpx;
   height: calc(100% - 40rpx);
-  background: #e5e5e5;
+  background: #e5e7eb;
 }
-.stage-done .stage-line {
-  background: #07c160;
-}
-.stage-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4rpx;
-  flex: 1;
-}
-.stage-row {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-}
-.stage-name {
-  font-size: 28rpx;
-  color: #333;
-}
-.stage-meta {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-}
-.stage-date {
-  font-size: 22rpx;
-  color: #999;
-}
+.stage-done .stage-line { background: #07c160; }
+.stage-info { display: flex; flex-direction: column; gap: 6rpx; flex: 1; }
+.stage-row { display: flex; align-items: center; gap: 12rpx; }
+.stage-name { font-size: 28rpx; color: #1f2329; }
+.stage-meta { display: flex; align-items: center; gap: 16rpx; }
+.stage-date { font-size: 22rpx; color: #8a8f99; }
 .stage-duration {
   font-size: 22rpx;
   color: #0083ff;
-  background: #f0f7ff;
-  padding: 2rpx 10rpx;
+  background: #e8f4ff;
+  padding: 2rpx 12rpx;
   border-radius: 6rpx;
 }
 </style>

@@ -1,77 +1,321 @@
-$primary-color: #0083ff;
-$success-color: #07c160;
-$warning-color: #ff9900;
-$danger-color: #fa5151;
-$text-color: #333333;
-$text-secondary: #777777;
-$bg-color: #f5f5f5;
-$border-color: #e5e5e5;
+/* ============================================================
+   Design System — 生产进度追踪
+   主色企业蓝 #0083ff，完整 token + 全局组件类
+   保留旧类名兼容，新增体系化样式
+   ============================================================ */
 
+/* ---------- Color: Primary ---------- */
+$primary: #0083ff;
+$primary-dark: #006fd6;
+$primary-bg: #e8f4ff;
+
+/* ---------- Color: Neutral scale ---------- */
+$gray-50: #f7f8fa;
+$gray-100: #f0f1f4;
+$gray-200: #e5e7eb;
+$gray-300: #d6d9e0;
+$gray-400: #c0c4cc;
+$gray-500: #a3a8b2;
+$gray-600: #8a8f99;
+$gray-700: #6b7280;
+$gray-800: #4b5563;
+$gray-900: #1f2329;
+
+/* ---------- Color: Functional + soft bg ---------- */
+$success: #07c160;
+$success-bg: #e8f8ee;
+$warning: #ff9900;
+$warning-bg: #fff7e6;
+$danger: #fa5151;
+$danger-bg: #ffecec;
+
+/* ---------- Semantic aliases ---------- */
+$text-primary: $gray-900;
+$text-regular: #333333;
+$text-secondary: $gray-600;
+$text-placeholder: $gray-400;
+$border-color: $gray-200;
+$border-light: $gray-100;
+$bg-color: $gray-50;
+
+/* 兼容旧变量名 */
+$primary-color: $primary;
+$success-color: $success;
+$warning-color: $warning;
+$danger-color: $danger;
+$text-color: $text-regular;
+
+/* ---------- Font size ---------- */
+$fs-xs: 20rpx;
+$fs-sm: 24rpx;
+$fs-base: 28rpx;
+$fs-md: 30rpx;
+$fs-lg: 34rpx;
+$fs-xl: 40rpx;
+$fs-display: 48rpx;
+
+/* ---------- Spacing ---------- */
+$space-1: 8rpx;
+$space-2: 16rpx;
+$space-3: 24rpx;
+$space-4: 32rpx;
+$space-5: 48rpx;
+
+/* ---------- Radius ---------- */
+$radius-sm: 8rpx;
+$radius-md: 12rpx;
+$radius-lg: 16rpx;
+$radius-xl: 20rpx;
+$radius-full: 999rpx;
+
+/* ---------- Shadow ---------- */
+$shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+$shadow-md: 0 4rpx 16rpx rgba(17, 24, 39, 0.06);
+$shadow-lg: 0 8rpx 24rpx rgba(17, 24, 39, 0.10);
+
+/* ============================================================
+   Base
+   ============================================================ */
 page {
   background-color: $bg-color;
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
-  font-size: 28rpx;
-  color: $text-color;
+  font-size: $fs-base;
+  color: $text-regular;
+  line-height: 1.5;
 }
 
 .container {
-  padding: 24rpx;
+  padding: $space-3;
 }
 
+/* ============================================================
+   Card
+   ============================================================ */
 .card {
   background: #ffffff;
-  border-radius: 16rpx;
-  padding: 24rpx;
-  margin-bottom: 20rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+  border-radius: $radius-lg;
+  padding: $space-3;
+  margin-bottom: $space-3;
+  box-shadow: $shadow-md;
 }
 
-.flex-between {
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: $space-2;
 }
 
-.flex-center {
+.divider {
+  height: 2rpx;
+  background: $border-light;
+  margin: $space-2 0;
+}
+
+/* ============================================================
+   Flex utilities
+   ============================================================ */
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.flex-center { display: flex; align-items: center; }
+.flex-col { display: flex; flex-direction: column; }
+.flex-1 { flex: 1; min-width: 0; }
+.flex-wrap { display: flex; flex-wrap: wrap; }
+
+/* ============================================================
+   Text utilities
+   ============================================================ */
+.text-primary { color: $primary; }
+.text-success { color: $success; }
+.text-warning { color: $warning; }
+.text-danger { color: $danger; }
+.text-secondary { color: $text-secondary; }
+.text-regular { color: $text-regular; }
+.text-placeholder { color: $text-placeholder; }
+
+.text-xs { font-size: $fs-xs; }
+.text-sm { font-size: $fs-sm; }
+.text-base { font-size: $fs-base; }
+.text-md { font-size: $fs-md; }
+.text-lg { font-size: $fs-lg; }
+.text-xl { font-size: $fs-xl; }
+.text-display { font-size: $fs-display; }
+
+.text-normal { font-weight: 400; }
+.text-medium { font-weight: 500; }
+.text-bold { font-weight: 600; }
+.text-bolder { font-weight: 700; }
+.text-center { text-align: center; }
+
+/* ============================================================
+   Spacing utilities
+   ============================================================ */
+.mt-xs { margin-top: $space-1; }
+.mt-sm { margin-top: 12rpx; }
+.mt-md { margin-top: $space-3; }
+.mt-lg { margin-top: 36rpx; }
+.mb-xs { margin-bottom: $space-1; }
+.mb-sm { margin-bottom: $space-2; }
+.mb-md { margin-bottom: $space-3; }
+.mb-lg { margin-bottom: $space-4; }
+.ml-xs { margin-left: $space-1; }
+.ml-sm { margin-left: 12rpx; }
+.ml-md { margin-left: $space-3; }
+.mr-xs { margin-right: $space-1; }
+.mr-sm { margin-right: $space-2; }
+.mr-md { margin-right: $space-3; }
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn {
   display: flex;
   align-items: center;
+  justify-content: center;
+  min-height: 88rpx;
+  padding: 0 $space-3;
+  font-size: $fs-md;
+  border-radius: $radius-md;
+  border: 2rpx solid transparent;
+  background: $gray-100;
+  color: $text-regular;
+  line-height: 1.2;
+  transition: opacity 0.15s ease;
+  /* reset mini-program button defaults */
+  &::after { border: none; }
+  &:active { opacity: 0.82; }
 }
+.btn-primary { background: $primary; color: #fff; }
+.btn-success { background: $success; color: #fff; }
+.btn-danger { background: $danger; color: #fff; }
+.btn-ghost { background: $primary-bg; color: $primary; }
+.btn-outline { background: #fff; color: $primary; border-color: $primary; }
+.btn-block { width: 100%; box-sizing: border-box; }
+.btn-sm { min-height: 60rpx; padding: 0 $space-2; font-size: $fs-sm; border-radius: $radius-sm; }
+.btn-lg { min-height: 96rpx; font-size: $fs-lg; }
 
-.text-primary { color: $primary-color; }
-.text-success { color: $success-color; }
-.text-danger { color: $danger-color; }
-.text-secondary { color: $text-secondary; }
-.text-sm { font-size: 24rpx; }
-.text-lg { font-size: 32rpx; }
-.text-bold { font-weight: 600; }
-
-.mt-sm { margin-top: 12rpx; }
-.mt-md { margin-top: 24rpx; }
-.mt-lg { margin-top: 36rpx; }
-.mb-md { margin-bottom: 24rpx; }
-.ml-sm { margin-left: 12rpx; }
-
-/* Minimum touch target for gloved workers */
-button, .filter-tab, .stage-chip, .menu-item, .batch-option, .stage-option {
-  min-height: 72rpx;
+/* ============================================================
+   Form
+   ============================================================ */
+.form-group { display: flex; flex-direction: column; gap: $space-1; }
+.form-label { font-size: $fs-sm; color: $text-secondary; }
+.form-input {
+  border: 2rpx solid $border-color;
+  border-radius: $radius-md;
+  padding: 22rpx $space-3;
+  font-size: $fs-base;
+  min-height: 48rpx;
+  background: #fff;
+  box-sizing: border-box;
 }
+.form-textarea {
+  border: 2rpx solid $border-color;
+  border-radius: $radius-md;
+  padding: 20rpx $space-3;
+  font-size: $fs-base;
+  height: 160rpx;
+  background: #fff;
+  box-sizing: border-box;
+}
+.picker-value { color: $text-regular; }
 
-/* Urgent priority tag - shared across pages */
+/* ============================================================
+   Tags
+   ============================================================ */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: $fs-xs;
+  padding: 4rpx 14rpx;
+  border-radius: $radius-sm;
+  line-height: 1.4;
+}
+.tag-urgent { background: $danger; color: #fff; }
+.tag-trial { background: $warning-bg; color: $warning; }
+.tag-info { background: $primary-bg; color: $primary; }
+.tag-success { background: $success-bg; color: $success; }
+.tag-warning { background: $warning-bg; color: $warning; }
+
+/* 旧标签类兼容（保留，各页面在用） */
 .urgent-tag {
-  font-size: 20rpx;
-  padding: 2rpx 10rpx;
-  border-radius: 6rpx;
-  background: $danger-color;
+  display: inline-flex;
+  align-items: center;
+  font-size: $fs-xs;
+  padding: 2rpx 12rpx;
+  border-radius: $radius-sm;
+  background: $danger;
   color: #fff;
-  margin-left: 12rpx;
+  margin-left: $space-1;
 }
-
 .trial-tag {
-  font-size: 20rpx;
-  padding: 2rpx 10rpx;
-  border-radius: 6rpx;
-  background: #fff7e6;
-  color: #ff9900;
+  display: inline-flex;
+  align-items: center;
+  font-size: $fs-xs;
+  padding: 2rpx 12rpx;
+  border-radius: $radius-sm;
+  background: $warning-bg;
+  color: $warning;
   margin-left: 8rpx;
   vertical-align: middle;
+}
+
+/* 数字徽标 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32rpx;
+  height: 32rpx;
+  padding: 0 8rpx;
+  border-radius: $radius-full;
+  background: $danger;
+  color: #fff;
+  font-size: $fs-xs;
+  line-height: 1;
+}
+
+/* ============================================================
+   List item
+   ============================================================ */
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $space-3 0;
+  border-bottom: 2rpx solid $border-light;
+  min-height: 88rpx;
+  &:last-child { border-bottom: none; }
+}
+
+/* ============================================================
+   Section
+   ============================================================ */
+.section-title {
+  font-size: $fs-md;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+/* ============================================================
+   Empty state
+   ============================================================ */
+.empty-state {
+  text-align: center;
+  padding: $space-5 $space-3;
+  color: $text-secondary;
+}
+
+/* ============================================================
+   Status dot
+   ============================================================ */
+.dot { display: inline-block; width: 12rpx; height: 12rpx; border-radius: 50%; background: $gray-400; flex-shrink: 0; }
+.dot-primary { background: $primary; }
+.dot-success { background: $success; }
+.dot-warning { background: $warning; }
+.dot-danger { background: $danger; }
+
+/* ============================================================
+   Minimum touch target for gloved workers
+   ============================================================ */
+button, .filter-tab, .stage-chip, .menu-item, .batch-option, .stage-option, .list-item, .btn {
+  min-height: 72rpx;
 }

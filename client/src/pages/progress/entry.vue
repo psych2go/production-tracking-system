@@ -5,10 +5,13 @@
     </view>
 
     <view v-else>
+      <view v-if="step === 1" class="mb-sm">
+        <BatchTypeTabs :model-value="batchType" @update:model-value="onTypeChange" />
+      </view>
       <!-- Stage filter with counts -->
       <view class="card" v-if="step === 1 && appStore.stages.length">
         <view class="flex-between">
-          <text class="section-title text-bold">按工序查看</text>
+          <text class="section-title">按工序查看</text>
         </view>
         <scroll-view scroll-x class="stage-scroll mt-sm">
           <view
@@ -33,7 +36,7 @@
         </scroll-view>
         <!-- 按封装形式查看 -->
         <view class="flex-between mt-md">
-          <text class="section-title text-bold">按封装形式查看</text>
+          <text class="section-title">按封装形式查看</text>
         </view>
         <scroll-view scroll-x class="stage-scroll mt-sm">
           <view
@@ -61,7 +64,7 @@
       <!-- Step 1: Select Batch -->
       <view v-if="step === 1" class="card">
         <view class="flex-between">
-          <text class="section-title text-bold">选择批次</text>
+          <text class="section-title">选择批次</text>
         </view>
         <view class="search-box mt-sm">
           <input
@@ -104,8 +107,10 @@
       <!-- Step 2: Select Stage (click to submit) -->
       <view v-if="step === 2" class="card">
         <view class="flex-between">
-          <text class="nav-back-default" @click="step = 1">&lt;</text>
-          <text class="section-title text-bold">选择工序</text>
+          <view class="nav-back" @click="step = 1">
+            <UIcon name="back" :size="36" color="#333333" />
+          </view>
+          <text class="section-title">选择工序</text>
           <view style="width: 60rpx;"></view>
         </view>
         <view class="batch-summary mt-sm">
@@ -159,6 +164,8 @@ import { useUserStore } from "../../store/user";
 import { useAppStore } from "../../store/app";
 import { batchApi, progressApi, settingsApi } from "../../api/modules";
 import { getCurrentStage } from "../../utils/format";
+import BatchTypeTabs from "../../components/BatchTypeTabs.vue";
+import UIcon from "../../components/UIcon.vue";
 import type { Batch, PackageType, ProcessStage } from "../../types";
 
 const userStore = useUserStore();
@@ -189,6 +196,7 @@ const stageBatchCounts = computed(() => {
 const step = ref(1);
 const batchKeyword = ref("");
 const batches = ref<Batch[]>([]);
+const batchType = ref<"product" | "trial">("product");
 const selectedBatch = ref<Batch | null>(null);
 const selectedStageId = ref<number | null>(null);
 const selectedPackageType = ref("");
@@ -282,11 +290,16 @@ function onBatchInput() {
 
 async function searchBatches() {
   try {
-    const res = await batchApi.list({ status: "active", keyword: batchKeyword.value || undefined, pageSize: 200 });
+    const res = await batchApi.list({ status: "active", batchType: batchType.value, keyword: batchKeyword.value || undefined, pageSize: 200 });
     batches.value = res.items;
   } catch (e: unknown) {
     uni.showToast({ title: (e as Error).message, icon: "none" });
   }
+}
+
+async function onTypeChange(type: "product" | "trial") {
+  batchType.value = type;
+  await searchBatches();
 }
 
 function selectBatch(batch: Batch) {
@@ -369,63 +382,55 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
-.nav-back-default {
-  font-size: 36rpx;
-  color: #333;
-  font-weight: 500;
-  width: 60rpx;
-}
+.nav-back { width: 60rpx; display: flex; align-items: center; }
 .search-box {
-  background: #f5f5f5;
+  background: #f4f5f7;
   border-radius: 12rpx;
   padding: 16rpx 24rpx;
 }
-.search-input {
-  font-size: 28rpx;
-}
+.search-input { font-size: 28rpx; }
 .batch-option {
   padding: 24rpx;
-  border: 2rpx solid #e5e5e5;
+  border: 2rpx solid #e5e7eb;
   border-radius: 12rpx;
   margin-bottom: 16rpx;
+  transition: all 0.15s;
+  &:active { border-color: #0083ff; background: #f7f9fc; }
 }
 .current-stage-hint-inline {
-  background: #f0f7ff;
-  padding: 4rpx 12rpx;
+  background: #e8f4ff;
+  padding: 4rpx 14rpx;
   border-radius: 8rpx;
 }
 .hint-text {
   display: block;
   font-size: 24rpx;
-  color: #999;
+  color: #8a8f99;
 }
-.stage-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-}
+.stage-list { display: flex; flex-direction: column; gap: 12rpx; }
 .stage-option {
   display: flex;
   align-items: center;
   padding: 24rpx;
-  border: 2rpx solid #e5e5e5;
+  border: 2rpx solid #e5e7eb;
   border-radius: 12rpx;
   gap: 20rpx;
   min-height: 88rpx;
+  transition: all 0.15s;
   &.done { opacity: 0.5; }
-  &.current { border-color: #0083ff; background: #f0f7ff; border-width: 3rpx; }
+  &.current { border-color: #0083ff; background: #e8f4ff; border-width: 3rpx; }
   &.suggested { border-color: #ff9900; background: #fffbf0; border-width: 3rpx; border-style: dashed; }
 }
 .stage-order {
   width: 52rpx;
   height: 52rpx;
   border-radius: 50%;
-  background: #f5f5f5;
+  background: #f0f1f4;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24rpx;
-  color: #666;
+  color: #8a8f99;
   flex-shrink: 0;
   &.order-done { background: #07c160; color: #fff; }
   &.order-current { background: #0083ff; color: #fff; }
@@ -434,10 +439,10 @@ onBeforeUnmount(() => {
 .check-mark { color: #fff; font-size: 24rpx; }
 .suggest-tag {
   font-size: 22rpx;
-  padding: 4rpx 16rpx;
+  padding: 4rpx 18rpx;
   background: #ff9900;
   color: #fff;
-  border-radius: 16rpx;
+  border-radius: 999rpx;
   white-space: nowrap;
 }
 .stage-name { flex: 1; }
@@ -456,21 +461,18 @@ onBeforeUnmount(() => {
 }
 .batch-summary {
   padding: 16rpx 24rpx;
-  background: #f5f5f5;
+  background: #f0f1f4;
   border-radius: 12rpx;
   font-size: 26rpx;
 }
-.section-title { font-size: 32rpx; }
-.stage-scroll {
-  white-space: nowrap;
-}
+.stage-scroll { white-space: nowrap; }
 .stage-chip {
   display: inline-flex;
   align-items: center;
   padding: 16rpx 28rpx;
-  background: #f0f7ff;
+  background: #e8f4ff;
   color: #0083ff;
-  border-radius: 24rpx;
+  border-radius: 999rpx;
   font-size: 26rpx;
   margin-right: 16rpx;
   min-height: 60rpx;
@@ -488,7 +490,7 @@ onBeforeUnmount(() => {
   color: #fff;
   font-size: 20rpx;
   padding: 2rpx 10rpx;
-  border-radius: 16rpx;
+  border-radius: 999rpx;
   margin-left: 8rpx;
   min-width: 32rpx;
   text-align: center;

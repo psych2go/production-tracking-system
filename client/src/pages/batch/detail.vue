@@ -7,13 +7,13 @@
           <text class="text-lg text-bold">
             {{ batch.batchNo }}
             <template v-if="isTrial">
-              <text class="trial-tag">试验</text>
+              <text class="tag tag-trial">试验</text>
             </template>
             <template v-else>
               {{ batch.product?.model || '' }}
             </template>
           </text>
-          <view v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</view>
+          <view v-if="batch.priority === 'urgent'" class="tag tag-urgent">紧急</view>
         </view>
         <view class="flex-center">
           <view v-if="isAdmin" class="edit-btn" @click="toggleEdit">
@@ -67,13 +67,13 @@
           </view>
           <view class="form-group mt-md">
             <text class="form-label">客户要求交期</text>
-            <picker mode="date" :value="editForm.customerDelivery" @change="e => editForm.customerDelivery = e.detail.value">
+            <picker mode="date" :value="editForm.customerDelivery" @change="(e: any) => editForm.customerDelivery = e.detail.value">
               <view class="form-input picker-value">{{ editForm.customerDelivery || '请选择' }}</view>
             </picker>
           </view>
           <view class="form-group mt-md">
             <text class="form-label">生产预计交期</text>
-            <picker mode="date" :value="editForm.productionDelivery" @change="e => editForm.productionDelivery = e.detail.value">
+            <picker mode="date" :value="editForm.productionDelivery" @change="(e: any) => editForm.productionDelivery = e.detail.value">
               <view class="form-input picker-value">{{ editForm.productionDelivery || '请选择' }}</view>
             </picker>
           </view>
@@ -124,7 +124,7 @@
           </view>
           <view class="form-group mt-md">
             <text class="form-label">要求完成时间</text>
-            <picker mode="date" :value="editForm.customerDelivery" @change="e => editForm.customerDelivery = e.detail.value">
+            <picker mode="date" :value="editForm.customerDelivery" @change="(e: any) => editForm.customerDelivery = e.detail.value">
               <view class="form-input picker-value">{{ editForm.customerDelivery || '请选择' }}</view>
             </picker>
           </view>
@@ -140,17 +140,17 @@
               <view v-for="att in attachments" :key="att.id" class="image-item">
                 <image :src="resolveImageUrl(att.filePath)" mode="aspectFill" class="image-preview" @click="previewAttachment(att)" />
                 <view class="image-delete" @click="deleteAttachment(att.id)">
-                  <text class="text-white text-sm">x</text>
+                  <UIcon name="close" :size="24" color="#ffffff" />
                 </view>
               </view>
               <view v-if="attachments.length < 9" class="image-add" @click="addTrialImage">
-                <text class="text-lg text-secondary">+</text>
+                <UIcon name="plus" :size="40" color="#c0c4cc" />
               </view>
             </view>
           </view>
         </template>
 
-        <button class="btn-primary mt-lg" :loading="saving" @click="saveEdit">保存</button>
+        <button class="btn btn-primary btn-block mt-lg" :loading="saving" @click="saveEdit">保存</button>
       </template>
 
       <!-- ===== VIEW MODE ===== -->
@@ -164,7 +164,7 @@
             <text>{{ quantityDisplay }}</text>
             <text class="text-secondary">封装形式</text>
             <view v-if="batch.packageType" class="tag-list">
-              <text v-for="pt in batch.packageType.split(',')" :key="pt" class="info-tag">{{ pt.trim() }}</text>
+              <text v-for="pt in batch.packageType.split(',')" :key="pt" class="tag tag-info">{{ pt.trim() }}</text>
             </view>
             <text v-else>-</text>
             <text class="text-secondary">要求完成时间</text>
@@ -220,8 +220,8 @@
     </view>
 
     <!-- Stage progress -->
-    <view class="card mt-md">
-      <text class="section-title text-bold">工序进度</text>
+    <view class="card">
+      <text class="section-title">工序进度</text>
       <StageTimeline
         v-if="appStore.stages.length"
         :stages="appStore.stages"
@@ -230,8 +230,8 @@
     </view>
 
     <!-- Quick actions -->
-    <view v-if="batch.status === 'active' && !editing" class="card mt-md">
-      <button class="btn-primary" @click="goRecordProgress">
+    <view v-if="batch.status === 'active' && !editing" class="card">
+      <button class="btn btn-primary btn-block" @click="goRecordProgress">
         工序流转
       </button>
     </view>
@@ -249,6 +249,7 @@ import { STATUS_LABELS, PRIORITIES } from "../../utils/constants";
 import { formatDate, formatDateShort, isOverdue as checkOverdue, getOverdueDays } from "../../utils/format";
 import type { Batch, PackageType, CustomerCode, BatchAttachment } from "../../types";
 import StageTimeline from "../../components/StageTimeline.vue";
+import UIcon from "../../components/UIcon.vue";
 
 const appStore = useAppStore();
 const userStore = useUserStore();
@@ -553,55 +554,36 @@ onLoad(async (query) => {
 <style scoped lang="scss">
 .info-grid {
   display: grid;
-  grid-template-columns: 160rpx 1fr;
-  gap: 16rpx 24rpx;
+  grid-template-columns: 168rpx 1fr;
+  gap: 20rpx 24rpx;
   font-size: 28rpx;
 }
-.section-title {
-  font-size: 32rpx;
-  margin-bottom: 12rpx;
-}
 .overdue-warning {
-  padding: 12rpx 20rpx;
-  background: #fff2f0;
-  border-radius: 8rpx;
+  padding: 14rpx 20rpx;
+  background: #ffecec;
+  border-radius: 10rpx;
   border-left: 6rpx solid #fa5151;
   color: #fa5151;
 }
-.trial-tag {
+.status-tag {
   font-size: 24rpx;
-  padding: 2rpx 10rpx;
-  border-radius: 6rpx;
-  background: #fff7e6;
-  color: #ff9900;
-  margin-left: 8rpx;
-  vertical-align: middle;
+  font-weight: 500;
 }
 .edit-btn {
-  padding: 8rpx 20rpx;
+  padding: 8rpx 22rpx;
   border: 2rpx solid #0083ff;
-  border-radius: 8rpx;
-  font-size: 26rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
   color: #0083ff;
   margin-right: 16rpx;
 }
 .delete-btn {
-  padding: 8rpx 20rpx;
-  border: 2rpx solid #ccc;
-  border-radius: 8rpx;
-  font-size: 26rpx;
-  color: #999;
+  padding: 8rpx 22rpx;
+  border: 2rpx solid #e5e7eb;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #8a8f99;
   margin-right: 16rpx;
-}
-.btn-primary {
-  background: #0083ff;
-  color: #fff;
-  border: none;
-  border-radius: 12rpx;
-  padding: 24rpx 0;
-  font-size: 32rpx;
-  text-align: center;
-  min-height: 88rpx;
 }
 .tag-list {
   display: flex;
@@ -609,100 +591,42 @@ onLoad(async (query) => {
   gap: 8rpx;
   align-items: center;
 }
-.info-tag {
-  font-size: 24rpx;
-  padding: 4rpx 14rpx;
-  border-radius: 6rpx;
-  background: #e8f4ff;
-  color: #0083ff;
-}
-.form-group { display: flex; flex-direction: column; gap: 8rpx; }
-.form-label { font-size: 26rpx; color: #666; }
-.form-input {
-  border: 2rpx solid #e5e5e5;
-  border-radius: 12rpx;
-  padding: 24rpx;
-  font-size: 28rpx;
-  min-height: 48rpx;
-}
-.form-textarea {
-  border: 2rpx solid #e5e5e5;
-  border-radius: 12rpx;
-  padding: 20rpx 24rpx;
-  font-size: 28rpx;
-  height: 160rpx;
-}
-.picker-value { color: #333; }
 .multi-select-list {
   display: flex;
   flex-wrap: wrap;
   gap: 12rpx;
 }
 .multi-select-item {
-  padding: 12rpx 24rpx;
-  border: 2rpx solid #e5e5e5;
-  border-radius: 8rpx;
+  padding: 14rpx 26rpx;
+  border: 2rpx solid #e5e7eb;
+  border-radius: 999rpx;
   font-size: 26rpx;
-  color: #666;
+  color: #6b7280;
   background: #fff;
   &.selected {
-    background: #f0f7ff;
+    background: #e8f4ff;
     border-color: #0083ff;
     color: #0083ff;
   }
 }
-.quantity-row {
-  display: flex;
-  gap: 16rpx;
-}
-.quantity-field {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-}
-.quantity-field .form-input {
-  flex: 1;
-}
-.quantity-unit {
-  font-size: 26rpx;
-  color: #999;
-  white-space: nowrap;
-}
-.image-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-}
-.image-item {
-  position: relative;
-  width: 200rpx;
-  height: 200rpx;
-}
-.image-preview {
-  width: 100%;
-  height: 100%;
-  border-radius: 8rpx;
-}
+.quantity-row { display: flex; gap: 16rpx; }
+.quantity-field { flex: 1; display: flex; align-items: center; gap: 8rpx; }
+.quantity-field .form-input { flex: 1; }
+.quantity-unit { font-size: 26rpx; color: #8a8f99; white-space: nowrap; }
+.image-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
+.image-item { position: relative; width: 200rpx; height: 200rpx; }
+.image-preview { width: 100%; height: 100%; border-radius: 12rpx; }
 .image-delete {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 44rpx;
-  height: 44rpx;
+  position: absolute; top: 0; right: 0;
+  width: 44rpx; height: 44rpx;
   background: rgba(0, 0, 0, 0.5);
-  border-radius: 0 8rpx 0 8rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 0 12rpx 0 12rpx;
+  display: flex; align-items: center; justify-content: center;
 }
 .image-add {
-  width: 200rpx;
-  height: 200rpx;
-  border: 2rpx dashed #ccc;
-  border-radius: 8rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 200rpx; height: 200rpx;
+  border: 2rpx dashed #d6d9e0;
+  border-radius: 12rpx;
+  display: flex; align-items: center; justify-content: center;
 }
 </style>

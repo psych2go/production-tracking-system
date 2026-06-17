@@ -355,6 +355,7 @@ function goBatchDetail(id: number) {
   border-radius: 12rpx;
   margin-bottom: 16rpx;
   overflow: hidden;
+  box-shadow: 0 4rpx 16rpx rgba(17, 24, 39, 0.06);
 }
 .tab-item {
   flex: 1;

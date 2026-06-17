@@ -10,35 +10,35 @@
       </text>
     </view>
 
-    <view class="card mt-md" v-if="userStore.isLoggedIn">
+    <view class="card" v-if="userStore.isLoggedIn">
       <text class="menu-section-title">常用功能</text>
-      <view class="menu-item" @click="go('/pages/progress/history')">
+      <view class="list-item" @click="go('/pages/progress/history')">
         <text>我的录入记录</text>
-        <text class="menu-arrow">></text>
+        <UIcon name="chevron-right" :size="28" color="#c0c4cc" />
       </view>
     </view>
 
-    <view class="card mt-md" v-if="userStore.isAdmin()">
+    <view class="card" v-if="userStore.isAdmin()">
       <text class="menu-section-title">系统管理</text>
-      <view class="menu-item" @click="go('/pages-admin/settings/index')">
+      <view class="list-item" @click="go('/pages-admin/settings/index')">
         <text>工序管理</text>
-        <text class="menu-arrow">></text>
+        <UIcon name="chevron-right" :size="28" color="#c0c4cc" />
       </view>
-      <view class="menu-item" @click="go('/pages-admin/package-types/index')">
+      <view class="list-item" @click="go('/pages-admin/package-types/index')">
         <text>封装形式管理</text>
-        <text class="menu-arrow">></text>
+        <UIcon name="chevron-right" :size="28" color="#c0c4cc" />
       </view>
-      <view class="menu-item" @click="go('/pages-admin/customer-codes/index')">
+      <view class="list-item" @click="go('/pages-admin/customer-codes/index')">
         <text>客户代码管理</text>
-        <text class="menu-arrow">></text>
+        <UIcon name="chevron-right" :size="28" color="#c0c4cc" />
       </view>
-      <view class="menu-item" @click="go('/pages-admin/users/index')">
+      <view class="list-item" @click="go('/pages-admin/users/index')">
         <text>用户管理</text>
-        <text class="menu-arrow">></text>
+        <UIcon name="chevron-right" :size="28" color="#c0c4cc" />
       </view>
-      <view class="menu-item" @click="go('/pages-admin/audit/index')">
+      <view class="list-item" @click="go('/pages-admin/audit/index')">
         <text>审计日志</text>
-        <text class="menu-arrow">></text>
+        <UIcon name="chevron-right" :size="28" color="#c0c4cc" />
       </view>
     </view>
 
@@ -50,6 +50,7 @@
 import { computed } from "vue";
 import { useUserStore } from "../../store/user";
 import { ROLE_LABELS } from "../../utils/constants";
+import UIcon from "../../components/UIcon.vue";
 
 const userStore = useUserStore();
 
@@ -70,37 +71,28 @@ function handleLogout() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 48rpx 24rpx;
+  padding: 56rpx 24rpx;
 }
 .avatar {
-  width: 120rpx;
-  height: 120rpx;
+  width: 128rpx;
+  height: 128rpx;
   border-radius: 50%;
-  background: #0083ff;
+  background: linear-gradient(135deg, #0083ff 0%, #006fd6 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 8rpx 20rpx rgba(0, 131, 255, 0.25);
 }
 .avatar-text {
   color: #fff;
-  font-size: 48rpx;
+  font-size: 52rpx;
   font-weight: 600;
 }
 .menu-section-title {
   font-size: 24rpx;
-  color: #999;
-  margin-bottom: 12rpx;
+  color: #8a8f99;
+  margin-bottom: 4rpx;
 }
-.menu-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 32rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
-  min-height: 88rpx;
-  &:last-child { border-bottom: none; }
-}
-.menu-arrow { color: #ccc; font-size: 28rpx; }
 .logout-btn {
   background: #fff;
   color: #fa5151;

@@ -2,7 +2,8 @@
   <view class="container">
     <!-- Search and filter -->
     <view class="card filter-bar">
-      <input v-model="keyword" placeholder="搜索批号或型号" class="search-input" @confirm="loadData" />
+      <BatchTypeTabs :model-value="batchType" @update:model-value="onTypeChange" />
+      <input v-model="keyword" placeholder="搜索批号或型号" class="search-input mt-sm" @confirm="loadData" />
       <view class="filter-tabs mt-sm">
         <text
           v-for="tab in tabs"
@@ -27,10 +28,10 @@
         >紧急</text>
       </view>
       <!-- Action buttons -->
-      <view class="action-row mt-sm" v-if="userStore.isAdmin()">
+      <view class="action-row" v-if="userStore.isAdmin()">
         <view class="action-item" @click="goCreate">
           <view class="action-circle">
-            <text class="action-icon">＋</text>
+            <UIcon name="plus" :size="40" color="#ffffff" />
           </view>
           <text class="action-label">新建批次</text>
         </view>
@@ -69,12 +70,15 @@ import { useUserStore } from "../../store/user";
 import { batchApi } from "../../api/modules";
 import type { Batch } from "../../types";
 import BatchCard from "../../components/BatchCard.vue";
+import BatchTypeTabs from "../../components/BatchTypeTabs.vue";
+import UIcon from "../../components/UIcon.vue";
 import { isOverdue as checkOverdue } from "../../utils/format";
 
 const userStore = useUserStore();
 const batches = ref<Batch[]>([]);
 const keyword = ref("");
 const currentTab = ref("active");
+const batchType = ref<"product" | "trial">("product");
 const smartFilter = ref("");
 const currentPage = ref(1);
 const hasMore = ref(false);
@@ -105,12 +109,18 @@ function toggleSmartFilter(filter: string) {
   smartFilter.value = smartFilter.value === filter ? "" : filter;
 }
 
+async function onTypeChange(type: "product" | "trial") {
+  batchType.value = type;
+  await loadData();
+  loadCounts();
+}
+
 async function loadCounts() {
   try {
     const [active, completed, all] = await Promise.all([
-      batchApi.list({ status: "active", page: 1 }),
-      batchApi.list({ status: "completed", page: 1 }),
-      batchApi.list({ page: 1 }),
+      batchApi.list({ status: "active", batchType: batchType.value, page: 1 }),
+      batchApi.list({ status: "completed", batchType: batchType.value, page: 1 }),
+      batchApi.list({ batchType: batchType.value, page: 1 }),
     ]);
     tabCounts.value = {
       active: active.total,
@@ -127,6 +137,7 @@ async function loadData() {
     const res = await batchApi.list({
       status: currentTab.value || undefined,
       keyword: keyword.value || undefined,
+      batchType: batchType.value,
       page: 1,
     });
     batches.value = res.items;
@@ -146,6 +157,7 @@ async function loadMore() {
     const res = await batchApi.list({
       status: currentTab.value || undefined,
       keyword: keyword.value || undefined,
+      batchType: batchType.value,
       page: currentPage.value,
     });
     batches.value = [...batches.value, ...res.items];
@@ -166,7 +178,7 @@ function goDetail(id: number) {
 }
 
 function goCreate() {
-  uni.navigateTo({ url: "/pages/batch/create" });
+  uni.navigateTo({ url: `/pages/batch/create?type=${batchType.value}` });
 }
 
 onShow(async () => {
@@ -176,11 +188,9 @@ onShow(async () => {
 </script>
 
 <style scoped lang="scss">
-.filter-bar {
-  padding: 20rpx 24rpx;
-}
+.filter-bar { padding: 24rpx; }
 .search-input {
-  background: #f5f5f5;
+  background: #f4f5f7;
   border-radius: 12rpx;
   padding: 20rpx 24rpx;
   font-size: 28rpx;
@@ -189,64 +199,70 @@ onShow(async () => {
   display: flex;
   gap: 16rpx;
   align-items: center;
+  flex-wrap: wrap;
 }
 .filter-tab {
-  padding: 12rpx 24rpx;
-  border-radius: 24rpx;
+  padding: 12rpx 26rpx;
+  border-radius: 999rpx;
   font-size: 26rpx;
-  color: #666;
-  background: #f5f5f5;
+  color: #6b7280;
+  background: #f4f5f7;
   min-height: 56rpx;
   display: inline-flex;
   align-items: center;
+  transition: all 0.2s;
   &.active {
     background: #0083ff;
     color: #fff;
+    font-weight: 500;
   }
 }
 .tab-count {
   font-size: 20rpx;
-  padding: 0rpx 8rpx;
-  border-radius: 16rpx;
-  margin-left: 6rpx;
-  background: rgba(255,255,255,0.3);
+  padding: 0 10rpx;
+  border-radius: 999rpx;
+  margin-left: 8rpx;
+  background: rgba(255, 255, 255, 0.25);
+  color: inherit;
 }
 .filter-tab.active .tab-count {
-  background: rgba(255,255,255,0.3);
+  background: rgba(255, 255, 255, 0.25);
   color: #fff;
 }
 .filter-divider {
   width: 2rpx;
-  height: 32rpx;
-  background: #ddd;
-  margin: 0 8rpx;
+  height: 28rpx;
+  background: #e5e7eb;
+  margin: 0 4rpx;
 }
 .smart-filter-tag {
-  padding: 8rpx 20rpx;
-  border-radius: 8rpx;
+  padding: 10rpx 22rpx;
+  border-radius: 999rpx;
   font-size: 24rpx;
   background: #fff;
-  border: 2rpx solid #e5e5e5;
-  color: #666;
+  border: 2rpx solid #e5e7eb;
+  color: #6b7280;
   min-height: 56rpx;
   display: inline-flex;
   align-items: center;
   &.active {
     border-color: #fa5151;
     color: #fa5151;
-    background: #fff2f0;
+    background: #ffecec;
   }
 }
 .action-row {
   display: flex;
   gap: 32rpx;
-  padding-top: 8rpx;
+  padding-top: 20rpx;
+  margin-top: 16rpx;
+  border-top: 2rpx solid #f0f1f4;
 }
 .action-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8rpx;
+  gap: 10rpx;
 }
 .action-circle {
   width: 88rpx;
@@ -256,11 +272,7 @@ onShow(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4rpx 12rpx rgba(0, 131, 255, 0.35);
-}
-.action-icon {
-  font-size: 36rpx;
-  color: #fff;
+  box-shadow: 0 6rpx 16rpx rgba(0, 131, 255, 0.32);
 }
 .action-label {
   font-size: 22rpx;

@@ -3,117 +3,109 @@
     <!-- Login gate -->
     <view v-if="!userStore.isLoggedIn" class="login-section">
       <view class="card login-card">
-        <text class="login-title text-lg text-bold">生产进度追踪</text>
-        <text class="login-desc text-secondary mt-sm">产品加工进度管理</text>
-        <view class="login-input-wrap mt-lg">
+        <view class="login-logo">
+          <UIcon name="check" :size="56" variant="primary" />
+        </view>
+        <text class="login-title">生产进度追踪</text>
+        <text class="login-desc">产品加工进度管理</text>
+        <view class="login-input-wrap">
           <input
             class="login-input"
             type="text"
             password
             v-model="loginPassword"
             placeholder="请输入密码"
+            placeholder-class="login-placeholder"
             @confirm="handleLogin"
           />
         </view>
-        <button class="login-btn mt-md" @click="handleLogin" :loading="loading">登录</button>
+        <button class="btn btn-primary btn-block btn-lg login-btn" @click="handleLogin" :loading="loading">登录</button>
       </view>
     </view>
 
     <!-- Dashboard -->
     <view v-else>
+      <view class="mb-sm">
+        <BatchTypeTabs v-model="batchType" />
+      </view>
+
       <!-- Stats cards -->
       <view class="stats-row">
-        <view class="stat-card card">
-          <text class="stat-value text-primary">{{ dashboard?.stats.activeProductBatches ?? 0 }}</text>
-          <text class="stat-label text-secondary text-sm">在线产品总批次</text>
-        </view>
-        <view class="stat-card card">
-          <text class="stat-value text-success">{{ dashboard?.stats.activeProductQuantity ?? 0 }}</text>
-          <text class="stat-label text-secondary text-sm">在线产品总数量</text>
-        </view>
-        <view class="stat-card card">
-          <text class="stat-value" style="color: #ff9900;">
-            {{ dashboard?.stats.totalTrialBatches ?? 0 }}
-          </text>
-          <text class="stat-label text-secondary text-sm">试验总批次</text>
+        <view v-for="(card, i) in statCards" :key="i" class="stat-card">
+          <text class="stat-value" :style="{ color: card.color }">{{ card.value }}</text>
+          <text class="stat-label">{{ card.label }}</text>
         </view>
       </view>
 
       <!-- Anomaly alerts -->
-      <view class="section-block mt-md" v-if="dashboard?.anomalies?.length">
+      <view class="section-block" v-if="dashboard?.anomalies?.length">
         <view class="section-header">
           <view class="flex-center">
-            <text class="alert-count">{{ dashboard.anomalies.length }}</text>
-            <text class="section-title text-bold">异常预警</text>
+            <view class="badge alert-count">{{ dashboard.anomalies.length }}</view>
+            <text class="section-title">异常预警</text>
           </view>
           <text class="collapse-btn" @click="collapsed.alerts = !collapsed.alerts">{{ collapsed.alerts ? '展开' : '收起' }}</text>
         </view>
-        <view v-if="!collapsed.alerts" class="section-body card">
+        <view v-if="!collapsed.alerts" class="card alert-card">
           <view
             v-for="(a, i) in dashboard.anomalies.slice(0, 5)"
             :key="i"
             class="alert-item"
             @click="a.batchId && goBatchDetail(a.batchId)"
           >
-            <view class="alert-dot" :class="`dot-${a.severity}`"></view>
-            <view class="alert-content">
-              <text class="text-sm">{{ a.description }}</text>
-            </view>
-            <text v-if="a.batchId" class="alert-arrow">></text>
+            <view class="dot" :class="{ 'dot-danger': a.severity === 'critical', 'dot-warning': a.severity === 'major' }"></view>
+            <text class="alert-content text-sm">{{ a.description }}</text>
+            <UIcon v-if="a.batchId" name="chevron-right" :size="28" color="#c0c4cc" />
           </view>
         </view>
       </view>
 
       <!-- Quick actions for workers -->
-      <view class="card mt-md quick-actions" v-if="!userStore.isAdmin()">
-        <text class="section-title text-bold">快捷操作</text>
-        <view class="action-grid mt-sm">
+      <view class="card quick-actions" v-if="!userStore.isAdmin()">
+        <text class="section-title">快捷操作</text>
+        <view class="action-grid">
           <view class="action-item" @click="goEntry">
-            <view class="action-icon action-icon-primary">
-              <text class="action-icon-text">+</text>
-            </view>
-            <text class="action-label text-sm">工序流转</text>
+            <UIcon name="plus" :size="48" variant="soft" />
+            <text class="action-label">工序流转</text>
           </view>
           <view class="action-item" @click="go('/pages/progress/history')">
-            <view class="action-icon action-icon-success">
-              <text class="action-icon-text">&#9776;</text>
-            </view>
-            <text class="action-label text-sm">我的记录</text>
+            <UIcon name="menu" :size="48" variant="soft-success" />
+            <text class="action-label">我的记录</text>
           </view>
         </view>
       </view>
 
       <!-- Active batches -->
-      <view class="section-block mt-md">
+      <view class="section-block">
         <view class="section-header">
-          <text class="section-title text-bold">正在加工</text>
+          <text class="section-title">正在加工</text>
           <text class="collapse-btn" @click="collapsed.batches = !collapsed.batches">{{ collapsed.batches ? '展开' : '收起' }}</text>
         </view>
-        <view v-if="!collapsed.batches" class="section-body">
+        <view v-if="!collapsed.batches">
           <BatchCard
-            v-for="batch in dashboard?.activeBatchList"
+            v-for="batch in visibleActiveBatches"
             :key="batch.id"
             :batch="batch"
             @click="goBatchDetail(batch.id)"
           />
-          <view v-if="!dashboard?.activeBatchList?.length" class="empty-state card">
-            <text class="text-secondary">暂无正在加工批次</text>
+          <view v-if="!visibleActiveBatches.length" class="empty-state card">
+            <text>暂无正在加工批次</text>
           </view>
         </view>
       </view>
 
       <!-- Recent activity -->
-      <view class="section-block mt-md">
+      <view class="section-block">
         <view class="section-header">
-          <text class="section-title text-bold">最近动态</text>
+          <text class="section-title">最近动态</text>
           <text class="collapse-btn" @click="collapsed.activity = !collapsed.activity">{{ collapsed.activity ? '展开' : '收起' }}</text>
         </view>
-        <view v-if="!collapsed.activity" class="section-body">
-          <view v-for="record in dashboard?.recentActivity" :key="record.id" class="activity-item card">
+        <view v-if="!collapsed.activity">
+          <view v-for="record in visibleRecentActivity" :key="record.id" class="card activity-item">
             <view class="flex-between">
               <view class="flex-center">
                 <text class="text-bold">{{ record.batch?.batchNo }} {{ record.batch?.product?.model || '' }}</text>
-                <view v-if="record.batch?.priority === 'urgent'" class="urgent-tag">紧急</view>
+                <view v-if="record.batch?.priority === 'urgent'" class="tag tag-urgent">紧急</view>
               </view>
               <text class="text-secondary text-sm">{{ formatTime(record.createdAt) }}</text>
             </view>
@@ -122,6 +114,9 @@
               <text class="text-sm text-secondary ml-sm">{{ record.operator?.name }}</text>
             </view>
           </view>
+          <view v-if="!visibleRecentActivity.length" class="empty-state card">
+            <text>暂无动态</text>
+          </view>
         </view>
       </view>
     </view>
@@ -129,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { onPullDownRefresh } from "@dcloudio/uni-app";
 import { useUserStore } from "../../store/user";
 import { useAppStore } from "../../store/app";
@@ -137,6 +132,8 @@ import { progressApi } from "../../api/modules";
 import { formatTime } from "../../utils/format";
 import type { DashboardData } from "../../types";
 import BatchCard from "../../components/BatchCard.vue";
+import BatchTypeTabs from "../../components/BatchTypeTabs.vue";
+import UIcon from "../../components/UIcon.vue";
 
 const userStore = useUserStore();
 const appStore = useAppStore();
@@ -144,6 +141,32 @@ const dashboard = ref<DashboardData | null>(null);
 const loading = ref(false);
 const loginPassword = ref("");
 const collapsed = ref({ alerts: false, batches: false, activity: false });
+const batchType = ref<"product" | "trial">("product");
+
+const statCards = computed(() => {
+  if (!dashboard.value) return [];
+  const s = dashboard.value.stats;
+  if (batchType.value === "trial") {
+    const activeTrial = (dashboard.value.activeBatchList ?? []).filter(b => b.batchType === "trial").length;
+    return [
+      { value: activeTrial, label: "在线试验批次", color: "#ff9900" },
+      { value: s.totalTrialBatches, label: "试验总批次", color: "#0083ff" },
+    ];
+  }
+  return [
+    { value: s.activeProductBatches, label: "在线产品总批次", color: "#0083ff" },
+    { value: s.activeProductQuantity, label: "在线产品总数量", color: "#07c160" },
+    { value: s.totalTrialBatches, label: "试验总批次", color: "#ff9900" },
+  ];
+});
+
+const visibleActiveBatches = computed(() =>
+  (dashboard.value?.activeBatchList ?? []).filter(b => b.batchType === batchType.value)
+);
+
+const visibleRecentActivity = computed(() =>
+  (dashboard.value?.recentActivity ?? []).filter(r => r.batch?.batchType === batchType.value)
+);
 
 async function handleLogin() {
   if (loading.value) return;
@@ -195,63 +218,75 @@ onPullDownRefresh(async () => {
 </script>
 
 <style scoped lang="scss">
+/* Login */
 .login-section {
   display: flex;
   justify-content: center;
   padding-top: 200rpx;
 }
 .login-card {
-  width: 600rpx;
-  text-align: center;
-  padding: 60rpx 40rpx;
+  width: 620rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 64rpx 48rpx;
 }
-.login-title { display: block; }
-.login-desc { display: block; }
+.login-logo { margin-bottom: 24rpx; }
+.login-title {
+  font-size: 38rpx;
+  font-weight: 700;
+  color: #1f2329;
+}
+.login-desc {
+  font-size: 26rpx;
+  color: #8a8f99;
+  margin-top: 8rpx;
+}
 .login-input-wrap {
-  border: 1rpx solid #ddd;
+  width: 100%;
+  margin-top: 48rpx;
+  border: 2rpx solid #e5e7eb;
   border-radius: 12rpx;
-  overflow: hidden;
+  background: #f7f8fa;
 }
 .login-input {
   width: 100%;
-  height: 88rpx;
+  height: 96rpx;
   padding: 0 24rpx;
   font-size: 30rpx;
   box-sizing: border-box;
 }
-.login-btn {
-  background: #0083ff;
-  color: #fff;
-  border: none;
-  border-radius: 12rpx;
-  padding: 24rpx 0;
-  font-size: 32rpx;
-  min-height: 88rpx;
-}
+.login-placeholder { color: #c0c4cc; }
+.login-btn { margin-top: 24rpx; }
+
+/* Stats */
 .stats-row {
   display: flex;
   gap: 16rpx;
 }
 .stat-card {
   flex: 1;
-  text-align: center;
+  background: #fff;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 16rpx rgba(17, 24, 39, 0.06);
   padding: 28rpx 12rpx;
+  text-align: center;
 }
 .stat-value {
   display: block;
-  font-size: 44rpx;
+  font-size: 48rpx;
   font-weight: 700;
+  line-height: 1.2;
 }
 .stat-label {
   display: block;
   margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #8a8f99;
 }
 
-/* Section blocks - consistent layout */
-.section-block {
-  display: flex;
-  flex-direction: column;
-}
+/* Sections */
+.section-block { margin-top: 24rpx; }
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -259,91 +294,47 @@ onPullDownRefresh(async () => {
   padding: 0 4rpx;
   margin-bottom: 16rpx;
 }
-.section-title {
-  font-size: 30rpx;
-}
-.section-body {
-  margin-top: 0;
-}
 
-.alert-count {
-  display: inline-block;
-  background: #fa5151;
-  color: #fff;
-  font-size: 22rpx;
-  padding: 2rpx 12rpx;
-  border-radius: 20rpx;
-  margin-right: 8rpx;
-  min-width: 36rpx;
-  text-align: center;
-}
+/* Alerts */
+.alert-count { margin-right: 12rpx; }
+.alert-card { padding: 8rpx 24rpx; }
 .alert-item {
   display: flex;
   align-items: center;
-  gap: 12rpx;
-  padding: 16rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
-  min-height: 72rpx;
+  gap: 16rpx;
+  padding: 20rpx 0;
+  border-bottom: 2rpx solid #f0f1f4;
   &:last-child { border-bottom: none; }
 }
 .alert-content { flex: 1; }
-.alert-arrow { color: #ccc; font-size: 28rpx; }
-.alert-dot {
-  width: 12rpx;
-  height: 12rpx;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.dot-critical { background: #fa5151; }
-.dot-major { background: #ff9900; }
-.dot-minor { background: #999; }
 
 /* Quick actions */
+.quick-actions { padding-bottom: 28rpx; }
 .action-grid {
   display: flex;
-  gap: 32rpx;
+  gap: 40rpx;
+  margin-top: 24rpx;
 }
 .action-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8rpx;
+  gap: 12rpx;
   min-width: 120rpx;
 }
-.action-icon {
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: 20rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.action-icon-primary { background: #e8f4ff; }
-.action-icon-success { background: #e8f8ee; }
-.action-icon-text { font-size: 36rpx; font-weight: 600; }
-.action-label { color: #666; }
-
-.empty-state {
-  text-align: center;
-  padding: 60rpx;
-}
-.activity-item {
-  padding: 20rpx 24rpx;
-}
-.collapse-btn {
+.action-label {
   font-size: 24rpx;
-  color: #0083ff;
-  padding: 4rpx 16rpx;
-  border: 1rpx solid #0083ff;
-  border-radius: 20rpx;
+  color: #6b7280;
 }
 
-.urgent-tag {
-  background: #fa5151;
-  color: #fff;
+.activity-item { padding: 24rpx; }
+
+.collapse-btn {
   font-size: 22rpx;
-  padding: 2rpx 12rpx;
-  border-radius: 6rpx;
-  margin-left: 8rpx;
+  color: #0083ff;
+  padding: 6rpx 20rpx;
+  border: 2rpx solid #0083ff;
+  border-radius: 999rpx;
+  background: #fff;
 }
 </style>

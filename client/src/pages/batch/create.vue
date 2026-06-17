@@ -1,7 +1,7 @@
 <template>
   <view class="container">
     <view class="card">
-      <text class="section-title text-bold">新建批次</text>
+      <text class="section-title">新建批次</text>
 
       <!-- Type selector -->
       <view class="type-selector mt-lg">
@@ -134,11 +134,11 @@
             <view v-for="(img, i) in trialImages" :key="i" class="image-item">
               <image :src="img" mode="aspectFill" class="image-preview" @click="previewImage(i)" />
               <view class="image-delete" @click="removeTrialImage(i)">
-                <text class="text-white text-sm">x</text>
+                <UIcon name="close" :size="22" color="#ffffff" />
               </view>
             </view>
             <view v-if="trialImages.length < 9" class="image-add" @click="chooseTrialImage">
-              <text class="text-lg text-secondary">+</text>
+              <UIcon name="plus" :size="36" color="#c0c4cc" />
             </view>
           </view>
         </view>
@@ -154,15 +154,17 @@
         <text v-for="(err, i) in validationErrors" :key="i" class="text-sm text-danger">{{ err }}</text>
       </view>
 
-      <button class="btn-primary mt-lg" :loading="submitting" @click="submit">创建批次</button>
+      <button class="btn btn-primary btn-block mt-lg" :loading="submitting" @click="submit">创建批次</button>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { onLoad } from "@dcloudio/uni-app";
 import { batchApi, settingsApi, attachmentApi } from "../../api/modules";
 import { PRIORITIES } from "../../utils/constants";
+import UIcon from "../../components/UIcon.vue";
 import type { PackageType, CustomerCode } from "../../types";
 
 const packageTypes = ref<PackageType[]>([]);
@@ -361,6 +363,12 @@ async function submit() {
   }
 }
 
+onLoad((query) => {
+  if (query?.type === "trial") {
+    switchType("trial");
+  }
+});
+
 onMounted(async () => {
   try {
     packageTypes.value = await settingsApi.listPackageTypes();
@@ -372,148 +380,64 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.section-title { font-size: 32rpx; }
-.type-selector {
-  display: flex;
-  gap: 16rpx;
-}
+.type-selector { display: flex; gap: 16rpx; }
 .type-option {
   flex: 1;
   text-align: center;
-  padding: 20rpx 0;
-  border: 2rpx solid #e5e5e5;
+  padding: 22rpx 0;
+  border: 2rpx solid #e5e7eb;
   border-radius: 12rpx;
   font-size: 30rpx;
-  color: #666;
+  color: #6b7280;
+  background: #fff;
   transition: all 0.2s;
-
   &.active {
     background: #0083ff;
     color: #fff;
     border-color: #0083ff;
+    font-weight: 500;
   }
-}
-.form-group { display: flex; flex-direction: column; gap: 8rpx; }
-.form-label { font-size: 26rpx; color: #666; }
-.form-input {
-  border: 2rpx solid #e5e5e5;
-  border-radius: 12rpx;
-  padding: 24rpx;
-  font-size: 28rpx;
-  min-height: 48rpx;
-}
-.form-textarea {
-  border: 2rpx solid #e5e5e5;
-  border-radius: 12rpx;
-  padding: 20rpx 24rpx;
-  font-size: 28rpx;
-  height: 160rpx;
-}
-.picker-value { color: #333; }
-.combo-input {
-  display: flex;
-  gap: 12rpx;
-  align-items: center;
-}
-.combo-field {
-  flex: 1;
-}
-.combo-btn {
-  padding: 18rpx 24rpx;
-  background: #f0f7ff;
-  color: #0083ff;
-  border-radius: 12rpx;
-  font-size: 26rpx;
-  white-space: nowrap;
 }
 .validation-errors {
   padding: 16rpx 20rpx;
-  background: #fff2f0;
-  border-radius: 8rpx;
+  background: #ffecec;
+  border-radius: 10rpx;
   display: flex;
   flex-direction: column;
-  gap: 4rpx;
+  gap: 6rpx;
 }
-.btn-primary {
-  background: #0083ff;
-  color: #fff;
-  border: none;
-  border-radius: 12rpx;
-  padding: 24rpx 0;
-  font-size: 32rpx;
-  text-align: center;
-  min-height: 88rpx;
-}
-.multi-select-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-}
+.multi-select-list { display: flex; flex-wrap: wrap; gap: 12rpx; }
 .multi-select-item {
-  padding: 12rpx 24rpx;
-  border: 2rpx solid #e5e5e5;
-  border-radius: 8rpx;
+  padding: 14rpx 26rpx;
+  border: 2rpx solid #e5e7eb;
+  border-radius: 999rpx;
   font-size: 26rpx;
-  color: #666;
+  color: #6b7280;
   background: #fff;
   &.selected {
-    background: #f0f7ff;
+    background: #e8f4ff;
     border-color: #0083ff;
     color: #0083ff;
   }
 }
-.quantity-row {
-  display: flex;
-  gap: 16rpx;
-}
-.quantity-field {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-}
-.quantity-field .form-input {
-  flex: 1;
-}
-.quantity-unit {
-  font-size: 26rpx;
-  color: #999;
-  white-space: nowrap;
-}
-.image-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-}
-.image-item {
-  position: relative;
-  width: 160rpx;
-  height: 160rpx;
-}
-.image-preview {
-  width: 100%;
-  height: 100%;
-  border-radius: 8rpx;
-}
+.quantity-row { display: flex; gap: 16rpx; }
+.quantity-field { flex: 1; display: flex; align-items: center; gap: 8rpx; }
+.quantity-field .form-input { flex: 1; }
+.quantity-unit { font-size: 26rpx; color: #8a8f99; white-space: nowrap; }
+.image-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
+.image-item { position: relative; width: 160rpx; height: 160rpx; }
+.image-preview { width: 100%; height: 100%; border-radius: 12rpx; }
 .image-delete {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 40rpx;
-  height: 40rpx;
+  position: absolute; top: 0; right: 0;
+  width: 40rpx; height: 40rpx;
   background: rgba(0, 0, 0, 0.5);
-  border-radius: 0 8rpx 0 8rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 0 12rpx 0 12rpx;
+  display: flex; align-items: center; justify-content: center;
 }
 .image-add {
-  width: 160rpx;
-  height: 160rpx;
-  border: 2rpx dashed #ccc;
-  border-radius: 8rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 160rpx; height: 160rpx;
+  border: 2rpx dashed #d6d9e0;
+  border-radius: 12rpx;
+  display: flex; align-items: center; justify-content: center;
 }
 </style>

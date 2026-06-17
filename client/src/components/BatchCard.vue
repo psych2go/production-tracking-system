@@ -94,7 +94,7 @@ const isOverdue = computed(() => checkOverdue(props.batch.customerDelivery, prop
 .batch-info { display: flex; flex-wrap: wrap; align-items: center; gap: 8rpx; }
 .package-tag {
   font-size: 20rpx;
-  padding: 2rpx 10rpx;
+  padding: 3rpx 12rpx;
   border-radius: 6rpx;
   background: #e8f4ff;
   color: #0083ff;
@@ -103,15 +103,16 @@ const isOverdue = computed(() => checkOverdue(props.batch.customerDelivery, prop
 .mt-xs { margin-top: 8rpx; }
 .overdue-badge {
   font-size: 22rpx;
-  padding: 4rpx 12rpx;
+  padding: 4rpx 14rpx;
   border-radius: 8rpx;
-  background: #fff2f0;
+  background: #ffecec;
   color: #fa5151;
-  border: 1rpx solid #fa5151;
+  border: 2rpx solid #fa5151;
+  font-weight: 500;
 }
 .trial-label {
   font-size: 22rpx;
-  padding: 2rpx 10rpx;
+  padding: 3rpx 12rpx;
   border-radius: 6rpx;
   background: #fff7e6;
   color: #ff9900;
