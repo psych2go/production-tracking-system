@@ -11,7 +11,7 @@ const store = new Map<string, RateLimitEntry>();
 setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of store) {
-    if (now > entry.resetAt) store.delete(key);
+    if (now >= entry.resetAt) store.delete(key);
   }
 }, 60_000).unref();
 
