@@ -31,7 +31,8 @@ jobs:
             DATABASE_URL="file:./dev.db" npx prisma generate
             npm run build
             pm2 delete pts 2>/dev/null || true
-            pm2 start dist/server.js --name pts
+            pm2 restart pts-api --update-env 2>/dev/null || pm2 start dist/server.js --name pts-api
+            pm2 save
 
             # 前端
             cd ../client

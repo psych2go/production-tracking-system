@@ -199,6 +199,7 @@ page {
 .form-group { display: flex; flex-direction: column; gap: $space-1; }
 .form-label { font-size: $fs-sm; color: $text-secondary; }
 .form-input {
+  width: 100%;
   border: 2rpx solid $border-color;
   border-radius: $radius-md;
   padding: 22rpx $space-3;
@@ -208,6 +209,7 @@ page {
   box-sizing: border-box;
 }
 .form-textarea {
+  width: 100%;
   border: 2rpx solid $border-color;
   border-radius: $radius-md;
   padding: 20rpx $space-3;

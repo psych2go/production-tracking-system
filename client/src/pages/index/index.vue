@@ -90,31 +90,6 @@
         </view>
       </view>
 
-      <!-- Recent activity -->
-      <view class="section-block">
-        <view class="section-header">
-          <text class="section-title">最近动态</text>
-          <text class="collapse-btn" @click="collapsed.activity = !collapsed.activity">{{ collapsed.activity ? '展开' : '收起' }}</text>
-        </view>
-        <view v-if="!collapsed.activity">
-          <view v-for="record in visibleRecentActivity" :key="record.id" class="card activity-item">
-            <view class="flex-between">
-              <view class="flex-center">
-                <text class="text-bold">{{ record.batch?.batchNo }} {{ record.batch?.product?.model || '' }}</text>
-                <view v-if="record.batch?.priority === 'urgent'" class="tag tag-urgent">紧急</view>
-              </view>
-              <text class="text-secondary text-sm">{{ formatTime(record.createdAt) }}</text>
-            </view>
-            <view class="mt-sm">
-              <text class="text-sm">流转到 {{ record.stage?.name }}</text>
-              <text class="text-sm text-secondary ml-sm">{{ record.operator?.name }}</text>
-            </view>
-          </view>
-          <view v-if="!visibleRecentActivity.length" class="empty-state card">
-            <text>暂无动态</text>
-          </view>
-        </view>
-      </view>
     </view>
   </view>
 </template>
@@ -125,7 +100,6 @@ import { onPullDownRefresh } from "@dcloudio/uni-app";
 import { useUserStore } from "../../store/user";
 import { useAppStore } from "../../store/app";
 import { progressApi } from "../../api/modules";
-import { formatTime } from "../../utils/format";
 import type { DashboardData } from "../../types";
 import BatchCard from "../../components/BatchCard.vue";
 import UIcon from "../../components/UIcon.vue";
@@ -135,7 +109,7 @@ const appStore = useAppStore();
 const dashboard = ref<DashboardData | null>(null);
 const loading = ref(false);
 const loginPassword = ref("");
-const collapsed = ref({ alerts: false, batches: false, activity: false });
+const collapsed = ref({ alerts: false, batches: false });
 
 const statCards = computed(() => {
   if (!dashboard.value) return [];
@@ -148,10 +122,6 @@ const statCards = computed(() => {
 
 const visibleActiveBatches = computed(() =>
   dashboard.value?.activeBatchList ?? []
-);
-
-const visibleRecentActivity = computed(() =>
-  dashboard.value?.recentActivity ?? []
 );
 
 async function handleLogin() {
