@@ -19,16 +19,13 @@ export interface Product {
 export interface Batch {
   id: number;
   batchNo: string;
-  batchType: "product" | "trial";
   productId: number | null;
   quantity: number;
-  quantityDetail: string | null;
   customerCode: string | null;
   orderNo: string | null;
   packageType: string | null;
   customerDelivery: string | null;
   productionDelivery: string | null;
-  trialContent: string | null;
   status: "active" | "completed" | "archived";
   priority: "normal" | "urgent";
   notes: string | null;
@@ -38,7 +35,6 @@ export interface Batch {
   product?: Product | null;
   creator?: { id: number; name: string };
   progressRecords?: ProgressRecord[];
-  attachments?: BatchAttachment[];
 }
 
 export interface ProcessStage {
@@ -74,7 +70,6 @@ export interface DashboardData {
   stats: {
     activeProductBatches: number;
     activeProductQuantity: number;
-    totalTrialBatches: number;
   };
   recentActivity: ProgressRecord[];
   activeBatchList: Batch[];
@@ -127,13 +122,4 @@ export interface PackageType {
 export interface CustomerCode {
   id: number;
   code: string;
-}
-
-export interface BatchAttachment {
-  id: number;
-  batchId: number;
-  fileName: string;
-  filePath: string;
-  fileSize: number;
-  createdAt: string;
 }

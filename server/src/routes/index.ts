@@ -7,7 +7,6 @@ import { progressRoutes } from "./progress.js";
 import { statisticsRoutes } from "./statistics.js";
 import { auditRoutes } from "./audit.js";
 import { settingsRoutes } from "./settings.js";
-import { uploadRoutes } from "./upload.js";
 
 export const routes = Router();
 
@@ -15,7 +14,6 @@ routes.use("/auth", authRoutes);
 routes.use("/users", userRoutes);
 routes.use("/products", productRoutes);
 routes.use("/batches", batchRoutes);
-routes.use("/batches", uploadRoutes);
 routes.use("/progress", progressRoutes);
 routes.use("/statistics", statisticsRoutes);
 routes.use("/audit", auditRoutes);

@@ -5,9 +5,6 @@
     </view>
 
     <view v-else>
-      <view v-if="step === 1" class="mb-sm">
-        <BatchTypeTabs :model-value="batchType" @update:model-value="onTypeChange" />
-      </view>
       <!-- Stage filter with counts -->
       <view class="card" v-if="step === 1 && appStore.stages.length">
         <view class="flex-between">
@@ -85,14 +82,12 @@
             <view class="flex-between">
               <view class="flex-center">
                 <text class="text-bold">{{ batch.batchNo }} {{ batch.product?.model || '' }}</text>
-                <text v-if="batch.batchType === 'trial'" class="trial-tag">试验</text>
                 <view v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</view>
               </view>
               <text class="text-secondary text-sm">{{ batch.packageType }}</text>
             </view>
             <view class="flex-between mt-sm">
-              <text v-if="batch.batchType !== 'trial'" class="text-sm text-secondary">数量: {{ batch.quantity }}</text>
-              <text v-else class="text-sm text-secondary"></text>
+              <text class="text-sm text-secondary">数量: {{ batch.quantity }}</text>
               <view v-if="getCurrentStage(batch)" class="current-stage-hint-inline">
                 <text class="text-sm">当前: {{ getCurrentStage(batch)?.name }}</text>
               </view>
@@ -164,7 +159,6 @@ import { useUserStore } from "../../store/user";
 import { useAppStore } from "../../store/app";
 import { batchApi, progressApi, settingsApi } from "../../api/modules";
 import { getCurrentStage } from "../../utils/format";
-import BatchTypeTabs from "../../components/BatchTypeTabs.vue";
 import UIcon from "../../components/UIcon.vue";
 import type { Batch, PackageType, ProcessStage } from "../../types";
 
@@ -196,7 +190,6 @@ const stageBatchCounts = computed(() => {
 const step = ref(1);
 const batchKeyword = ref("");
 const batches = ref<Batch[]>([]);
-const batchType = ref<"product" | "trial">("product");
 const selectedBatch = ref<Batch | null>(null);
 const selectedStageId = ref<number | null>(null);
 const selectedPackageType = ref("");
@@ -290,16 +283,11 @@ function onBatchInput() {
 
 async function searchBatches() {
   try {
-    const res = await batchApi.list({ status: "active", batchType: batchType.value, keyword: batchKeyword.value || undefined, pageSize: 200 });
+    const res = await batchApi.list({ status: "active", keyword: batchKeyword.value || undefined, pageSize: 200 });
     batches.value = res.items;
   } catch (e: unknown) {
     uni.showToast({ title: (e as Error).message, icon: "none" });
   }
-}
-
-async function onTypeChange(type: "product" | "trial") {
-  batchType.value = type;
-  await searchBatches();
 }
 
 function selectBatch(batch: Batch) {
@@ -323,7 +311,7 @@ async function confirmStage(stage: ProcessStage) {
 
   const res = await uni.showModal({
     title: "确认流转",
-    content: `确认将 ${selectedBatch.value?.product?.model ?? selectedBatch.value?.trialContent ?? selectedBatch.value?.batchNo} 流转到「${stage.name}」工序？`,
+    content: `确认将 ${selectedBatch.value?.product?.model ?? selectedBatch.value?.batchNo} 流转到「${stage.name}」工序？`,
   });
   if (res.cancel) return;
 

@@ -258,7 +258,6 @@ async function main() {
     const batch = await prisma.batch.create({
       data: {
         batchNo: cfg.batchNo,
-        batchType: "product",
         productId: productIds[cfg.productIdx],
         quantity: cfg.quantity,
         status: "completed",
@@ -303,7 +302,6 @@ async function main() {
     const batch = await prisma.batch.create({
       data: {
         batchNo: cfg.batchNo,
-        batchType: "product",
         productId: productIds[cfg.productIdx],
         quantity: cfg.quantity,
         status: "active",
@@ -345,7 +343,6 @@ async function main() {
     const batch = await prisma.batch.create({
       data: {
         batchNo: cfg.batchNo,
-        batchType: "product",
         productId: productIds[cfg.productIdx],
         quantity: cfg.quantity,
         status: "active",
@@ -370,53 +367,8 @@ async function main() {
   }
   console.log(`创建 ${delayedBatchConfigs.length} 个延迟预警批次，共 ${delayRecordCount} 条进度记录`);
 
-  // ---- 场景 D: 试验批次 ----
-  console.log("\n--- 生成试验批次 ---");
-
-  const trialConfigs = [
-    { daysAgo: 5, content: "新型粘片胶水测试", completedStages: 6 },
-    { daysAgo: 3, content: "压焊参数优化试验", completedStages: 5 },
-    { daysAgo: 8, content: "电镀液配比调整", completedStages: -1 },  // 已完成
-    { daysAgo: 1, content: "减划刀片寿命测试", completedStages: 2 },
-  ];
-
-  let trialCount = 0;
-  for (const cfg of trialConfigs) {
-    const baseDate = new Date(now);
-    baseDate.setDate(baseDate.getDate() - cfg.daysAgo);
-    baseDate.setHours(rand(8, 14), 0, 0, 0);
-
-    const dateStr = baseDate.toISOString().slice(0, 10).replace(/-/g, "").slice(0, 8);
-    const seq = String(trialCount + 1).padStart(3, "0");
-
-    const batch = await prisma.batch.create({
-      data: {
-        batchNo: `S${dateStr}-${seq}`,
-        batchType: "trial",
-        quantity: 0,
-        status: cfg.completedStages === -1 ? "completed" : "active",
-        trialContent: cfg.content,
-        packageType: trialCount % 2 === 0 ? "SOP16L" : undefined,
-        createdBy: admin.id,
-        createdAt: baseDate,
-      },
-    });
-
-    if (cfg.completedStages > 0) {
-      const records = generateProgressRecords(
-        batch.id, allOperatorIds, stageIds, stageCodes,
-        baseDate, cfg.completedStages, 100, // 试验批次数量少
-      );
-      const count = await insertRecords(records);
-      recordCount += count;
-    }
-
-    trialCount++;
-  }
-  console.log(`创建 ${trialCount} 个试验批次`);
-
   console.log(`\n=== 演示数据生成完毕 ===`);
-  console.log(`总批次: ${batchCount + trialCount}`);
+  console.log(`总批次: ${batchCount}`);
   console.log(`总进度记录: ~${recordCount + activeRecordCount + delayRecordCount}`);
 
   // 验证预警逻辑

@@ -79,7 +79,6 @@ export async function getProductionTrend(filters: {
 
   // Find all completed product batches, use packaging stage record's createdAt as completion date
   const batchWhere: Record<string, unknown> = {
-    batchType: "product",
     status: "completed",
   };
 
@@ -95,7 +94,7 @@ export async function getProductionTrend(filters: {
   // Get packaging progress records (completion records) for product batches
   const recordWhere: Record<string, unknown> = {
     stageId: packagingStage.id,
-    batch: { batchType: "product", status: "completed" },
+    batch: { status: "completed" },
   };
   if (startDate || endDate) {
     const createdAt: Record<string, Date> = {};
@@ -283,7 +282,7 @@ export async function exportExcel(filters: {
       const wb = XLSX.utils.book_new();
 
       // Product sheet
-      const productRows = batches.filter(b => b.batchType === "product").map(b => {
+      const productRows = batches.map(b => {
         const currentStage = getCurrentStageFromRecords(b.progressRecords);
         return {
           批号: b.batchNo,
@@ -300,23 +299,6 @@ export async function exportExcel(filters: {
       });
       if (productRows.length) {
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(productRows), "在线产品");
-      }
-
-      // Trial sheet
-      const trialRows = batches.filter(b => b.batchType === "trial").map(b => {
-        const currentStage = getCurrentStageFromRecords(b.progressRecords);
-        return {
-          批号: b.batchNo,
-          试验内容: b.trialContent || "",
-          封装形式: b.packageType || "",
-          要求完成时间: b.customerDelivery ? b.customerDelivery.toISOString().slice(0, 10) : "",
-          备注: b.notes || "",
-          当前工序: currentStage,
-          创建时间: b.createdAt.toISOString().slice(0, 10),
-        };
-      });
-      if (trialRows.length) {
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(trialRows), "在线试验");
       }
 
       if (wb.SheetNames.length === 0) {

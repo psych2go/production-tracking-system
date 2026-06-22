@@ -1,5 +1,5 @@
 import { api } from "./index";
-import type { User, Product, Batch, ProcessStage, ProgressRecord, PaginatedResult, DashboardData, ProcessDurationData, ProductionTrendData, AnomalyItem, AuditLog, PackageType, CustomerCode, BatchAttachment } from "../types";
+import type { User, Product, Batch, ProcessStage, ProgressRecord, PaginatedResult, DashboardData, ProcessDurationData, ProductionTrendData, AnomalyItem, AuditLog, PackageType, CustomerCode } from "../types";
 
 // Auth
 export const authApi = {
@@ -32,14 +32,13 @@ export const productApi = {
 
 // Batches
 export const batchApi = {
-  list: (params?: { status?: string; productId?: number; keyword?: string; customerCode?: string; packageType?: string; batchType?: string; page?: number; pageSize?: number }) => {
+  list: (params?: { status?: string; productId?: number; keyword?: string; customerCode?: string; packageType?: string; page?: number; pageSize?: number }) => {
     const query = new URLSearchParams();
     if (params?.status) query.set("status", params.status);
     if (params?.productId) query.set("productId", String(params.productId));
     if (params?.keyword) query.set("keyword", params.keyword);
     if (params?.customerCode) query.set("customerCode", params.customerCode);
     if (params?.packageType) query.set("packageType", params.packageType);
-    if (params?.batchType) query.set("batchType", params.batchType);
     if (params?.page) query.set("page", String(params.page));
     if (params?.pageSize) query.set("pageSize", String(params.pageSize));
     return api.get<PaginatedResult<Batch>>(`/api/batches?${query.toString()}`);
@@ -135,15 +134,4 @@ export const auditApi = {
     if (params?.page) query.set("page", String(params.page));
     return api.get<PaginatedResult<AuditLog>>(`/api/audit/logs?${query.toString()}`);
   },
-};
-
-// Attachments
-export const attachmentApi = {
-  list: (batchId: number) =>
-    api.get<BatchAttachment[]>(`/api/batches/${batchId}/attachments`),
-  upload: async (batchId: number, filePath: string) => {
-    return api.uploadFile<BatchAttachment[]>(`/api/batches/${batchId}/attachments`, filePath, "files");
-  },
-  remove: (batchId: number, attachmentId: number) =>
-    api.delete<{ success: boolean }>(`/api/batches/${batchId}/attachments/${attachmentId}`),
 };

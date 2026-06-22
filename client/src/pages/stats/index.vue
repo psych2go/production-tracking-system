@@ -15,9 +15,9 @@
     <!-- Export button -->
     <view class="card export-bar">
       <view class="export-left">
-        <text class="export-hint" v-if="activeTab === 'online'">统计规则：分别统计在线产品和在线试验的详细信息及当前工序</text>
+        <text class="export-hint" v-if="activeTab === 'online'">统计规则：统计在线产品的详细信息及当前工序</text>
         <text class="export-hint" v-else-if="activeTab === 'durations'">统计规则：耗时 = 相邻两道工序流转记录的时间差，按工序汇总平均/最短/最长值</text>
-        <text class="export-hint" v-else-if="activeTab === 'production'">统计规则：仅统计产品批次（不含试验），按完成日期汇总产量（加工数量之和）</text>
+        <text class="export-hint" v-else-if="activeTab === 'production'">统计规则：仅统计产品批次，按完成日期汇总产量（加工数量之和）</text>
         <text class="export-hint" v-else>统计规则：活跃批次超过 5 天无进度更新则标记为延迟预警</text>
       </view>
       <button class="btn-export" @click="onExport">导出 Excel</button>
@@ -65,38 +65,6 @@
         </scroll-view>
         <view v-else class="empty-chart">
           <text class="text-secondary">暂无在线产品批次</text>
-        </view>
-      </view>
-
-      <!-- Trial batches -->
-      <view class="card mt-md">
-        <text class="section-title text-bold">在线试验</text>
-        <scroll-view scroll-x class="mt-sm" v-if="onlineTrials.length">
-          <view class="online-table">
-            <view class="online-header">
-              <text class="online-col trial-col-no">批号</text>
-              <text class="online-col trial-col-content">试验内容</text>
-              <text class="online-col trial-col-pkg">封装形式</text>
-              <text class="online-col trial-col-qty">数量</text>
-              <text class="online-col trial-col-deadline">要求完成时间</text>
-              <text class="online-col trial-col-notes">备注</text>
-              <text class="online-col trial-col-stage">当前工序</text>
-              <text class="online-col trial-col-date">创建时间</text>
-            </view>
-            <view v-for="batch in onlineTrials" :key="batch.id" class="online-row" @click="goBatchDetail(batch.id)">
-              <text class="online-col trial-col-no">{{ batch.batchNo }}</text>
-              <text class="online-col trial-col-content">{{ batch.trialContent || '-' }}</text>
-              <text class="online-col trial-col-pkg">{{ batch.packageType || '-' }}</text>
-              <text class="online-col trial-col-qty">{{ formatTrialQty(batch) }}</text>
-              <text class="online-col trial-col-deadline">{{ batch.customerDelivery ? batch.customerDelivery.slice(0, 10) : '-' }}</text>
-              <text class="online-col trial-col-notes">{{ batch.notes || '-' }}</text>
-              <text class="online-col trial-col-stage">{{ getBatchStageName(batch) }}</text>
-              <text class="online-col trial-col-date">{{ batch.createdAt.slice(0, 10) }}</text>
-            </view>
-          </view>
-        </scroll-view>
-        <view v-else class="empty-chart">
-          <text class="text-secondary">暂无在线试验批次</text>
         </view>
       </view>
     </view>
@@ -207,21 +175,7 @@ const durationList = ref<ProcessDurationData[]>([]);
 const productionList = ref<ProductionTrendData[]>([]);
 const anomalies = ref<AnomalyItem[]>([]);
 const onlineBatches = ref<Batch[]>([]);
-const onlineProducts = computed(() => onlineBatches.value.filter(b => b.batchType === "product"));
-const onlineTrials = computed(() => onlineBatches.value.filter(b => b.batchType === "trial"));
-
-function formatTrialQty(batch: Batch): string {
-  if (batch.quantityDetail) {
-    try {
-      const parsed = JSON.parse(batch.quantityDetail);
-      const parts: string[] = [];
-      if (parsed["条"] && Number(parsed["条"]) > 0) parts.push(`${parsed["条"]}条`);
-      if (parsed["只"] && Number(parsed["只"]) > 0) parts.push(`${parsed["只"]}只`);
-      if (parts.length) return parts.join("+");
-    } catch { /* fallback */ }
-  }
-  return batch.quantity ? String(batch.quantity) : "-";
-}
+const onlineProducts = computed(() => onlineBatches.value);
 
 function getBatchStageName(batch: Batch): string {
   return getCurrentStage(batch)?.name || '未开始';
@@ -471,14 +425,4 @@ function goBatchDetail(id: number) {
 .online-col-stage { width: 140rpx; color: #0083ff; font-weight: 500; }
 .online-col-notes { width: 200rpx; justify-content: flex-start; }
 .online-col-date { width: 160rpx; }
-
-/* Trial table columns */
-.trial-col-no { width: 180rpx; justify-content: flex-start; font-weight: 500; }
-.trial-col-content { width: 400rpx; justify-content: flex-start; }
-.trial-col-pkg { width: 400rpx; }
-.trial-col-qty { width: 200rpx; }
-.trial-col-deadline { width: 180rpx; }
-.trial-col-notes { width: 180rpx; justify-content: flex-start; }
-.trial-col-stage { width: 140rpx; color: #0083ff; font-weight: 500; }
-.trial-col-date { width: 160rpx; }
 </style>

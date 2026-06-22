@@ -44,11 +44,9 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 ### 工序流转
 记录流转及数量信息（投入数、产出数、不良品数、不良类型）。所有工序可自由点击（允许跳过）。流转到包装自动创建「已完成」记录并标记批次 completed。
 
-### 批次（产品/试验双类型）
+### 批次
 
 **产品批次**：手动批号、产品型号（upsert Product）、数量、封装形式（校验 PackageType 表）、客户代码、订单编号、客户要求交期、生产预计交期、优先级、备注
-
-**试验批次**：自动批号 `S{yyyyMMdd}-{序号}`（序号3位零填充）、试验内容、封装形式、数量（支持「条」「只」双单位）、要求完成时间、备注。无产品关联。
 
 ### 客户代码
 预设客户代码列表（管理员维护），创建/编辑产品批次时从列表选择。管理入口：个人中心 → 客户代码管理。
@@ -73,20 +71,18 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 - Zod 校验在路由层通过 `validate(schema)` 中间件执行，转换结果自动写回 `req.body`
 - 审计日志：`auditLog(action, entity)` 中间件拦截 `res.json`，记录请求参数和 POST/PUT 请求体（自动排除 password 字段），异步写入
 - 样式：`rpx` 单位，颜色变量在 `global.scss`（Primary `#0083ff`、Success `#07c160`、Warning `#ff9900`、Danger `#fa5151`）
-- 产品批次显示：`批号 型号`（同一行）。试验批次：批号 + 橙色「试验」标签
+- 产品批次显示：`批号 型号`（同一行）
 
 ## 显示约定
 
 - 紧急标签：全局 `.urgent-tag`（红色背景白字）
-- 试验标签：全局 `.trial-tag`（橙色）
 - 状态：active→正在加工、completed→已完成、archived→已归档
-- 产品交期显示「客户交期」和「预计交期」，试验显示「要求完成时间」
-- 试验批次数量：`quantityDetail` 存 JSON 如 `{"条":100,"只":50}`，`quantity` 存总和。显示格式 "100条 50只"，老数据 fallback 到 `quantity` 数字
+- 产品交期显示「客户交期」和「预计交期」
 - 工序耗时：超过1天显示"X天X小时"，不足1天显示"X小时X分"或"X分钟"
 
 ## 数据模型（8 个）
 
-User、Product、Batch（产品/试验双类型）、ProcessStage、ProgressRecord（批次+工序唯一）、PackageType、CustomerCode、AuditLog
+User、Product、Batch、ProcessStage、ProgressRecord（批次+工序唯一）、PackageType、CustomerCode、AuditLog
 
 ## 工序（16 道，4 道质检）
 
@@ -102,4 +98,4 @@ User、Product、Batch（产品/试验双类型）、ProcessStage、ProgressReco
 cd server && npx tsx prisma/seed-demo.ts
 ```
 
-生成约 50+ 批次（含已完成、正在加工、延迟预警、试验）和完整进度记录，用于统计页面和仪表盘演示。
+生成约 50+ 批次（含已完成、正在加工、延迟预警）和完整进度记录，用于统计页面和仪表盘演示。

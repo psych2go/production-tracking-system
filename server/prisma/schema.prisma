@@ -42,7 +42,6 @@ model Product {
 model Batch {
   id         Int      @id @default(autoincrement())
   batchNo    String   @map("batch_no")
-  batchType  String   @default("product") @map("batch_type") // product, trial
   productId  Int?     @map("product_id")
   quantity   Int      @default(0)
   status     String   @default("active") // active, completed, archived
@@ -52,8 +51,6 @@ model Batch {
   packageType        String?   @map("package_type")
   customerDelivery   DateTime? @map("customer_delivery")
   productionDelivery DateTime? @map("production_delivery")
-  trialContent       String?   @map("trial_content")
-  quantityDetail     String?   @map("quantity_detail")
   notes            String?
   createdBy        Int?      @map("created_by")
   createdAt        DateTime  @default(now()) @map("created_at")
@@ -62,7 +59,6 @@ model Batch {
   product         Product?         @relation(fields: [productId], references: [id])
   creator         User?            @relation("BatchCreator", fields: [createdBy], references: [id])
   progressRecords ProgressRecord[]
-  attachments     BatchAttachment[]
 
   @@map("batches")
 }
@@ -134,16 +130,4 @@ model AuditLog {
   user User @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
-}
-
-model BatchAttachment {
-  id        Int      @id @default(autoincrement())
-  batchId   Int      @map("batch_id")
-  fileName  String   @map("file_name")
-  filePath  String   @map("file_path")
-  fileSize  Int      @map("file_size")
-  createdAt DateTime @default(now()) @map("created_at")
-  batch     Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
-
-  @@map("batch_attachments")
 }

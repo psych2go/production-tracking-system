@@ -31,7 +31,6 @@ describe("Progress Routes", () => {
       expect(res.body.stats).toBeDefined();
       expect(res.body.stats.activeProductBatches).toBeGreaterThanOrEqual(0);
       expect(res.body.stats.activeProductQuantity).toBeGreaterThanOrEqual(0);
-      expect(res.body.stats.totalTrialBatches).toBeGreaterThanOrEqual(0);
       expect(res.body.recentActivity).toBeInstanceOf(Array);
       expect(res.body.activeBatchList).toBeInstanceOf(Array);
       expect(res.body.anomalies).toBeInstanceOf(Array);

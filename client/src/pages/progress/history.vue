@@ -1,7 +1,7 @@
 <template>
   <view class="container">
     <view v-if="stageName" class="card">
-      <text class="text-lg text-bold">{{ stageName }} - 产品列表（{{ productCount }}批产品，{{ trialCount }}批试验）</text>
+      <text class="text-lg text-bold">{{ stageName }} - 产品列表（{{ records.length }}批产品）</text>
     </view>
     <view v-for="record in records" :key="record.id" class="card record-card" @click="goBatchDetail(record.batchId)">
       <view class="flex-between">
@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import { onLoad } from "@dcloudio/uni-app";
 import { progressApi } from "../../api/modules";
 import { formatTime } from "../../utils/format";
@@ -32,9 +32,6 @@ import type { ProgressRecord } from "../../types";
 const records = ref<ProgressRecord[]>([]);
 const stageId = ref(0);
 const stageName = ref("");
-
-const productCount = computed(() => records.value.filter((r) => r.batch?.batchType !== "trial").length);
-const trialCount = computed(() => records.value.filter((r) => r.batch?.batchType === "trial").length);
 
 onLoad((query) => {
   if (query?.stageId) {

@@ -2,8 +2,7 @@
   <view class="container">
     <!-- Search and filter -->
     <view class="card filter-bar">
-      <BatchTypeTabs :model-value="batchType" @update:model-value="onTypeChange" />
-      <input v-model="keyword" placeholder="搜索批号或型号" class="search-input mt-sm" @confirm="loadData" />
+      <input v-model="keyword" placeholder="搜索批号或型号" class="search-input" @confirm="loadData" />
       <view class="filter-tabs mt-sm">
         <text
           v-for="tab in tabs"
@@ -70,7 +69,6 @@ import { useUserStore } from "../../store/user";
 import { batchApi } from "../../api/modules";
 import type { Batch } from "../../types";
 import BatchCard from "../../components/BatchCard.vue";
-import BatchTypeTabs from "../../components/BatchTypeTabs.vue";
 import UIcon from "../../components/UIcon.vue";
 import { isOverdue as checkOverdue } from "../../utils/format";
 
@@ -78,7 +76,6 @@ const userStore = useUserStore();
 const batches = ref<Batch[]>([]);
 const keyword = ref("");
 const currentTab = ref("active");
-const batchType = ref<"product" | "trial">("product");
 const smartFilter = ref("");
 const currentPage = ref(1);
 const hasMore = ref(false);
@@ -109,18 +106,12 @@ function toggleSmartFilter(filter: string) {
   smartFilter.value = smartFilter.value === filter ? "" : filter;
 }
 
-async function onTypeChange(type: "product" | "trial") {
-  batchType.value = type;
-  await loadData();
-  loadCounts();
-}
-
 async function loadCounts() {
   try {
     const [active, completed, all] = await Promise.all([
-      batchApi.list({ status: "active", batchType: batchType.value, page: 1 }),
-      batchApi.list({ status: "completed", batchType: batchType.value, page: 1 }),
-      batchApi.list({ batchType: batchType.value, page: 1 }),
+      batchApi.list({ status: "active", page: 1 }),
+      batchApi.list({ status: "completed", page: 1 }),
+      batchApi.list({ page: 1 }),
     ]);
     tabCounts.value = {
       active: active.total,
@@ -137,7 +128,6 @@ async function loadData() {
     const res = await batchApi.list({
       status: currentTab.value || undefined,
       keyword: keyword.value || undefined,
-      batchType: batchType.value,
       page: 1,
     });
     batches.value = res.items;
@@ -157,7 +147,6 @@ async function loadMore() {
     const res = await batchApi.list({
       status: currentTab.value || undefined,
       keyword: keyword.value || undefined,
-      batchType: batchType.value,
       page: currentPage.value,
     });
     batches.value = [...batches.value, ...res.items];
@@ -178,7 +167,7 @@ function goDetail(id: number) {
 }
 
 function goCreate() {
-  uni.navigateTo({ url: `/pages/batch/create?type=${batchType.value}` });
+  uni.navigateTo({ url: "/pages/batch/create" });
 }
 
 onShow(async () => {

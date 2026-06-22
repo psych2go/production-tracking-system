@@ -230,7 +230,6 @@ page {
   line-height: 1.4;
 }
 .tag-urgent { background: $danger; color: #fff; }
-.tag-trial { background: $warning-bg; color: $warning; }
 .tag-info { background: $primary-bg; color: $primary; }
 .tag-success { background: $success-bg; color: $success; }
 .tag-warning { background: $warning-bg; color: $warning; }
@@ -245,17 +244,6 @@ page {
   background: $danger;
   color: #fff;
   margin-left: $space-1;
-}
-.trial-tag {
-  display: inline-flex;
-  align-items: center;
-  font-size: $fs-xs;
-  padding: 2rpx 12rpx;
-  border-radius: $radius-sm;
-  background: $warning-bg;
-  color: $warning;
-  margin-left: 8rpx;
-  vertical-align: middle;
 }
 
 /* 数字徽标 */

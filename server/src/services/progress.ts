@@ -100,10 +100,9 @@ export async function getDashboardData() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [activeProductBatches, activeProductQuantity, totalTrialBatches] = await Promise.all([
-    prisma.batch.count({ where: { status: "active", batchType: "product" } }),
-    prisma.batch.aggregate({ where: { status: "active", batchType: "product" }, _sum: { quantity: true } }),
-    prisma.batch.count({ where: { batchType: "trial" } }),
+  const [activeProductBatches, activeProductQuantity] = await Promise.all([
+    prisma.batch.count({ where: { status: "active" } }),
+    prisma.batch.aggregate({ where: { status: "active" }, _sum: { quantity: true } }),
   ]);
 
   // Recent activity (last 10 records)
@@ -142,7 +141,7 @@ export async function getDashboardData() {
   }
 
   return {
-    stats: { activeProductBatches, activeProductQuantity: activeProductQuantity._sum.quantity ?? 0, totalTrialBatches },
+    stats: { activeProductBatches, activeProductQuantity: activeProductQuantity._sum.quantity ?? 0 },
     recentActivity,
     activeBatchList,
     anomalies,

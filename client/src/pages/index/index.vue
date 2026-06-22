@@ -25,10 +25,6 @@
 
     <!-- Dashboard -->
     <view v-else>
-      <view class="mb-sm">
-        <BatchTypeTabs v-model="batchType" />
-      </view>
-
       <!-- Stats cards -->
       <view class="stats-row">
         <view v-for="(card, i) in statCards" :key="i" class="stat-card">
@@ -132,7 +128,6 @@ import { progressApi } from "../../api/modules";
 import { formatTime } from "../../utils/format";
 import type { DashboardData } from "../../types";
 import BatchCard from "../../components/BatchCard.vue";
-import BatchTypeTabs from "../../components/BatchTypeTabs.vue";
 import UIcon from "../../components/UIcon.vue";
 
 const userStore = useUserStore();
@@ -141,18 +136,10 @@ const dashboard = ref<DashboardData | null>(null);
 const loading = ref(false);
 const loginPassword = ref("");
 const collapsed = ref({ alerts: false, batches: false, activity: false });
-const batchType = ref<"product" | "trial">("product");
 
 const statCards = computed(() => {
   if (!dashboard.value) return [];
   const s = dashboard.value.stats;
-  if (batchType.value === "trial") {
-    const activeTrial = (dashboard.value.activeBatchList ?? []).filter(b => b.batchType === "trial").length;
-    return [
-      { value: activeTrial, label: "在线试验批次", color: "#ff9900" },
-      { value: s.totalTrialBatches, label: "试验总批次", color: "#0083ff" },
-    ];
-  }
   return [
     { value: s.activeProductBatches, label: "在线产品总批次", color: "#0083ff" },
     { value: s.activeProductQuantity, label: "在线产品总数量", color: "#07c160" },
@@ -160,11 +147,11 @@ const statCards = computed(() => {
 });
 
 const visibleActiveBatches = computed(() =>
-  (dashboard.value?.activeBatchList ?? []).filter(b => b.batchType === batchType.value)
+  dashboard.value?.activeBatchList ?? []
 );
 
 const visibleRecentActivity = computed(() =>
-  (dashboard.value?.recentActivity ?? []).filter(r => r.batch?.batchType === batchType.value)
+  dashboard.value?.recentActivity ?? []
 );
 
 async function handleLogin() {

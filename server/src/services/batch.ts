@@ -1,18 +1,9 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../config/database.js";
 
-function sumQuantityDetail(detail: string): number {
-  try {
-    const parsed = JSON.parse(detail);
-    return Object.values(parsed).reduce((sum: number, v) => sum + Number(v), 0);
-  } catch {
-    return 0;
-  }
-}
-
 async function validatePackageType(tx: Prisma.TransactionClient, packageType: string | undefined | null) {
   if (!packageType) return;
-  // 试验批次封装形式可多选，存储为逗号分隔；逐个校验存在性
+  // 封装形式可多选，存储为逗号分隔；逐个校验存在性
   const names = packageType.split(",").map((s) => s.trim()).filter(Boolean);
   for (const name of names) {
     const exists = await tx.packageType.findUnique({ where: { name } });
@@ -26,24 +17,21 @@ export async function listBatches(filters: {
   keyword?: string;
   customerCode?: string;
   packageType?: string;
-  batchType?: string;
   page?: number;
   pageSize?: number;
 }) {
-  const { status, productId, keyword, customerCode, packageType, batchType, page = 1, pageSize = 50 } = filters;
+  const { status, productId, keyword, customerCode, packageType, page = 1, pageSize = 50 } = filters;
 
   const where: Record<string, unknown> = {};
   if (status) where.status = status;
   if (productId) where.productId = productId;
   if (customerCode) where.customerCode = customerCode;
   if (packageType) where.packageType = { contains: packageType };
-  if (batchType) where.batchType = batchType;
   if (keyword) {
     where.OR = [
       { batchNo: { contains: keyword } },
       { product: { model: { contains: keyword } } },
       { product: { name: { contains: keyword } } },
-      { trialContent: { contains: keyword } },
     ];
   }
 
@@ -78,52 +66,24 @@ export async function getBatchDetail(id: number) {
         include: { stage: true, operator: { select: { id: true, name: true } } },
         orderBy: { stage: { stageOrder: "asc" } },
       },
-      attachments: { orderBy: { createdAt: "asc" } },
     },
   });
 }
 
 export async function createBatch(data: {
-  batchType?: string;
   batchNo?: string;
   productModel?: string;
   quantity?: number;
-  quantityDetail?: string;
   packageType?: string;
   customerCode?: string;
   orderNo?: string;
   customerDelivery?: string;
   productionDelivery?: string;
   priority?: string;
-  trialContent?: string;
   notes?: string;
   createdBy?: number;
 }) {
   return prisma.$transaction(async (tx) => {
-    if (data.batchType === "trial") {
-      const batchNo = await generateTrialBatchNo(tx);
-      const quantity = data.quantityDetail
-        ? sumQuantityDetail(data.quantityDetail)
-        : (data.quantity ?? 0);
-
-      await validatePackageType(tx, data.packageType);
-
-      return tx.batch.create({
-        data: {
-          batchNo,
-          batchType: "trial",
-          quantity,
-          quantityDetail: data.quantityDetail || undefined,
-          packageType: data.packageType || undefined,
-          customerDelivery: data.customerDelivery ? new Date(data.customerDelivery) : undefined,
-          trialContent: data.trialContent,
-          notes: data.notes || undefined,
-          createdBy: data.createdBy,
-        },
-      });
-    }
-
-    // Product batch
     await validatePackageType(tx, data.packageType);
 
     const product = await tx.product.upsert({
@@ -142,7 +102,6 @@ export async function createBatch(data: {
     return tx.batch.create({
       data: {
         batchNo: data.batchNo!,
-        batchType: "product",
         productId: product.id,
         quantity: data.quantity!,
         packageType: data.packageType || undefined,
@@ -156,37 +115,6 @@ export async function createBatch(data: {
       },
     });
   });
-}
-
-async function generateTrialBatchNo(tx: Prisma.TransactionClient): Promise<string> {
-  const today = new Date();
-  const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
-  const prefix = `S${dateStr}-`;
-
-  const lastBatch = await tx.batch.findFirst({
-    where: { batchNo: { startsWith: prefix }, batchType: "trial" },
-    orderBy: { batchNo: "desc" },
-    select: { batchNo: true },
-  });
-
-  let seq = 1;
-  if (lastBatch) {
-    const lastSeq = parseInt(lastBatch.batchNo.split("-").pop() || "0", 10);
-    seq = lastSeq + 1;
-  }
-
-  // Increment until we find an unused batchNo (handles concurrent inserts)
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const batchNo = `${prefix}${String(seq).padStart(3, "0")}`;
-    const existing = await tx.batch.findFirst({
-      where: { batchNo, batchType: "trial" },
-      select: { id: true },
-    });
-    if (!existing) return batchNo;
-    seq++;
-  }
-
-  throw new Error("无法生成唯一试验批号，请重试");
 }
 
 export async function deleteBatch(id: number) {
@@ -207,8 +135,6 @@ export async function updateBatch(id: number, data: {
   batchNo?: string;
   productModel?: string;
   quantity?: number;
-  quantityDetail?: string;
-  trialContent?: string;
   customerCode?: string | null;
   orderNo?: string | null;
   packageType?: string | null;
@@ -235,7 +161,6 @@ export async function updateBatch(id: number, data: {
     };
 
     if (data.batchNo !== undefined) updateData.batchNo = data.batchNo;
-    if (data.trialContent !== undefined) updateData.trialContent = data.trialContent;
 
     // Only allow archiving completed batches via update; other status changes go through progress flow
     if (data.status !== undefined) {
@@ -246,15 +171,7 @@ export async function updateBatch(id: number, data: {
       }
     }
 
-    if (data.quantityDetail !== undefined) {
-      if (data.quantityDetail) {
-        updateData.quantityDetail = data.quantityDetail;
-        updateData.quantity = sumQuantityDetail(data.quantityDetail);
-      } else {
-        updateData.quantityDetail = null;
-        updateData.quantity = data.quantity ?? 0;
-      }
-    } else if (data.quantity !== undefined) {
+    if (data.quantity !== undefined) {
       updateData.quantity = data.quantity;
     }
 
