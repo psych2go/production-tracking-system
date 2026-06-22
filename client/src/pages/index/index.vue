@@ -71,20 +71,43 @@
         </view>
       </view>
 
-      <!-- Active batches -->
+      <!-- Active batches kanban -->
       <view class="section-block">
         <view class="section-header">
           <text class="section-title">正在加工</text>
           <text class="collapse-btn" @click="collapsed.batches = !collapsed.batches">{{ collapsed.batches ? '展开' : '收起' }}</text>
         </view>
         <view v-if="!collapsed.batches">
-          <BatchCard
-            v-for="batch in visibleActiveBatches"
-            :key="batch.id"
-            :batch="batch"
-            @click="goBatchDetail(batch.id)"
-          />
-          <view v-if="!visibleActiveBatches.length" class="empty-state card">
+          <scroll-view scroll-x class="kanban-scroll" v-if="visibleActiveBatches.length">
+            <view class="kanban-board">
+              <view v-for="col in kanbanColumns" :key="col.key" class="kanban-column">
+                <view class="kanban-col-header">
+                  <text class="kanban-col-name">{{ col.name }}</text>
+                  <text class="kanban-col-count">{{ col.batches.length }}</text>
+                </view>
+                <view class="kanban-col-body">
+                  <view
+                    v-for="batch in col.batches"
+                    :key="batch.id"
+                    class="kanban-card"
+                    @click="goBatchDetail(batch.id)"
+                  >
+                    <view class="kanban-card-top">
+                      <text class="kanban-card-no">{{ batch.batchNo }}</text>
+                      <view v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</view>
+                    </view>
+                    <text class="kanban-card-model">{{ batch.product?.model || '-' }}</text>
+                    <view class="kanban-card-meta">
+                      <text class="kanban-card-qty">{{ batch.quantity }}只</text>
+                      <text v-if="batch.packageType" class="kanban-pkg">{{ batch.packageType.split(',')[0].trim() }}</text>
+                    </view>
+                  </view>
+                  <view v-if="!col.batches.length" class="kanban-empty">暂无</view>
+                </view>
+              </view>
+            </view>
+          </scroll-view>
+          <view v-else class="empty-state card">
             <text>暂无正在加工批次</text>
           </view>
         </view>
@@ -100,8 +123,8 @@ import { onPullDownRefresh } from "@dcloudio/uni-app";
 import { useUserStore } from "../../store/user";
 import { useAppStore } from "../../store/app";
 import { progressApi } from "../../api/modules";
-import type { DashboardData } from "../../types";
-import BatchCard from "../../components/BatchCard.vue";
+import { getCurrentStage } from "../../utils/format";
+import type { Batch, DashboardData } from "../../types";
 import UIcon from "../../components/UIcon.vue";
 
 const userStore = useUserStore();
@@ -123,6 +146,19 @@ const statCards = computed(() => {
 const visibleActiveBatches = computed(() =>
   dashboard.value?.activeBatchList ?? []
 );
+
+const kanbanColumns = computed(() => {
+  const stages = appStore.stages.filter((s) => s.code !== "completed");
+  const batches = visibleActiveBatches.value;
+  const cols = stages.map((s) => ({
+    key: `stage-${s.id}`,
+    name: s.name,
+    batches: batches.filter((b) => getCurrentStage(b)?.id === s.id),
+  }));
+  const notStarted = batches.filter((b) => getCurrentStage(b) === null);
+  cols.push({ key: "not-started", name: "未开始", batches: notStarted });
+  return cols;
+});
 
 async function handleLogin() {
   if (loading.value) return;
@@ -292,5 +328,70 @@ onPullDownRefresh(async () => {
   border: 2rpx solid #0083ff;
   border-radius: 999rpx;
   background: #fff;
+}
+
+/* Kanban */
+.kanban-scroll { white-space: nowrap; }
+.kanban-board { display: inline-flex; gap: 16rpx; padding-bottom: 8rpx; }
+.kanban-column {
+  display: inline-block;
+  width: 260rpx;
+  vertical-align: top;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+  padding: 16rpx 12rpx;
+}
+.kanban-col-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+  padding: 0 4rpx;
+}
+.kanban-col-name { font-size: 24rpx; font-weight: 600; color: #1f2329; }
+.kanban-col-count {
+  font-size: 20rpx;
+  background: #0083ff;
+  color: #fff;
+  border-radius: 999rpx;
+  padding: 0 10rpx;
+  min-width: 28rpx;
+  text-align: center;
+}
+.kanban-col-body { display: flex; flex-direction: column; gap: 12rpx; }
+.kanban-card {
+  background: #fff;
+  border-radius: 10rpx;
+  padding: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(17, 24, 39, 0.05);
+  &:active { background: #f5f5f5; }
+}
+.kanban-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6rpx;
+}
+.kanban-card-no { font-size: 24rpx; font-weight: 600; color: #1f2329; }
+.kanban-card-model { font-size: 22rpx; color: #6b7280; display: block; }
+.kanban-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8rpx;
+}
+.kanban-card-qty { font-size: 22rpx; color: #0083ff; font-weight: 500; }
+.kanban-pkg {
+  font-size: 18rpx;
+  background: #e8f4ff;
+  color: #0083ff;
+  border-radius: 4rpx;
+  padding: 2rpx 8rpx;
+}
+.kanban-empty {
+  font-size: 22rpx;
+  color: #c0c4cc;
+  text-align: center;
+  padding: 24rpx 0;
 }
 </style>

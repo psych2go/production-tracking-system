@@ -81,11 +81,6 @@ model ProgressRecord {
   batchId         Int       @map("batch_id")
   stageId         Int       @map("stage_id")
   operatorId      Int       @map("operator_id")
-  inputQuantity   Int?      @map("input_quantity")
-  outputQuantity  Int?      @map("output_quantity")
-  defectQuantity  Int       @default(0) @map("defect_quantity")
-  defectType      String?   @map("defect_type")
-  defectNotes     String?   @map("defect_notes")
   status          String    @default("completed") // completed, in_progress
   notes           String?
   createdAt       DateTime  @default(now()) @map("created_at")

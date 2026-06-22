@@ -71,9 +71,6 @@ function generateProgressRecords(
     batchId: number;
     stageId: number;
     operatorId: number;
-    inputQuantity: number;
-    outputQuantity: number;
-    defectQuantity: number;
     status: string;
     createdAt: Date;
   }> = [];
@@ -93,29 +90,16 @@ function generateProgressRecords(
     }
 
     const startedAt = new Date(currentDate);
-    const completedAt = new Date(startedAt.getTime() + duration * 60 * 1000);
-
-    // 良率：质检工序可能有更多不良品
-    const defectRate = ["incoming_inspection", "in_process_inspection", "ultrasound_scan", "visual_inspection"].includes(code)
-      ? rand(1, 5) / 100
-      : rand(0, 2) / 100;
-    const defectQty = Math.round(quantity * defectRate);
-    const outputQty = quantity - defectQty;
 
     records.push({
       batchId,
       stageId: stageIds[i],
       operatorId: randomPick(operatorIds),
-      inputQuantity: quantity,
-      outputQuantity: outputQty,
-      defectQuantity: defectQty,
       status: "completed",
       createdAt: startedAt,
     });
 
-    // 下一道工序的输入 = 上道的输出
-    quantity = outputQty;
-    currentDate = completedAt;
+    currentDate = new Date(startedAt.getTime() + duration * 60 * 1000);
   }
 
   return records;
@@ -125,9 +109,6 @@ async function insertRecords(records: Array<{
   batchId: number;
   stageId: number;
   operatorId: number;
-  inputQuantity: number;
-  outputQuantity: number;
-  defectQuantity: number;
   status: string;
   createdAt: Date;
 }>) {

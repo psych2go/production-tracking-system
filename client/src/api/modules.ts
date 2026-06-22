@@ -1,5 +1,5 @@
 import { api } from "./index";
-import type { User, Product, Batch, ProcessStage, ProgressRecord, PaginatedResult, DashboardData, ProcessDurationData, ProductionTrendData, AnomalyItem, AuditLog, PackageType, CustomerCode } from "../types";
+import type { User, Batch, ProcessStage, ProgressRecord, PaginatedResult, DashboardData, AnomalyItem, AuditLog, PackageType, CustomerCode } from "../types";
 
 // Auth
 export const authApi = {
@@ -20,14 +20,6 @@ export const userApi = {
   },
   update: (id: number, data: { role?: string; department?: string; isActive?: boolean }) =>
     api.put<User>(`/api/users/${id}`, data),
-};
-
-// Products
-export const productApi = {
-  list: (page = 1) => api.get<PaginatedResult<Product>>(`/api/products?page=${page}`),
-  create: (data: { model: string; name?: string; description?: string }) => api.post<Product>("/api/products", data),
-  update: (id: number, data: Partial<Product>) => api.put<Product>(`/api/products/${id}`, data),
-  delete: (id: number) => api.delete(`/api/products/${id}`),
 };
 
 // Batches
@@ -74,21 +66,6 @@ export const progressApi = {
 
 // Statistics
 export const statsApi = {
-  durations: (params?: { stageId?: number; startDate?: string; endDate?: string }) => {
-    const query = new URLSearchParams();
-    if (params?.stageId) query.set("stageId", String(params.stageId));
-    if (params?.startDate) query.set("startDate", params.startDate);
-    if (params?.endDate) query.set("endDate", params.endDate);
-    return api.get<ProcessDurationData[]>(`/api/statistics/durations?${query.toString()}`);
-  },
-  production: (params?: { groupBy?: string; startDate?: string; endDate?: string }) => {
-    const query = new URLSearchParams();
-    if (params?.groupBy) query.set("groupBy", params.groupBy);
-    if (params?.startDate) query.set("startDate", params.startDate);
-    if (params?.endDate) query.set("endDate", params.endDate);
-    return api.get<ProductionTrendData[]>(`/api/statistics/production?${query.toString()}`);
-  },
-  anomalies: () => api.get<AnomalyItem[]>("/api/statistics/anomalies"),
   exportExcel: (type: string, params?: { startDate?: string; endDate?: string }) => {
     const query = new URLSearchParams();
     query.set("type", type);
