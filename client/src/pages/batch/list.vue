@@ -26,15 +26,6 @@
           @click="toggleSmartFilter('urgent')"
         >紧急</text>
       </view>
-      <!-- Action buttons -->
-      <view class="action-row" v-if="userStore.isAdmin()">
-        <view class="action-item" @click="goCreate">
-          <view class="action-circle">
-            <UIcon name="plus" :size="40" color="#ffffff" />
-          </view>
-          <text class="action-label">新建批次</text>
-        </view>
-      </view>
     </view>
 
     <!-- Batch list -->
@@ -57,6 +48,13 @@
 
     <view v-if="!filteredBatches.length && !loading" class="card text-center mt-lg">
       <text class="text-secondary">{{ keyword || smartFilter ? '无匹配批次' : '暂无批次' }}</text>
+    </view>
+
+    <view class="fab-spacer"></view>
+
+    <!-- 浮动新建按钮 -->
+    <view v-if="userStore.isAdmin()" class="fab" @click="goCreate">
+      <UIcon name="plus" :size="52" color="#ffffff" />
     </view>
 
   </view>
@@ -240,34 +238,23 @@ onShow(async () => {
     background: #ffecec;
   }
 }
-.action-row {
-  display: flex;
-  gap: 32rpx;
-  padding-top: 20rpx;
-  margin-top: 16rpx;
-  border-top: 2rpx solid #f0f1f4;
-}
-.action-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10rpx;
-}
-.action-circle {
-  width: 88rpx;
-  height: 88rpx;
+.fab {
+  position: fixed;
+  right: 40rpx;
+  bottom: 140rpx;
+  width: 112rpx;
+  height: 112rpx;
   border-radius: 50%;
   background: #0083ff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6rpx 16rpx rgba(0, 131, 255, 0.32);
+  box-shadow: 0 8rpx 24rpx rgba(0, 131, 255, 0.42);
+  z-index: 100;
+  &:active { transform: scale(0.94); }
 }
-.action-label {
-  font-size: 22rpx;
-  color: #0083ff;
-  white-space: nowrap;
-  font-weight: 500;
+.fab-spacer {
+  height: 160rpx;
 }
 .load-more-tip {
   text-align: center;
