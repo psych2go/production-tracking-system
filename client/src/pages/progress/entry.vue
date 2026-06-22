@@ -103,10 +103,11 @@
       <view v-if="step === 2" class="card">
         <view class="flex-between">
           <view class="nav-back" @click="step = 1">
-            <UIcon name="back" :size="36" color="#333333" />
+            <UIcon name="back" :size="40" color="#0083ff" />
+            <text class="nav-back-text">返回</text>
           </view>
           <text class="section-title">选择工序</text>
-          <view style="width: 60rpx;"></view>
+          <view class="nav-back-placeholder"></view>
         </view>
         <view class="batch-summary mt-sm">
           <text>{{ selectedBatch?.batchNo }} {{ selectedBatch?.product?.model }}</text>
@@ -370,7 +371,21 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
-.nav-back { width: 60rpx; display: flex; align-items: center; }
+.nav-back {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  padding: 12rpx 8rpx;
+  min-width: 140rpx;
+}
+.nav-back-text {
+  font-size: 30rpx;
+  color: #0083ff;
+}
+.nav-back-placeholder {
+  min-width: 140rpx;
+  flex-shrink: 0;
+}
 .search-box {
   background: #f4f5f7;
   border-radius: 12rpx;
