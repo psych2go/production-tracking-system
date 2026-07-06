@@ -5,6 +5,7 @@ import { authGuard, roleGuard, AuthRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 import { parseId } from "../utils/parseId.js";
+import { parsePagination } from "../utils/pagination.js";
 
 const router = Router();
 
@@ -46,8 +47,7 @@ router.get("/", authGuard, async (req, res, next) => {
       keyword: req.query.keyword as string,
       customerCode: req.query.customerCode as string,
       packageType: req.query.packageType as string,
-      page: parseInt(req.query.page as string) || 1,
-      pageSize: parseInt(req.query.pageSize as string) || 50,
+      ...parsePagination(req.query, { pageDefault: 1, pageSizeDefault: 50 }),
     });
     res.json(result);
   } catch (err) {

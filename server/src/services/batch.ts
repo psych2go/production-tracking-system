@@ -11,6 +11,15 @@ async function validatePackageType(tx: Prisma.TransactionClient, packageType: st
   }
 }
 
+async function validateCustomerCode(tx: Prisma.TransactionClient, customerCode: string | undefined | null) {
+  if (!customerCode) return;
+  // 客户代码表为空（全新库未 seed）时跳过校验，避免破坏初始批次创建
+  const total = await tx.customerCode.count();
+  if (total === 0) return;
+  const exists = await tx.customerCode.findUnique({ where: { code: customerCode } });
+  if (!exists) throw new Error(`客户代码「${customerCode}」不存在，请先在设置中创建`);
+}
+
 export async function listBatches(filters: {
   status?: string;
   productId?: number;
@@ -85,6 +94,7 @@ export async function createBatch(data: {
 }) {
   return prisma.$transaction(async (tx) => {
     await validatePackageType(tx, data.packageType);
+    await validateCustomerCode(tx, data.customerCode);
 
     const product = await tx.product.upsert({
       where: { model: data.productModel! },
@@ -178,6 +188,9 @@ export async function updateBatch(id: number, data: {
     // Validate packageType against PackageType table
     const newPackageType = data.packageType !== undefined ? data.packageType : batch.packageType;
     await validatePackageType(tx, newPackageType);
+    // Validate customerCode against CustomerCode table
+    const newCustomerCode = data.customerCode !== undefined ? data.customerCode : batch.customerCode;
+    await validateCustomerCode(tx, newCustomerCode);
 
     if (data.productModel !== undefined) {
       const product = await tx.product.upsert({

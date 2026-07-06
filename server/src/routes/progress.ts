@@ -11,6 +11,7 @@ import { authGuard, AuthRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 import { parseId } from "../utils/parseId.js";
+import { parsePagination } from "../utils/pagination.js";
 
 const router = Router();
 
@@ -46,7 +47,7 @@ router.get("/stages/:stageId/products", authGuard, async (req, res, next) => {
   try {
     const records = await getStageProducts(
       parseId(req.params.stageId, "工序ID"),
-      parseInt(req.query.page as string) || 1,
+      parsePagination(req.query, { pageDefault: 1 }).page,
     );
     res.json(records);
   } catch (err) {
@@ -61,8 +62,7 @@ router.get("/", authGuard, async (req, res, next) => {
       batchId: req.query.batchId ? parseId(req.query.batchId as string) : undefined,
       stageId: req.query.stageId ? parseId(req.query.stageId as string) : undefined,
       operatorId: req.query.operatorId ? parseId(req.query.operatorId as string) : undefined,
-      page: parseInt(req.query.page as string) || 1,
-      pageSize: parseInt(req.query.pageSize as string) || 20,
+      ...parsePagination(req.query, { pageDefault: 1, pageSizeDefault: 20 }),
     });
     res.json(result);
   } catch (err) {

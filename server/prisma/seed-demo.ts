@@ -158,8 +158,11 @@ async function main() {
   const stageCodes = stages.map((s) => s.code);
   console.log(`获取 ${stages.length} 道工序`);
 
+  // 「已完成」工序单独查出，用于给已完成批次追加完成记录
+  const completedStage = await prisma.processStage.findUnique({ where: { code: "completed" } });
+
   const packageTypes = ["SOP16L", "SOP28L", "LQFP48L", "LQFP64L (10×10)", "DIP16L", "SSOP24L (0.65)"];
-  const customerCodes = ["HW", "ZTE", "MI", "DJ", "LE"];
+  const customerCodes = ["HIC", "SJ", "XIC", "JSC20", "JSC21"];
 
   // 4. 清除旧的演示数据（只删演示批次和进度记录）
   console.log("\n清除旧的演示批次和进度记录...");
@@ -258,6 +261,19 @@ async function main() {
 
     const count = await insertRecords(records);
 
+    // 追加「已完成」工序记录（批次状态已为 completed，需补齐完成工序）
+    if (completedStage && records.length > 0) {
+      const lastRecord = records[records.length - 1];
+      await insertRecords([{
+        batchId: batch.id,
+        stageId: completedStage.id,
+        operatorId: randomPick(allOperatorIds),
+        status: "completed",
+        createdAt: new Date(lastRecord.createdAt.getTime() + 30 * 60 * 1000),
+      }]);
+      recordCount += 1;
+    }
+
     batchCount++;
     recordCount += count;
   }
@@ -268,11 +284,11 @@ async function main() {
   let activeRecordCount = 0;
 
   const activeBatchConfigs = [
-    { daysAgo: 2, productIdx: 0, quantity: 20000, completedStages: 8, batchNo: "B202604131", packageType: "SOP28L", customerCode: "HW" },
-    { daysAgo: 3, productIdx: 2, quantity: 15000, completedStages: 5, batchNo: "B202604132", packageType: "LQFP48L", customerCode: "ZTE" },
-    { daysAgo: 1, productIdx: 4, quantity: 10000, completedStages: 3, batchNo: "B202604133", packageType: "LQFP64L (10×10)", customerCode: "DJ" },
-    { daysAgo: 4, productIdx: 1, quantity: 8000, completedStages: 10, batchNo: "B202604134", packageType: "SOP16L", customerCode: "MI" },
-    { daysAgo: 0, productIdx: 3, quantity: 12000, completedStages: 1, batchNo: "B202604135", packageType: "DIP16L", customerCode: "LE" },
+    { daysAgo: 2, productIdx: 0, quantity: 20000, completedStages: 8, batchNo: "B202604131", packageType: "SOP28L", customerCode: "HIC" },
+    { daysAgo: 3, productIdx: 2, quantity: 15000, completedStages: 5, batchNo: "B202604132", packageType: "LQFP48L", customerCode: "SJ" },
+    { daysAgo: 1, productIdx: 4, quantity: 10000, completedStages: 3, batchNo: "B202604133", packageType: "LQFP64L (10×10)", customerCode: "JSC20" },
+    { daysAgo: 4, productIdx: 1, quantity: 8000, completedStages: 10, batchNo: "B202604134", packageType: "SOP16L", customerCode: "XIC" },
+    { daysAgo: 0, productIdx: 3, quantity: 12000, completedStages: 1, batchNo: "B202604135", packageType: "DIP16L", customerCode: "JSC21" },
   ];
 
   for (const cfg of activeBatchConfigs) {
@@ -311,9 +327,9 @@ async function main() {
   let delayRecordCount = 0;
 
   const delayedBatchConfigs = [
-    { daysAgo: 8, productIdx: 0, quantity: 10000, completedStages: 4, batchNo: "B202604D01", packageType: "SOP28L", customerCode: "HW", desc: "等待来料补充" },
-    { daysAgo: 6, productIdx: 3, quantity: 5000, completedStages: 7, batchNo: "B202604D02", packageType: "LQFP48L", customerCode: "ZTE", desc: "超扫设备检修中" },
-    { daysAgo: 5, productIdx: 2, quantity: 8000, completedStages: 2, batchNo: "B202604D03", packageType: "SSOP24L (0.65)", customerCode: "DJ", desc: "镜检不合格待返工" },
+    { daysAgo: 8, productIdx: 0, quantity: 10000, completedStages: 4, batchNo: "B202604D01", packageType: "SOP28L", customerCode: "HIC", desc: "等待来料补充" },
+    { daysAgo: 6, productIdx: 3, quantity: 5000, completedStages: 7, batchNo: "B202604D02", packageType: "LQFP48L", customerCode: "SJ", desc: "超扫设备检修中" },
+    { daysAgo: 5, productIdx: 2, quantity: 8000, completedStages: 2, batchNo: "B202604D03", packageType: "SSOP24L (0.65)", customerCode: "JSC20", desc: "镜检不合格待返工" },
   ];
 
   for (const cfg of delayedBatchConfigs) {

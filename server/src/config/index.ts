@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import crypto from "crypto";
 dotenv.config();
 
 export const config = {
@@ -11,8 +12,8 @@ export const config = {
       if (process.env.NODE_ENV === "production") {
         throw new Error("JWT_SECRET 环境变量未设置，生产环境必须配置");
       }
-      console.warn("[WARN] JWT_SECRET 未设置，使用开发默认值");
-      return "dev-secret";
+      console.warn("[WARN] JWT_SECRET 未设置，使用随机开发密钥（服务重启后所有已签发 token 将失效）");
+      return crypto.randomBytes(32).toString("hex");
     })(),
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   },

@@ -5,6 +5,7 @@ import { authGuard, roleGuard, AuthRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 import { parseId } from "../utils/parseId.js";
+import { parsePagination } from "../utils/pagination.js";
 
 const router = Router();
 
@@ -19,8 +20,7 @@ router.get("/", authGuard, roleGuard("admin"), async (req, res, next) => {
     const result = await listUsers({
       keyword: req.query.keyword as string | undefined,
       role: req.query.role as string | undefined,
-      page: parseInt(req.query.page as string) || 1,
-      pageSize: parseInt(req.query.pageSize as string) || 20,
+      ...parsePagination(req.query, { pageDefault: 1, pageSizeDefault: 20 }),
     });
     res.json(result);
   } catch (err) {
@@ -42,7 +42,7 @@ router.put("/:id", authGuard, roleGuard("admin"), auditLog("update", "user"), va
   }
 });
 
-router.delete("/:id", authGuard, roleGuard("admin"), async (req: AuthRequest, res, next) => {
+router.delete("/:id", authGuard, roleGuard("admin"), auditLog("delete", "user"), async (req: AuthRequest, res, next) => {
   try {
     const targetId = parseId(req.params.id);
     if (targetId === req.user!.id) {

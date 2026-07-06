@@ -19,8 +19,9 @@ export async function getAnomalies() {
   });
   const fiveDaysMs = 5 * 24 * 60 * 60 * 1000;
   for (const b of activeBatches) {
-    const lastUpdate = b.progressRecords[0]?.createdAt;
-    if (lastUpdate && Date.now() - new Date(lastUpdate).getTime() > fiveDaysMs) {
+    // 无进度记录时回退到批次创建时间，确保"创建了却从未开工"的批次也能被延迟预警
+    const lastUpdate = b.progressRecords[0]?.createdAt ?? b.createdAt;
+    if (Date.now() - new Date(lastUpdate).getTime() > fiveDaysMs) {
       anomalies.push({
         type: "batch_delay",
         severity: "major",

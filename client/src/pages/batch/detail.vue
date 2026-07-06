@@ -254,12 +254,10 @@ async function saveEdit() {
 
 function goRecordProgress() {
   if (!batch.value) return;
-  uni.switchTab({
-    url: "/pages/progress/entry",
-    success: () => {
-      uni.setStorageSync("pendingBatchId", batch.value!.id);
-    },
-  });
+  // 必须在 switchTab 之前写入：目标页 onShow 早于 switchTab 的 success 回调执行，
+  // 否则 onShow 读到的是上一次遗留的 pendingBatchId，会选中错误的批次。
+  uni.setStorageSync("pendingBatchId", batch.value.id);
+  uni.switchTab({ url: "/pages/progress/entry" });
 }
 
 async function confirmDelete() {

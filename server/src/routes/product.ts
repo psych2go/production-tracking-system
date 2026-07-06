@@ -3,7 +3,9 @@ import { z } from "zod";
 import { listProducts, createProduct, updateProduct, deleteProduct } from "../services/product.js";
 import { authGuard, roleGuard } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
+import { auditLog } from "../middleware/audit.js";
 import { parseId } from "../utils/parseId.js";
+import { parsePagination } from "../utils/pagination.js";
 
 const router = Router();
 
@@ -21,7 +23,7 @@ const updateSchema = z.object({
 
 router.get("/", authGuard, async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
+    const { page } = parsePagination(req.query, { pageDefault: 1 });
     const result = await listProducts(page);
     res.json(result);
   } catch (err) {
@@ -29,7 +31,7 @@ router.get("/", authGuard, async (req, res, next) => {
   }
 });
 
-router.post("/", authGuard, roleGuard("admin"), validate(createSchema), async (req, res, next) => {
+router.post("/", authGuard, roleGuard("admin"), auditLog("create", "product"), validate(createSchema), async (req, res, next) => {
   try {
     const product = await createProduct(req.body);
     res.status(201).json(product);
@@ -38,7 +40,7 @@ router.post("/", authGuard, roleGuard("admin"), validate(createSchema), async (r
   }
 });
 
-router.put("/:id", authGuard, roleGuard("admin"), validate(updateSchema), async (req, res, next) => {
+router.put("/:id", authGuard, roleGuard("admin"), auditLog("update", "product"), validate(updateSchema), async (req, res, next) => {
   try {
     const product = await updateProduct(parseId(req.params.id), req.body);
     res.json(product);
@@ -47,7 +49,7 @@ router.put("/:id", authGuard, roleGuard("admin"), validate(updateSchema), async 
   }
 });
 
-router.delete("/:id", authGuard, roleGuard("admin"), async (req, res, next) => {
+router.delete("/:id", authGuard, roleGuard("admin"), auditLog("delete", "product"), async (req, res, next) => {
   try {
     await deleteProduct(parseId(req.params.id));
     res.json({ success: true });

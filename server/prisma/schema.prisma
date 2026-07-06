@@ -60,6 +60,7 @@ model Batch {
   creator         User?            @relation("BatchCreator", fields: [createdBy], references: [id])
   progressRecords ProgressRecord[]
 
+  @@unique([batchNo, productId], map: "batch_no_product_unique")
   @@map("batches")
 }
 

@@ -37,26 +37,9 @@ export async function upsertProgress(data: {
       include: { stage: true, operator: { select: { id: true, name: true } } },
     });
 
-    // Auto-complete batch when reaching "packaging" or "completed" stage
+    // 流转到「已完成」工序时，标记批次为已完成（需从包装手动流转到已完成）
     const currentStage = await tx.processStage.findUnique({ where: { id: data.stageId } });
-    if (currentStage?.code === "packaging") {
-      // Flow to packaging: auto-create "completed" stage record + complete batch
-      const completedStage = await tx.processStage.findUnique({ where: { code: "completed" } });
-      if (completedStage) {
-        await tx.progressRecord.upsert({
-          where: { batchId_stageId: { batchId: data.batchId, stageId: completedStage.id } },
-          update: { operatorId: data.operatorId, status: "completed" },
-          create: {
-            batchId: data.batchId,
-            stageId: completedStage.id,
-            operatorId: data.operatorId,
-            status: "completed",
-          },
-        });
-      }
-      await tx.batch.update({ where: { id: data.batchId }, data: { status: "completed" } });
-    } else if (currentStage?.code === "completed") {
-      // Directly flow to "completed" stage
+    if (currentStage?.code === "completed") {
       await tx.batch.update({ where: { id: data.batchId }, data: { status: "completed" } });
     }
 

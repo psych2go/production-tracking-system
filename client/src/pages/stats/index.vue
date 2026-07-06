@@ -56,6 +56,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { statsApi, batchApi } from "../../api/modules";
+import { api } from "../../api/index";
 import { useAppStore } from "../../store/app";
 import { useUserStore } from "../../store/user";
 import { getCurrentStage } from "../../utils/format";
@@ -100,7 +101,7 @@ function onExport() {
   // #endif
   // #ifndef H5
   uni.downloadFile({
-    url: exportInfo.url,
+    url: api.getBaseUrl() + exportInfo.url,
     header: { Authorization: `Bearer ${token}` },
     success: (res) => {
       if (res.statusCode === 200) {

@@ -15,9 +15,18 @@ setInterval(() => {
   }
 }, 60_000).unref();
 
+/**
+ * 提取客户端 IP。app.ts 在生产设置了 trust proxy=1，req.ip 已由 Express 按
+ * 受信代理解析为真实客户端 IP。注意：若 3000 端口被直接暴露（未置于反向代理后），
+ * 攻击者仍可伪造 X-Forwarded-For 绕过限流——必须部署于反向代理（nginx 等）之后。
+ */
+function getClientIp(req: Request): string {
+  return req.ip ?? req.socket?.remoteAddress ?? "unknown";
+}
+
 export function rateLimit(options: { windowMs: number; max: number }) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const key = req.ip ?? req.socket?.remoteAddress ?? "unknown";
+    const key = getClientIp(req);
     const now = Date.now();
     const entry = store.get(key);
 

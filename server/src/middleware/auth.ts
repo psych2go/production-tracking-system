@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { config } from "../config/index.js";
+import { prisma } from "../config/database.js";
 
 export interface AuthRequest extends Request {
   user?: {
@@ -11,7 +12,7 @@ export interface AuthRequest extends Request {
   };
 }
 
-export function authGuard(req: AuthRequest, res: Response, next: NextFunction) {
+export async function authGuard(req: AuthRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
     res.status(401).json({ error: "未提供认证令牌" });
@@ -26,7 +27,16 @@ export function authGuard(req: AuthRequest, res: Response, next: NextFunction) {
       name: string;
       role: string;
     };
-    req.user = decoded;
+    // 实时校验用户状态与角色：防止停用/降级后旧 token 在过期前仍有效
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, wwUserId: true, name: true, role: true, isActive: true },
+    });
+    if (!user || !user.isActive) {
+      res.status(401).json({ error: "用户不存在或已停用" });
+      return;
+    }
+    req.user = { id: user.id, wwUserId: user.wwUserId, name: user.name, role: user.role };
     next();
   } catch {
     res.status(401).json({ error: "令牌无效或已过期" });

@@ -13,7 +13,7 @@ describe("Progress Routes", () => {
     const stages = await prisma.processStage.findMany({ orderBy: { stageOrder: "asc" } });
     batchId = batch!.id;
     stageId = stages[0].id; // 来料检验
-    lastStageId = stages[stages.length - 1].id; // 包装
+    lastStageId = stages[stages.length - 1].id; // 已完成（手动流转到该工序才标记批次完成）
 
     // Clean progress records
     await prisma.progressRecord.deleteMany();

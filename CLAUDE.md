@@ -31,6 +31,7 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 - 生产：企业微信 OAuth 回调 → upsert 用户 → JWT
 - 认证端点限流：60 秒内最多 10 次请求
 - 401 仅在已登录时触发登出（防未登录循环重定向）
+- **部署**：生产必须置于反向代理（nginx 等）之后，禁止 3000 端口直连暴露。限流按客户端 IP（trust proxy 解析 X-Forwarded-For），直连暴露时该 IP 可被伪造从而绕过限流。authGuard 会实时查 DB 校验 `isActive` 与 `role`，停用/降级即时生效（不依赖 token 过期）。
 
 ## 角色权限
 
@@ -42,7 +43,7 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 ## 核心业务
 
 ### 工序流转
-记录流转及数量信息（投入数、产出数、不良品数、不良类型）。所有工序可自由点击（允许跳过）。流转到包装自动创建「已完成」记录并标记批次 completed。
+记录流转及数量信息（投入数、产出数、不良品数、不良类型）。所有工序可自由点击（允许跳过）。流转到「已完成」工序时标记批次 completed（需从包装手动流转到已完成）。
 
 ### 批次
 
@@ -55,7 +56,7 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 已流转的工序不可再次流转。前后端双重校验，后端返回明确错误信息（含工序名和流转时间）。
 
 ### 批次状态变更
-- `active` → `completed`：仅通过工序流转自动完成（流转到包装工序）
+- `active` → `completed`：仅通过工序流转完成（手动流转到「已完成」工序）
 - `completed` → `archived`：管理员手动归档
 - 其他状态转换不允许（通过 update 接口直接修改 status 会被拒绝）
 
@@ -88,7 +89,7 @@ User、Product、Batch、ProcessStage、ProgressRecord（批次+工序唯一）�
 
 来料检验(质检) → 减划 → 镜检(质检) → 粘片库 → 粘片 → 压焊 → 塑封 → 超扫(质检) → 去溢料 → 切筋 → 电镀 → 打印 → 成型 → 外观检验(质检) → 包装 → 已完成
 
-> 注：「已完成」(code: `completed`) 是自动工序——流转到包装时自动创建，不显示为可点击工序。
+> 注：「已完成」(code: `completed`) 是手动终工序——需从包装手动流转到已完成，标记批次完成。
 
 工序和封装形式可通过管理页面动态增删改。
 

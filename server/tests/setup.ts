@@ -43,6 +43,7 @@ async function seedTestData() {
   await prisma.progressRecord.deleteMany();
   await prisma.batch.deleteMany();
   await prisma.packageType.deleteMany();
+  await prisma.customerCode.deleteMany();
   await prisma.product.deleteMany();
   await prisma.processStage.deleteMany();
   await prisma.user.deleteMany();
@@ -62,6 +63,7 @@ async function seedTestData() {
     { code: "die_attach", name: "粘片", stageOrder: 2 },
     { code: "wire_bonding", name: "压焊", stageOrder: 3 },
     { code: "packaging", name: "包装", stageOrder: 4 },
+    { code: "completed", name: "已完成", stageOrder: 5 },
   ];
   for (const s of stageDefs) {
     stages.push(await prisma.processStage.create({ data: s }));
@@ -74,6 +76,9 @@ async function seedTestData() {
       { name: "DIP16L", category: "DIP", sortOrder: 2 },
     ],
   });
+
+  // Create customer code referenced by the seeded batch (validateCustomerCode enforces existence)
+  await prisma.customerCode.create({ data: { code: "CUST001" } });
 
   // Create product
   const product = await prisma.product.create({ data: { model: "GD32F303" } });
