@@ -153,7 +153,10 @@ export async function updateBatch(id: number, data: {
   notes?: string;
 }) {
   return prisma.$transaction(async (tx) => {
-    const batch = await tx.batch.findUnique({ where: { id } });
+    const batch = await tx.batch.findUnique({
+      where: { id },
+      include: { product: { select: { model: true } } },
+    });
     if (!batch) throw new Error("批次不存在");
 
     const updateData: Record<string, unknown> = {
@@ -185,12 +188,14 @@ export async function updateBatch(id: number, data: {
       updateData.quantity = data.quantity;
     }
 
-    // Validate packageType against PackageType table
-    const newPackageType = data.packageType !== undefined ? data.packageType : batch.packageType;
-    await validatePackageType(tx, newPackageType);
-    // Validate customerCode against CustomerCode table
-    const newCustomerCode = data.customerCode !== undefined ? data.customerCode : batch.customerCode;
-    await validateCustomerCode(tx, newCustomerCode);
+    // Validate packageType against PackageType table — 仅当传入新值时校验
+    if (data.packageType !== undefined) {
+      await validatePackageType(tx, data.packageType);
+    }
+    // Validate customerCode against CustomerCode table — 仅当传入新值时校验
+    if (data.customerCode !== undefined) {
+      await validateCustomerCode(tx, data.customerCode);
+    }
 
     if (data.productModel !== undefined) {
       const product = await tx.product.upsert({
@@ -210,7 +215,8 @@ export async function updateBatch(id: number, data: {
         select: { id: true },
       });
       if (existing) {
-        throw new Error(`批号「${finalBatchNo}」+ 型号「${data.productModel || ""}」已存在，不可重复创建`);
+        const modelLabel = data.productModel || batch.product?.model || "(当前型号)";
+        throw new Error(`批号「${finalBatchNo}」+ 型号「${modelLabel}」组合已存在，不可重复更新`);
       }
     }
 

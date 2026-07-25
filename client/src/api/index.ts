@@ -28,6 +28,11 @@ function request<T>({ url, method = "GET", data }: RequestOptions): Promise<T> {
         Authorization: userStore.token ? `Bearer ${userStore.token}` : "",
       },
       success: (res) => {
+        // 非 H5 平台 uni.request 不自动跟随 3xx 重定向，将 HTML 内容当 JSON 返回
+        if (res.statusCode >= 300 && res.statusCode < 400) {
+          reject(new Error(`请求被重定向 (${res.statusCode})`));
+          return;
+        }
         if (res.statusCode === 401) {
           // single-flight：多个并发请求同时 401 时只触发一次登出+跳转
           if (userStore.isLoggedIn && !isLoggingOut) {
@@ -37,8 +42,13 @@ function request<T>({ url, method = "GET", data }: RequestOptions): Promise<T> {
               url: "/pages/index/index",
               complete: () => { isLoggingOut = false; },
             });
+            // 安全网：如果 complete 因平台原因不触发，300ms 后自动复位
+            setTimeout(() => { isLoggingOut = false; }, 300);
           }
-          reject(new Error("登录已过期，请重新登录"));
+          // 延迟 reject 让 reLaunch 先开始页面切换，避免错误提示短暂闪现
+          setTimeout(() => {
+            reject(new Error("登录已过期，请重新登录"));
+          }, 300);
           return;
         }
         if (res.statusCode >= 400) {

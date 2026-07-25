@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { Prisma } from "@prisma/client";
 import { config } from "../config/index.js";
 import { prisma } from "../config/database.js";
 
@@ -38,8 +39,22 @@ export async function authGuard(req: AuthRequest, res: Response, next: NextFunct
     }
     req.user = { id: user.id, wwUserId: user.wwUserId, name: user.name, role: user.role };
     next();
-  } catch {
+  } catch (err) {
+    // 区分数据库错误与 JWT 验证错误：Prisma 异常应走全局 errorHandler 返回 500
+    if (err instanceof Prisma.PrismaClientKnownRequestError ||
+        err instanceof Prisma.PrismaClientInitializationError) {
+      console.error("[authGuard] 数据库错误:", err.message);
+      next(err);
+      return;
+    }
+    // JWT 验证失败或意外异常
+    if (err instanceof jwt.JsonWebTokenError || err instanceof jwt.TokenExpiredError) {
+      console.warn("[authGuard] 令牌验证失败:", err.message);
+    } else if (err instanceof Error) {
+      console.warn("[authGuard] 认证异常:", err.message);
+    }
     res.status(401).json({ error: "令牌无效或已过期" });
+    return;
   }
 }
 

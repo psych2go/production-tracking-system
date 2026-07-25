@@ -70,11 +70,17 @@ export async function deletePackageType(id: number) {
   const pt = await prisma.packageType.findUnique({ where: { id } });
   if (!pt) throw new Error("封装形式不存在");
 
-  // packageType 可能是逗号分隔的多选值（如 "SOP16L,SOP28L"），用 contains 匹配避免漏判；
-  // 宁可多挡（误判在用而拒绝删除）也不可漏挡导致误删。
-  const batchCount = await prisma.batch.count({ where: { packageType: { contains: pt.name } } });
-  if (batchCount > 0) {
-    throw new Error(`该封装形式已有 ${batchCount} 个批次使用，无法删除`);
+  // packageType 可能是逗号分隔的多选值（如 "SOP16L,SOP28L"），先用 contains 快速筛选，
+  // 再在 JS 层精确匹配逗号分隔项，避免子串误匹配（如 "SOP16" 误匹配 "SOP16L"）。
+  const candidateBatches = await prisma.batch.findMany({
+    where: { packageType: { contains: pt.name } },
+    select: { id: true, packageType: true },
+  });
+  const actualCount = candidateBatches.filter((b) =>
+    b.packageType?.split(",").map((s) => s.trim()).includes(pt.name)
+  ).length;
+  if (actualCount > 0) {
+    throw new Error(`该封装形式已有 ${actualCount} 个批次使用，无法删除`);
   }
 
   return prisma.packageType.delete({ where: { id } });
