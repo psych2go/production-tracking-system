@@ -133,7 +133,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onShow } from "@dcloudio/uni-app";
 import { useAppStore } from "../../store/app";
 import { useUserStore } from "../../store/user";
 import { batchApi, settingsApi } from "../../api/modules";
@@ -150,6 +150,7 @@ const customerCodes = ref<CustomerCode[]>([]);
 
 const editing = ref(false);
 const saving = ref(false);
+const currentBatchId = ref(0);
 
 const isAdmin = computed(() => userStore.isAdmin());
 
@@ -282,14 +283,12 @@ async function confirmDelete() {
   }
 }
 
-onLoad(async (query) => {
-  if (query?.id) {
-    try {
-      batch.value = await batchApi.get(Number(query.id));
-    } catch {
-      uni.showToast({ title: "加载失败", icon: "none" });
-      return;
-    }
+async function loadBatch(id: number) {
+  try {
+    batch.value = await batchApi.get(id);
+  } catch {
+    uni.showToast({ title: "加载失败", icon: "none" });
+    return;
   }
   // Load package types and customer codes for edit mode
   if (isAdmin.value) {
@@ -297,6 +296,19 @@ onLoad(async (query) => {
       packageTypes.value = await settingsApi.listPackageTypes();
       customerCodes.value = await settingsApi.listCustomerCodes();
     } catch { /* non-critical */ }
+  }
+}
+
+onLoad(async (query) => {
+  if (query?.id) {
+    currentBatchId.value = Number(query.id);
+    await loadBatch(currentBatchId.value);
+  }
+});
+
+onShow(async () => {
+  if (currentBatchId.value) {
+    await loadBatch(currentBatchId.value);
   }
 });
 </script>

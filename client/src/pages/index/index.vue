@@ -119,7 +119,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { onPullDownRefresh } from "@dcloudio/uni-app";
+import { onPullDownRefresh, onShow } from "@dcloudio/uni-app";
 import { useUserStore } from "../../store/user";
 import { useAppStore } from "../../store/app";
 import { progressApi } from "../../api/modules";
@@ -200,6 +200,12 @@ onMounted(async () => {
   if (userStore.isLoggedIn) {
     await appStore.loadStages();
     await loadData();
+  }
+});
+
+onShow(() => {
+  if (userStore.isLoggedIn) {
+    loadData();
   }
 });
 

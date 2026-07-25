@@ -24,7 +24,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { onLoad } from "@dcloudio/uni-app";
+import { onLoad, onShow } from "@dcloudio/uni-app";
 import { progressApi } from "../../api/modules";
 import { formatTime } from "../../utils/format";
 import type { ProgressRecord } from "../../types";
@@ -33,14 +33,9 @@ const records = ref<ProgressRecord[]>([]);
 const stageId = ref(0);
 const stageName = ref("");
 
-onLoad((query) => {
-  if (query?.stageId) {
-    stageId.value = Number(query.stageId);
-    stageName.value = query.stageName || "";
-  }
-});
+let loaded = false;
 
-onMounted(async () => {
+async function loadRecords() {
   try {
     if (stageId.value) {
       records.value = await progressApi.stageProducts(stageId.value);
@@ -50,6 +45,23 @@ onMounted(async () => {
   } catch (e: unknown) {
     uni.showToast({ title: (e as Error).message, icon: "none" });
   }
+}
+
+onLoad((query) => {
+  if (query?.stageId) {
+    stageId.value = Number(query.stageId);
+    stageName.value = query.stageName || "";
+  }
+});
+
+onMounted(async () => {
+  loaded = true;
+  await loadRecords();
+});
+
+onShow(() => {
+  // onShow 会在首次挂载后也触发一次，但 loaded 已为 true，不会跳过
+  loadRecords();
 });
 
 function goBatchDetail(batchId: number) {

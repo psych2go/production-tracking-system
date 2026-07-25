@@ -55,6 +55,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { onShow } from "@dcloudio/uni-app";
 import { statsApi, batchApi } from "../../api/modules";
 import { api } from "../../api/index";
 import { useAppStore } from "../../store/app";
@@ -128,6 +129,10 @@ async function loadData() {
 
 onMounted(async () => {
   await appStore.loadStages();
+  loadData();
+});
+
+onShow(() => {
   loadData();
 });
 
