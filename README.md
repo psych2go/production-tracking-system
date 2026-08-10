@@ -97,13 +97,14 @@ cd /opt/pts/server && npm install
 npx prisma generate && npx prisma migrate deploy
 DATABASE_URL="file:./dev.db" npm run db:seed
 cp .env.example .env && nano .env  # 填入实际配置
+# 必须设置 NODE_ENV=production，并使用至少32位随机 JWT_SECRET
 npm run build
 
 # 4. 前端
 cd /opt/pts/client && npm install && npm run build:h5
 
 # 5. 启动
-pm2 start npm --name pts --cwd /opt/pts/server -- start
+NODE_ENV=production pm2 start npm --name pts --cwd /opt/pts/server -- start
 pm2 save && pm2 startup
 
 # 6. Nginx

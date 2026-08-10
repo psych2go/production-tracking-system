@@ -26,6 +26,7 @@ jobs:
 
             # 后端
             cd server
+            export NODE_ENV=production
             npm install
             DATABASE_URL="file:./dev.db" npx prisma migrate deploy
             DATABASE_URL="file:./dev.db" npx prisma generate

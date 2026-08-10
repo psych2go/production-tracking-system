@@ -53,18 +53,15 @@ router.post("/password-login", authLimiter, auditLog("login", "auth"), validate(
   }
 });
 
-// Dev login (development only)
-router.post("/dev-login", authLimiter, async (_req, res, next) => {
-  if (config.nodeEnv !== "development") {
-    res.status(403).json({ error: "开发登录仅在开发环境可用" });
-    return;
-  }
-  try {
-    const { token, user } = await handleWwCallback("dev_code");
-    res.json({ token, user });
-  } catch (err) {
-    next(err);
-  }
-});
+if (config.nodeEnv === "development") {
+  router.post("/dev-login", authLimiter, async (_req, res, next) => {
+    try {
+      const { token, user } = await handleWwCallback("dev_code");
+      res.json({ token, user });
+    } catch (err) {
+      next(err);
+    }
+  });
+}
 
 export const authRoutes = router;
