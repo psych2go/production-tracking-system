@@ -26,42 +26,7 @@ jobs:
 
             # 后端
             cd server
-            node <<'NODE'
-            const crypto = require("crypto");
-            const fs = require("fs");
-
-            const envPath = ".env";
-            const source = fs.existsSync(envPath)
-              ? fs.readFileSync(envPath, "utf8")
-              : fs.readFileSync(".env.example", "utf8");
-            const lines = source.split(/\r?\n/);
-
-            function getValue(key) {
-              const line = lines.find((item) => item.startsWith(`${key}=`));
-              return line ? line.slice(key.length + 1) : "";
-            }
-
-            function setValue(key, value) {
-              const index = lines.findIndex((item) => item.startsWith(`${key}=`));
-              if (index >= 0) lines[index] = `${key}=${value}`;
-              else lines.push(`${key}=${value}`);
-            }
-
-            const insecureSecrets = new Set([
-              "dev-secret",
-              "test-secret",
-              "your-jwt-secret-change-in-production",
-            ]);
-            const currentSecret = getValue("JWT_SECRET");
-            if (currentSecret.length < 32 || insecureSecrets.has(currentSecret)) {
-              setValue("JWT_SECRET", crypto.randomBytes(32).toString("hex"));
-            }
-
-            setValue("NODE_ENV", "production");
-            setValue("HOST", "127.0.0.1");
-            fs.writeFileSync(envPath, `${lines.filter(Boolean).join("\n")}\n`, { mode: 0o600 });
-            fs.chmodSync(envPath, 0o600);
-            NODE
+            node scripts/prepare-production-env.cjs
             npm ci --include=dev
             DATABASE_URL="file:./dev.db" npx prisma migrate deploy
             DATABASE_URL="file:./dev.db" npx prisma generate
