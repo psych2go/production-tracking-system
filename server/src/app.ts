@@ -9,7 +9,7 @@ export const app = express();
 app.disable("x-powered-by");
 
 if (config.nodeEnv === "production") {
-  app.set("trust proxy", 1);
+  app.set("trust proxy", "loopback");
 }
 
 app.use((_req, res, next) => {

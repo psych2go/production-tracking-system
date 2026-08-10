@@ -17,10 +17,12 @@ const passwordSchema = z.object({
   password: z.string().min(1),
 });
 
-const authLimiter = rateLimit({ windowMs: 60_000, max: 10 });
+const wwLoginLimiter = rateLimit({ windowMs: 60_000, max: 10 });
+const passwordLoginLimiter = rateLimit({ windowMs: 60_000, max: 10 });
+const devLoginLimiter = rateLimit({ windowMs: 60_000, max: 10 });
 
 // WeChat Work OAuth callback
-router.post("/ww/callback", authLimiter, auditLog("login", "auth"), validate(callbackSchema), async (req, res, next) => {
+router.post("/ww/callback", wwLoginLimiter, auditLog("login", "auth"), validate(callbackSchema), async (req, res, next) => {
   try {
     const { token, user } = await handleWwCallback(req.body.code);
     res.json({ token, user });
@@ -44,7 +46,7 @@ router.get("/me", authGuard, async (req: AuthRequest, res, next) => {
 });
 
 // Password login
-router.post("/password-login", authLimiter, auditLog("login", "auth"), validate(passwordSchema), async (req, res, next) => {
+router.post("/password-login", passwordLoginLimiter, auditLog("login", "auth"), validate(passwordSchema), async (req, res, next) => {
   try {
     const { token, user } = await handlePasswordLogin(req.body.password);
     res.json({ token, user });
@@ -54,7 +56,7 @@ router.post("/password-login", authLimiter, auditLog("login", "auth"), validate(
 });
 
 if (config.nodeEnv === "development") {
-  router.post("/dev-login", authLimiter, async (_req, res, next) => {
+  router.post("/dev-login", devLoginLimiter, async (_req, res, next) => {
     try {
       const { token, user } = await handleWwCallback("dev_code");
       res.json({ token, user });
