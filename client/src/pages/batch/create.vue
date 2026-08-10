@@ -1,6 +1,6 @@
 <template>
   <view class="container">
-    <view class="card">
+    <view class="card create-card">
       <text class="section-title">新建批次</text>
 
       <view class="form-group mt-lg">
@@ -178,10 +178,14 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
+.create-card {
+  border-top: 6rpx solid #087f8c;
+}
 .validation-errors {
   padding: 16rpx 20rpx;
-  background: #ffecec;
-  border-radius: 10rpx;
+  background: #fcecea;
+  border-radius: 6rpx;
+  border-left: 5rpx solid #c9483f;
   display: flex;
   flex-direction: column;
   gap: 6rpx;

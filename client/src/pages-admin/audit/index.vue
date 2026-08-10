@@ -138,8 +138,8 @@ onMounted(loadLogs);
 }
 .filter-item {
   padding: 8rpx 20rpx;
-  background: #f5f5f5;
-  border-radius: 20rpx;
+  background: #edf0f0;
+  border-radius: 8rpx;
   font-size: 26rpx;
   color: #666;
 }
@@ -156,12 +156,12 @@ onMounted(loadLogs);
   padding: 4rpx 12rpx;
   border-radius: 8rpx;
 }
-.tag-create { background: #e8f5e9; color: #4caf50; }
-.tag-update { background: #e3f2fd; color: #2196f3; }
-.tag-delete { background: #fce4ec; color: #f44336; }
-.tag-upsert { background: #e0f7fa; color: #00bcd4; }
-.tag-resolve { background: #fff3e0; color: #ff9800; }
-.tag-login { background: #f3e5f5; color: #9c27b0; }
+.tag-create { background: #e6f3ec; color: #27865f; }
+.tag-update { background: #e6f4f3; color: #087f8c; }
+.tag-delete { background: #fcecea; color: #c9483f; }
+.tag-upsert { background: #edf0f0; color: #485458; }
+.tag-resolve { background: #fff3df; color: #d97706; }
+.tag-login { background: #e9eeee; color: #16343a; }
 .detail-toggle {
   margin-top: 8rpx;
 }

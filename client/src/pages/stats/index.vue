@@ -3,7 +3,8 @@
     <!-- Export button -->
     <view class="card export-bar">
       <view class="export-left">
-        <text class="export-hint">统计规则：统计在线产品的详细信息及当前工序</text>
+        <text class="export-title">在线产品报表</text>
+        <text class="export-hint">包含批次信息与当前工序</text>
       </view>
       <button class="btn-export" @click="onExport">导出 Excel</button>
     </view>
@@ -146,21 +147,33 @@ function goBatchDetail(id: number) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16rpx 24rpx;
+  padding: 22rpx 24rpx;
+  border-left: 6rpx solid #087f8c;
 }
 .export-left { flex: 1; margin-right: 20rpx; }
+.export-title {
+  display: block;
+  color: #172327;
+  font-size: 28rpx;
+  font-weight: 700;
+}
 .export-hint {
+  display: block;
+  margin-top: 4rpx;
   font-size: 22rpx;
-  color: #999;
+  color: #657174;
   line-height: 1.6;
 }
 .btn-export {
+  min-height: 64rpx;
   font-size: 24rpx;
-  padding: 8rpx 24rpx;
-  background: #0083ff;
+  font-weight: 600;
+  padding: 8rpx 22rpx;
+  background: #087f8c;
   color: #fff;
   border: none;
-  border-radius: 8rpx;
+  border-radius: 7rpx;
+  &::after { border: none; }
 }
 .section-title { font-size: 32rpx; }
 .empty-chart { text-align: center; padding: 60rpx 0; }
@@ -168,22 +181,27 @@ function goBatchDetail(id: number) {
 /* Online table */
 .online-table {
   min-width: 1100rpx;
+  border: 2rpx solid #dfe4e4;
+  border-radius: 8rpx;
+  overflow: hidden;
 }
 .online-header {
   display: flex;
-  padding: 14rpx 0;
-  border-bottom: 2rpx solid #e5e5e5;
+  padding: 16rpx 0;
+  border-bottom: 2rpx solid #dfe4e4;
   font-size: 22rpx;
-  color: #999;
-  background: #fafafa;
+  color: #485458;
+  font-weight: 700;
+  background: #edf0f0;
 }
 .online-row {
   display: flex;
   padding: 18rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 2rpx solid #edf0f0;
   font-size: 24rpx;
   &:last-child { border-bottom: none; }
-  &:active { background: #f5f5f5; }
+  &:nth-child(odd) { background: #fafbfb; }
+  &:active { background: #e6f4f3; }
 }
 .online-col {
   flex-shrink: 0;
@@ -200,7 +218,7 @@ function goBatchDetail(id: number) {
 .online-col-order { width: 160rpx; }
 .online-col-priority { width: 100rpx; }
 .online-col-delivery { width: 180rpx; }
-.online-col-stage { width: 140rpx; color: #0083ff; font-weight: 500; }
+.online-col-stage { width: 140rpx; color: #087f8c; font-weight: 700; }
 .online-col-notes { width: 200rpx; justify-content: flex-start; }
 .online-col-date { width: 160rpx; }
 </style>

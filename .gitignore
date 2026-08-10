@@ -17,6 +17,7 @@ server/dist/
 # IDE
 .vscode/
 .idea/
+.claude/
 
 # OS
 .DS_Store

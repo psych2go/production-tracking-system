@@ -2,7 +2,10 @@
   <view class="container">
     <!-- Search and filter -->
     <view class="card filter-bar">
-      <input v-model="keyword" placeholder="搜索批号或型号" class="search-input" @confirm="loadData" />
+      <view class="search-wrap">
+        <text class="search-mark">⌕</text>
+        <input v-model="keyword" placeholder="搜索批号或型号" class="search-input" @confirm="loadData" />
+      </view>
       <view class="filter-tabs mt-sm">
         <text
           v-for="tab in tabs"
@@ -175,41 +178,64 @@ onShow(async () => {
 </script>
 
 <style scoped lang="scss">
-.filter-bar { padding: 24rpx; }
+.filter-bar {
+  padding: 20rpx;
+  border-top: 5rpx solid #087f8c;
+}
+.search-wrap {
+  display: flex;
+  align-items: center;
+  min-height: 82rpx;
+  background: #f1f4f3;
+  border: 2rpx solid transparent;
+  border-radius: 8rpx;
+  padding: 0 20rpx;
+  &:focus-within {
+    background: #fff;
+    border-color: #087f8c;
+  }
+}
+.search-mark {
+  margin-right: 14rpx;
+  color: #657174;
+  font-size: 34rpx;
+  line-height: 1;
+}
 .search-input {
-  background: #f4f5f7;
-  border-radius: 12rpx;
-  padding: 20rpx 24rpx;
+  flex: 1;
+  height: 80rpx;
   font-size: 28rpx;
 }
 .filter-tabs {
   display: flex;
-  gap: 16rpx;
+  gap: 10rpx;
   align-items: center;
   flex-wrap: wrap;
+  padding-top: 16rpx;
+  border-top: 2rpx solid #edf0f0;
 }
 .filter-tab {
-  padding: 12rpx 26rpx;
-  border-radius: 999rpx;
-  font-size: 26rpx;
-  color: #6b7280;
-  background: #f4f5f7;
+  padding: 10rpx 18rpx;
+  border-radius: 6rpx;
+  font-size: 24rpx;
+  color: #657174;
+  background: #edf0f0;
   min-height: 56rpx;
   display: inline-flex;
   align-items: center;
   transition: all 0.2s;
   &.active {
-    background: #0083ff;
+    background: #16343a;
     color: #fff;
-    font-weight: 500;
+    font-weight: 600;
   }
 }
 .tab-count {
   font-size: 20rpx;
-  padding: 0 10rpx;
-  border-radius: 999rpx;
+  padding: 0 8rpx;
+  border-radius: 4rpx;
   margin-left: 8rpx;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(23, 35, 39, 0.08);
   color: inherit;
 }
 .filter-tab.active .tab-count {
@@ -219,23 +245,23 @@ onShow(async () => {
 .filter-divider {
   width: 2rpx;
   height: 28rpx;
-  background: #e5e7eb;
+  background: #cbd2d2;
   margin: 0 4rpx;
 }
 .smart-filter-tag {
-  padding: 10rpx 22rpx;
-  border-radius: 999rpx;
+  padding: 9rpx 17rpx;
+  border-radius: 6rpx;
   font-size: 24rpx;
   background: #fff;
-  border: 2rpx solid #e5e7eb;
-  color: #6b7280;
+  border: 2rpx solid #dfe4e4;
+  color: #657174;
   min-height: 56rpx;
   display: inline-flex;
   align-items: center;
   &.active {
-    border-color: #fa5151;
-    color: #fa5151;
-    background: #ffecec;
+    border-color: #c9483f;
+    color: #c9483f;
+    background: #fcecea;
   }
 }
 .fab {
@@ -245,11 +271,12 @@ onShow(async () => {
   width: 112rpx;
   height: 112rpx;
   border-radius: 50%;
-  background: #0083ff;
+  background: #087f8c;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(0, 131, 255, 0.42);
+  border: 6rpx solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10rpx 28rpx rgba(8, 127, 140, 0.32);
   z-index: 100;
   &:active { transform: scale(0.94); }
 }

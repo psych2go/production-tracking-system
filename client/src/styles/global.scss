@@ -1,102 +1,106 @@
 /* ============================================================
-   Design System — 生产进度追踪
-   主色企业蓝 #0083ff，完整 token + 全局组件类
-   保留旧类名兼容，新增体系化样式
+   Design system - Production control console
    ============================================================ */
 
-/* ---------- Color: Primary ---------- */
-$primary: #0083ff;
-$primary-dark: #006fd6;
-$primary-bg: #e8f4ff;
+$primary: #087f8c;
+$primary-dark: #075e68;
+$primary-deep: #16343a;
+$primary-bg: #e6f4f3;
 
-/* ---------- Color: Neutral scale ---------- */
-$gray-50: #f7f8fa;
-$gray-100: #f0f1f4;
-$gray-200: #e5e7eb;
-$gray-300: #d6d9e0;
-$gray-400: #c0c4cc;
-$gray-500: #a3a8b2;
-$gray-600: #8a8f99;
-$gray-700: #6b7280;
-$gray-800: #4b5563;
-$gray-900: #1f2329;
+$gray-50: #f5f7f7;
+$gray-100: #edf0f0;
+$gray-200: #dfe4e4;
+$gray-300: #cbd2d2;
+$gray-400: #aab4b5;
+$gray-500: #7d898b;
+$gray-600: #657174;
+$gray-700: #485458;
+$gray-800: #2c383c;
+$gray-900: #172327;
 
-/* ---------- Color: Functional + soft bg ---------- */
-$success: #07c160;
-$success-bg: #e8f8ee;
-$warning: #ff9900;
-$warning-bg: #fff7e6;
-$danger: #fa5151;
-$danger-bg: #ffecec;
+$success: #27865f;
+$success-bg: #e6f3ec;
+$warning: #d97706;
+$warning-bg: #fff3df;
+$danger: #c9483f;
+$danger-bg: #fcecea;
 
-/* ---------- Semantic aliases ---------- */
 $text-primary: $gray-900;
-$text-regular: #333333;
+$text-regular: $gray-800;
 $text-secondary: $gray-600;
 $text-placeholder: $gray-400;
 $border-color: $gray-200;
 $border-light: $gray-100;
-$bg-color: $gray-50;
+$bg-color: #f1f4f3;
 
-/* 兼容旧变量名 */
 $primary-color: $primary;
 $success-color: $success;
 $warning-color: $warning;
 $danger-color: $danger;
 $text-color: $text-regular;
 
-/* ---------- Font size ---------- */
 $fs-xs: 20rpx;
 $fs-sm: 24rpx;
 $fs-base: 28rpx;
 $fs-md: 30rpx;
 $fs-lg: 34rpx;
 $fs-xl: 40rpx;
-$fs-display: 48rpx;
+$fs-display: 52rpx;
 
-/* ---------- Spacing ---------- */
 $space-1: 8rpx;
 $space-2: 16rpx;
 $space-3: 24rpx;
 $space-4: 32rpx;
 $space-5: 48rpx;
 
-/* ---------- Radius ---------- */
-$radius-sm: 8rpx;
-$radius-md: 12rpx;
-$radius-lg: 16rpx;
-$radius-xl: 20rpx;
+$radius-sm: 6rpx;
+$radius-md: 10rpx;
+$radius-lg: 14rpx;
+$radius-xl: 16rpx;
 $radius-full: 999rpx;
 
-/* ---------- Shadow ---------- */
-$shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
-$shadow-md: 0 4rpx 16rpx rgba(17, 24, 39, 0.06);
-$shadow-lg: 0 8rpx 24rpx rgba(17, 24, 39, 0.10);
+$shadow-sm: 0 2rpx 8rpx rgba(23, 35, 39, 0.04);
+$shadow-md: 0 5rpx 18rpx rgba(23, 35, 39, 0.07);
+$shadow-lg: 0 12rpx 32rpx rgba(23, 35, 39, 0.12);
 
-/* ============================================================
-   Base
-   ============================================================ */
 page {
   background-color: $bg-color;
-  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  background-image:
+    linear-gradient(rgba(8, 127, 140, 0.025) 2rpx, transparent 2rpx),
+    linear-gradient(90deg, rgba(8, 127, 140, 0.025) 2rpx, transparent 2rpx);
+  background-size: 48rpx 48rpx;
+  font-family: "DIN Alternate", "Avenir Next", -apple-system, BlinkMacSystemFont,
+    "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: $fs-base;
   color: $text-regular;
   line-height: 1.5;
 }
 
-.container {
-  padding: $space-3;
+view,
+text,
+button,
+input,
+textarea {
+  box-sizing: border-box;
+  letter-spacing: 0;
 }
 
-/* ============================================================
-   Card
-   ============================================================ */
+.container {
+  width: 100%;
+  max-width: 1120rpx;
+  margin: 0 auto;
+  padding: $space-3;
+  padding-bottom: calc(#{$space-4} + env(safe-area-inset-bottom));
+}
+
 .card {
-  background: #ffffff;
+  position: relative;
+  background: rgba(255, 255, 255, 0.98);
+  border: 2rpx solid rgba(203, 210, 210, 0.76);
   border-radius: $radius-lg;
   padding: $space-3;
   margin-bottom: $space-3;
-  box-shadow: $shadow-md;
+  box-shadow: $shadow-sm;
 }
 
 .card-header {
@@ -112,18 +116,12 @@ page {
   margin: $space-2 0;
 }
 
-/* ============================================================
-   Flex utilities
-   ============================================================ */
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .flex-center { display: flex; align-items: center; }
 .flex-col { display: flex; flex-direction: column; }
 .flex-1 { flex: 1; min-width: 0; }
 .flex-wrap { display: flex; flex-wrap: wrap; }
 
-/* ============================================================
-   Text utilities
-   ============================================================ */
 .text-primary { color: $primary; }
 .text-success { color: $success; }
 .text-warning { color: $warning; }
@@ -131,7 +129,6 @@ page {
 .text-secondary { color: $text-secondary; }
 .text-regular { color: $text-regular; }
 .text-placeholder { color: $text-placeholder; }
-
 .text-xs { font-size: $fs-xs; }
 .text-sm { font-size: $fs-sm; }
 .text-base { font-size: $fs-base; }
@@ -139,16 +136,12 @@ page {
 .text-lg { font-size: $fs-lg; }
 .text-xl { font-size: $fs-xl; }
 .text-display { font-size: $fs-display; }
-
 .text-normal { font-weight: 400; }
 .text-medium { font-weight: 500; }
 .text-bold { font-weight: 600; }
 .text-bolder { font-weight: 700; }
 .text-center { text-align: center; }
 
-/* ============================================================
-   Spacing utilities
-   ============================================================ */
 .mt-xs { margin-top: $space-1; }
 .mt-sm { margin-top: 12rpx; }
 .mt-md { margin-top: $space-3; }
@@ -164,148 +157,188 @@ page {
 .mr-sm { margin-right: $space-2; }
 .mr-md { margin-right: $space-3; }
 
-/* ============================================================
-   Buttons
-   ============================================================ */
 .btn {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 88rpx;
   padding: 0 $space-3;
-  font-size: $fs-md;
+  font-size: $fs-base;
+  font-weight: 600;
   border-radius: $radius-md;
   border: 2rpx solid transparent;
   background: $gray-100;
   color: $text-regular;
   line-height: 1.2;
-  transition: opacity 0.15s ease;
-  /* reset mini-program button defaults */
+  box-shadow: none;
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
   &::after { border: none; }
-  &:active { opacity: 0.82; }
+  &:active { opacity: 0.88; transform: translateY(2rpx); }
 }
-.btn-primary { background: $primary; color: #fff; }
+
+.btn-primary {
+  background: $primary;
+  color: #fff;
+  box-shadow: 0 7rpx 16rpx rgba(8, 127, 140, 0.18);
+}
 .btn-success { background: $success; color: #fff; }
 .btn-danger { background: $danger; color: #fff; }
-.btn-ghost { background: $primary-bg; color: $primary; }
+.btn-ghost { background: $primary-bg; color: $primary-dark; }
 .btn-outline { background: #fff; color: $primary; border-color: $primary; }
 .btn-block { width: 100%; box-sizing: border-box; }
 .btn-sm { min-height: 60rpx; padding: 0 $space-2; font-size: $fs-sm; border-radius: $radius-sm; }
-.btn-lg { min-height: 96rpx; font-size: $fs-lg; }
+.btn-lg { min-height: 96rpx; font-size: $fs-md; }
 
-/* ============================================================
-   Form
-   ============================================================ */
-.form-group { display: flex; flex-direction: column; gap: $space-1; }
-.form-label { font-size: $fs-sm; color: $text-secondary; }
-.form-input {
-  width: 100%;
-  border: 2rpx solid $border-color;
-  border-radius: $radius-md;
-  padding: 22rpx $space-3;
-  font-size: $fs-base;
-  height: 80rpx;
-  background: #fff;
-  box-sizing: border-box;
+.form-group { display: flex; flex-direction: column; gap: 10rpx; }
+.form-label {
+  font-size: $fs-sm;
+  font-weight: 600;
+  color: $gray-700;
 }
+.form-input,
 .form-textarea {
   width: 100%;
   border: 2rpx solid $border-color;
   border-radius: $radius-md;
   padding: 20rpx $space-3;
   font-size: $fs-base;
-  height: 160rpx;
-  background: #fff;
+  background: $gray-50;
+  color: $text-primary;
   box-sizing: border-box;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.form-input {
+  height: 84rpx;
+}
+.form-textarea {
+  height: 168rpx;
+}
+.form-input:focus,
+.form-textarea:focus {
+  border-color: $primary;
+  background: #fff;
 }
 .picker-value { color: $text-regular; }
 
-/* ============================================================
-   Tags
-   ============================================================ */
 .tag {
   display: inline-flex;
   align-items: center;
   font-size: $fs-xs;
-  padding: 4rpx 14rpx;
+  font-weight: 600;
+  padding: 5rpx 14rpx;
   border-radius: $radius-sm;
   line-height: 1.4;
 }
 .tag-urgent { background: $danger; color: #fff; }
-.tag-info { background: $primary-bg; color: $primary; }
+.tag-info { background: $primary-bg; color: $primary-dark; }
 .tag-success { background: $success-bg; color: $success; }
 .tag-warning { background: $warning-bg; color: $warning; }
 
-/* 旧标签类兼容（保留，各页面在用） */
 .urgent-tag {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   font-size: $fs-xs;
-  padding: 2rpx 12rpx;
+  font-weight: 600;
+  padding: 3rpx 11rpx;
   border-radius: $radius-sm;
   background: $danger;
   color: #fff;
   margin-left: $space-1;
 }
 
-/* 数字徽标 */
 .badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 32rpx;
-  height: 32rpx;
+  min-width: 34rpx;
+  height: 34rpx;
   padding: 0 8rpx;
-  border-radius: $radius-full;
+  border-radius: $radius-sm;
   background: $danger;
   color: #fff;
   font-size: $fs-xs;
+  font-weight: 700;
   line-height: 1;
 }
 
-/* ============================================================
-   List item
-   ============================================================ */
 .list-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: $space-3 0;
+  padding: $space-3 4rpx;
   border-bottom: 2rpx solid $border-light;
   min-height: 88rpx;
+  color: $text-primary;
   &:last-child { border-bottom: none; }
+  &:active { background: $gray-50; }
 }
 
-/* ============================================================
-   Section
-   ============================================================ */
 .section-title {
+  position: relative;
+  padding-left: 18rpx;
   font-size: $fs-md;
-  font-weight: 600;
+  font-weight: 700;
   color: $text-primary;
 }
+.section-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 7rpx;
+  width: 6rpx;
+  height: 28rpx;
+  border-radius: 2rpx;
+  background: $primary;
+}
 
-/* ============================================================
-   Empty state
-   ============================================================ */
 .empty-state {
   text-align: center;
   padding: $space-5 $space-3;
   color: $text-secondary;
 }
 
-/* ============================================================
-   Status dot
-   ============================================================ */
-.dot { display: inline-block; width: 12rpx; height: 12rpx; border-radius: 50%; background: $gray-400; flex-shrink: 0; }
+.dot {
+  display: inline-block;
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: $gray-400;
+  flex-shrink: 0;
+}
 .dot-primary { background: $primary; }
 .dot-success { background: $success; }
 .dot-warning { background: $warning; }
 .dot-danger { background: $danger; }
 
-/* ============================================================
-   Minimum touch target for gloved workers
-   ============================================================ */
-button, .filter-tab, .stage-chip, .menu-item, .batch-option, .stage-option, .list-item, .btn {
+button,
+.filter-tab,
+.stage-chip,
+.menu-item,
+.batch-option,
+.stage-option,
+.list-item,
+.btn {
   min-height: 72rpx;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media screen and (min-width: 900px) {
+  .container {
+    max-width: 960px;
+    padding: 28px 32px 48px;
+  }
+
+  .card {
+    box-shadow: $shadow-md;
+  }
 }

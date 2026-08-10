@@ -6,9 +6,10 @@
 
     <view v-else>
       <!-- Stage filter with counts -->
-      <view class="card" v-if="step === 1 && appStore.stages.length">
-        <view class="flex-between">
-          <text class="section-title">按工序查看</text>
+      <view class="card filter-panel" v-if="step === 1 && appStore.stages.length">
+        <view class="filter-label">
+          <text class="filter-index">A</text>
+          <text>按工序查看</text>
         </view>
         <scroll-view scroll-x class="stage-scroll mt-sm">
           <view
@@ -32,8 +33,9 @@
           </view>
         </scroll-view>
         <!-- 按封装形式查看 -->
-        <view class="flex-between mt-md">
-          <text class="section-title">按封装形式查看</text>
+        <view class="filter-label mt-md">
+          <text class="filter-index">B</text>
+          <text>按封装形式查看</text>
         </view>
         <scroll-view scroll-x class="stage-scroll mt-sm">
           <view
@@ -64,6 +66,7 @@
           <text class="section-title">选择批次</text>
         </view>
         <view class="search-box mt-sm">
+          <text class="search-mark">⌕</text>
           <input
             v-model="batchKeyword"
             placeholder="搜索批号或型号"
@@ -103,7 +106,7 @@
       <view v-if="step === 2" class="card">
         <view class="flex-between">
           <view class="nav-back" @click="step = 1">
-            <UIcon name="back" :size="40" color="#0083ff" />
+            <UIcon name="back" :size="40" color="#087f8c" />
             <text class="nav-back-text">返回</text>
           </view>
           <text class="section-title">选择工序</text>
@@ -371,6 +374,28 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="scss">
+.filter-panel {
+  border-top: 5rpx solid #087f8c;
+}
+.filter-label {
+  display: flex;
+  align-items: center;
+  color: #2c383c;
+  font-size: 25rpx;
+  font-weight: 700;
+}
+.filter-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34rpx;
+  height: 34rpx;
+  margin-right: 12rpx;
+  border-radius: 5rpx;
+  background: #16343a;
+  color: #fff;
+  font-size: 19rpx;
+}
 .nav-back {
   display: flex;
   align-items: center;
@@ -380,30 +405,38 @@ onBeforeUnmount(() => {
 }
 .nav-back-text {
   font-size: 30rpx;
-  color: #0083ff;
+  color: #087f8c;
 }
 .nav-back-placeholder {
   min-width: 140rpx;
   flex-shrink: 0;
 }
 .search-box {
-  background: #f4f5f7;
-  border-radius: 12rpx;
-  padding: 16rpx 24rpx;
+  display: flex;
+  align-items: center;
+  min-height: 82rpx;
+  background: #f1f4f3;
+  border: 2rpx solid transparent;
+  border-radius: 8rpx;
+  padding: 0 20rpx;
+  &:focus-within { background: #fff; border-color: #087f8c; }
 }
-.search-input { font-size: 28rpx; }
+.search-mark { margin-right: 14rpx; color: #657174; font-size: 34rpx; }
+.search-input { flex: 1; height: 80rpx; font-size: 28rpx; }
 .batch-option {
   padding: 24rpx;
-  border: 2rpx solid #e5e7eb;
-  border-radius: 12rpx;
+  border: 2rpx solid #dfe4e4;
+  border-left: 6rpx solid #087f8c;
+  border-radius: 8rpx;
   margin-bottom: 16rpx;
   transition: all 0.15s;
-  &:active { border-color: #0083ff; background: #f7f9fc; }
+  &:active { border-color: #087f8c; background: #f5f7f7; }
 }
 .current-stage-hint-inline {
-  background: #e8f4ff;
+  background: #e6f4f3;
+  color: #075e68;
   padding: 4rpx 14rpx;
-  border-radius: 8rpx;
+  border-radius: 5rpx;
 }
 .hint-text {
   display: block;
@@ -415,43 +448,43 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   padding: 24rpx;
-  border: 2rpx solid #e5e7eb;
-  border-radius: 12rpx;
+  border: 2rpx solid #dfe4e4;
+  border-radius: 8rpx;
   gap: 20rpx;
   min-height: 88rpx;
   transition: all 0.15s;
   &.done { opacity: 0.5; }
-  &.current { border-color: #0083ff; background: #e8f4ff; border-width: 3rpx; }
-  &.suggested { border-color: #ff9900; background: #fffbf0; border-width: 3rpx; border-style: dashed; }
+  &.current { border-color: #087f8c; background: #e6f4f3; border-width: 3rpx; }
+  &.suggested { border-color: #d97706; background: #fff3df; border-width: 3rpx; }
 }
 .stage-order {
   width: 52rpx;
   height: 52rpx;
-  border-radius: 50%;
-  background: #f0f1f4;
+  border-radius: 6rpx;
+  background: #edf0f0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24rpx;
-  color: #8a8f99;
+  color: #657174;
   flex-shrink: 0;
-  &.order-done { background: #07c160; color: #fff; }
-  &.order-current { background: #0083ff; color: #fff; }
-  &.order-suggested { background: #ff9900; color: #fff; }
+  &.order-done { background: #27865f; color: #fff; }
+  &.order-current { background: #087f8c; color: #fff; }
+  &.order-suggested { background: #d97706; color: #fff; }
 }
 .check-mark { color: #fff; font-size: 24rpx; }
 .suggest-tag {
   font-size: 22rpx;
   padding: 4rpx 18rpx;
-  background: #ff9900;
+  background: #d97706;
   color: #fff;
-  border-radius: 999rpx;
+  border-radius: 5rpx;
   white-space: nowrap;
 }
 .stage-name { flex: 1; }
 .stage-completed-blink {
-  border-color: #07c160;
-  background: linear-gradient(135deg, #f0fff0 0%, #e8f5e9 100%);
+  border-color: #27865f;
+  background: #e6f3ec;
   animation: blink-border 1.5s ease-in-out infinite;
 }
 .stage-completed-blink.done {
@@ -459,28 +492,30 @@ onBeforeUnmount(() => {
   opacity: 0.5;
 }
 @keyframes blink-border {
-  0%, 100% { border-color: #07c160; box-shadow: 0 0 0rpx transparent; }
-  50% { border-color: #07c160; box-shadow: 0 0 12rpx rgba(7, 193, 96, 0.4); }
+  0%, 100% { border-color: #27865f; box-shadow: 0 0 0rpx transparent; }
+  50% { border-color: #27865f; box-shadow: 0 0 12rpx rgba(39, 134, 95, 0.32); }
 }
 .batch-summary {
   padding: 16rpx 24rpx;
-  background: #f0f1f4;
-  border-radius: 12rpx;
+  background: #16343a;
+  border-radius: 8rpx;
+  color: #fff;
   font-size: 26rpx;
 }
 .stage-scroll { white-space: nowrap; }
 .stage-chip {
   display: inline-flex;
   align-items: center;
-  padding: 16rpx 28rpx;
-  background: #e8f4ff;
-  color: #0083ff;
-  border-radius: 999rpx;
-  font-size: 26rpx;
-  margin-right: 16rpx;
+  padding: 13rpx 20rpx;
+  background: #edf0f0;
+  color: #485458;
+  border: 2rpx solid transparent;
+  border-radius: 6rpx;
+  font-size: 24rpx;
+  margin-right: 10rpx;
   min-height: 60rpx;
   &.active {
-    background: #0083ff;
+    background: #087f8c;
     color: #fff;
   }
   &.active .stage-chip-count {
@@ -489,11 +524,11 @@ onBeforeUnmount(() => {
   }
 }
 .stage-chip-count {
-  background: #0083ff;
-  color: #fff;
+  background: #fff;
+  color: #087f8c;
   font-size: 20rpx;
   padding: 2rpx 10rpx;
-  border-radius: 999rpx;
+  border-radius: 4rpx;
   margin-left: 8rpx;
   min-width: 32rpx;
   text-align: center;

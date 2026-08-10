@@ -3,11 +3,15 @@
     <!-- Login gate -->
     <view v-if="!userStore.isLoggedIn" class="login-section">
       <view class="card login-card">
-        <view class="login-logo">
-          <UIcon name="check" :size="56" variant="primary" />
+        <view class="login-brand">
+          <view class="login-logo">
+            <UIcon name="check" :size="52" variant="primary" />
+          </view>
+          <view class="brand-rule"></view>
+          <text class="brand-code">PTS</text>
         </view>
         <text class="login-title">生产进度追踪</text>
-        <text class="login-desc">产品加工进度管理</text>
+        <text class="login-desc">车间生产控制台</text>
         <view class="login-input-wrap">
           <input
             class="login-input"
@@ -25,11 +29,25 @@
 
     <!-- Dashboard -->
     <view v-else>
+      <view class="dashboard-heading">
+        <view>
+          <text class="dashboard-kicker">PRODUCTION CONTROL</text>
+          <text class="dashboard-title">生产总览</text>
+        </view>
+        <view class="live-status">
+          <view class="live-dot"></view>
+          <text>实时</text>
+        </view>
+      </view>
+
       <!-- Stats cards -->
       <view class="stats-row">
-        <view v-for="(card, i) in statCards" :key="i" class="stat-card">
-          <text class="stat-value" :style="{ color: card.color }">{{ card.value }}</text>
-          <text class="stat-label">{{ card.label }}</text>
+        <view v-for="(card, i) in statCards" :key="i" class="stat-card" :class="`stat-card-${i + 1}`">
+          <view class="stat-index">0{{ i + 1 }}</view>
+          <view>
+            <text class="stat-value">{{ card.value }}</text>
+            <text class="stat-label">{{ card.label }}</text>
+          </view>
         </view>
       </view>
 
@@ -62,11 +80,19 @@
         <view class="action-grid">
           <view class="action-item" @click="goEntry">
             <UIcon name="plus" :size="48" variant="soft" />
-            <text class="action-label">工序流转</text>
+            <view class="action-copy">
+              <text class="action-label">工序流转</text>
+              <text class="action-meta">录入当前进度</text>
+            </view>
+            <UIcon name="chevron-right" :size="30" color="#7d898b" />
           </view>
           <view class="action-item" @click="go('/pages/progress/history')">
             <UIcon name="menu" :size="48" variant="soft-success" />
-            <text class="action-label">我的记录</text>
+            <view class="action-copy">
+              <text class="action-label">我的记录</text>
+              <text class="action-meta">查看流转历史</text>
+            </view>
+            <UIcon name="chevron-right" :size="30" color="#7d898b" />
           </view>
         </view>
       </view>
@@ -138,8 +164,8 @@ const statCards = computed(() => {
   if (!dashboard.value) return [];
   const s = dashboard.value.stats;
   return [
-    { value: s.activeProductBatches, label: "在线产品总批次", color: "#0083ff" },
-    { value: s.activeProductQuantity, label: "在线产品总数量", color: "#07c160" },
+    { value: s.activeProductBatches, label: "在线产品总批次" },
+    { value: s.activeProductQuantity, label: "在线产品总数量" },
   ];
 });
 
@@ -220,32 +246,62 @@ onPullDownRefresh(async () => {
 .login-section {
   display: flex;
   justify-content: center;
-  padding-top: 200rpx;
+  min-height: calc(100vh - 220rpx);
+  align-items: center;
+  padding: 48rpx 0;
 }
 .login-card {
   width: 620rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 64rpx 48rpx;
+  padding: 56rpx 48rpx 48rpx;
+  overflow: hidden;
+  border-top: 8rpx solid #087f8c;
+  box-shadow: 0 18rpx 48rpx rgba(23, 35, 39, 0.12);
 }
-.login-logo { margin-bottom: 24rpx; }
-.login-title {
-  font-size: 38rpx;
+.login-card::after {
+  content: "";
+  position: absolute;
+  right: -60rpx;
+  top: -60rpx;
+  width: 180rpx;
+  height: 180rpx;
+  border: 2rpx solid rgba(8, 127, 140, 0.12);
+  transform: rotate(45deg);
+}
+.login-brand {
+  display: flex;
+  align-items: center;
+  margin-bottom: 28rpx;
+}
+.brand-rule {
+  width: 2rpx;
+  height: 40rpx;
+  margin: 0 18rpx;
+  background: #cbd2d2;
+}
+.brand-code {
+  color: #657174;
+  font-size: 22rpx;
   font-weight: 700;
-  color: #1f2329;
+}
+.login-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #172327;
 }
 .login-desc {
-  font-size: 26rpx;
-  color: #8a8f99;
+  font-size: 24rpx;
+  color: #657174;
   margin-top: 8rpx;
 }
 .login-input-wrap {
   width: 100%;
-  margin-top: 48rpx;
-  border: 2rpx solid #e5e7eb;
-  border-radius: 12rpx;
-  background: #f7f8fa;
+  margin-top: 44rpx;
+  border: 2rpx solid #dfe4e4;
+  border-radius: 10rpx;
+  background: #f5f7f7;
 }
 .login-input {
   width: 100%;
@@ -257,30 +313,92 @@ onPullDownRefresh(async () => {
 .login-placeholder { color: #c0c4cc; }
 .login-btn { margin-top: 24rpx; }
 
+/* Heading */
+.dashboard-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin: 8rpx 0 24rpx;
+}
+.dashboard-kicker {
+  display: block;
+  color: #087f8c;
+  font-size: 18rpx;
+  font-weight: 700;
+}
+.dashboard-title {
+  display: block;
+  margin-top: 4rpx;
+  color: #172327;
+  font-size: 42rpx;
+  font-weight: 700;
+}
+.live-status {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 8rpx 14rpx;
+  border: 2rpx solid #cbd2d2;
+  border-radius: 6rpx;
+  color: #657174;
+  font-size: 22rpx;
+  background: rgba(255, 255, 255, 0.76);
+}
+.live-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: #27865f;
+  box-shadow: 0 0 0 6rpx rgba(39, 134, 95, 0.12);
+}
+
 /* Stats */
 .stats-row {
   display: flex;
   gap: 16rpx;
 }
 .stat-card {
+  position: relative;
   flex: 1;
   background: #fff;
-  border-radius: 16rpx;
-  box-shadow: 0 4rpx 16rpx rgba(17, 24, 39, 0.06);
-  padding: 28rpx 12rpx;
-  text-align: center;
+  border: 2rpx solid #dfe4e4;
+  border-radius: 12rpx;
+  box-shadow: 0 5rpx 18rpx rgba(23, 35, 39, 0.06);
+  padding: 26rpx 22rpx 24rpx;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 7rpx;
+  background: #087f8c;
+}
+.stat-card-2::before {
+  background: #d97706;
+}
+.stat-index {
+  position: absolute;
+  right: 16rpx;
+  top: 12rpx;
+  color: #cbd2d2;
+  font-size: 18rpx;
+  font-weight: 700;
 }
 .stat-value {
   display: block;
-  font-size: 48rpx;
+  color: #172327;
+  font-size: 52rpx;
   font-weight: 700;
   line-height: 1.2;
 }
 .stat-label {
   display: block;
-  margin-top: 8rpx;
+  margin-top: 6rpx;
   font-size: 22rpx;
-  color: #8a8f99;
+  color: #657174;
 }
 
 /* Sections */
@@ -294,58 +412,68 @@ onPullDownRefresh(async () => {
 }
 
 /* Alerts */
-.alert-count { margin-right: 12rpx; }
-.alert-card { padding: 8rpx 24rpx; }
+.alert-count { margin-right: 12rpx; background: #c9483f; }
+.alert-card { padding: 8rpx 24rpx; border-left: 6rpx solid #c9483f; }
 .alert-item {
   display: flex;
   align-items: center;
   gap: 16rpx;
   padding: 20rpx 0;
-  border-bottom: 2rpx solid #f0f1f4;
+  border-bottom: 2rpx solid #edf0f0;
   &:last-child { border-bottom: none; }
 }
 .alert-content { flex: 1; }
 
 /* Quick actions */
-.quick-actions { padding-bottom: 28rpx; }
+.quick-actions { padding-bottom: 12rpx; }
 .action-grid {
   display: flex;
-  gap: 40rpx;
-  margin-top: 24rpx;
+  flex-direction: column;
+  margin-top: 14rpx;
 }
 .action-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 12rpx;
-  min-width: 120rpx;
+  gap: 18rpx;
+  min-height: 86rpx;
+  border-bottom: 2rpx solid #edf0f0;
+  &:last-child { border-bottom: none; }
+}
+.action-copy {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 .action-label {
-  font-size: 24rpx;
-  color: #6b7280;
+  font-size: 27rpx;
+  font-weight: 600;
+  color: #172327;
+}
+.action-meta {
+  margin-top: 2rpx;
+  font-size: 21rpx;
+  color: #7d898b;
 }
 
 .activity-item { padding: 24rpx; }
 
 .collapse-btn {
   font-size: 22rpx;
-  color: #0083ff;
-  padding: 6rpx 20rpx;
-  border: 2rpx solid #0083ff;
-  border-radius: 999rpx;
-  background: #fff;
+  color: #087f8c;
+  padding: 8rpx 4rpx 8rpx 20rpx;
 }
 
 /* Kanban */
 .kanban-scroll { white-space: nowrap; }
-.kanban-board { display: inline-flex; gap: 16rpx; padding-bottom: 8rpx; }
+.kanban-board { display: inline-flex; gap: 16rpx; padding: 2rpx 2rpx 10rpx; }
 .kanban-column {
   display: inline-block;
-  width: 260rpx;
+  width: 274rpx;
   vertical-align: top;
-  background: #f7f8fa;
-  border-radius: 12rpx;
+  background: #e9eeee;
+  border-radius: 10rpx;
   padding: 16rpx 12rpx;
+  border-top: 5rpx solid #7d898b;
 }
 .kanban-col-header {
   display: flex;
@@ -354,12 +482,12 @@ onPullDownRefresh(async () => {
   margin-bottom: 12rpx;
   padding: 0 4rpx;
 }
-.kanban-col-name { font-size: 24rpx; font-weight: 600; color: #1f2329; }
+.kanban-col-name { font-size: 24rpx; font-weight: 700; color: #2c383c; }
 .kanban-col-count {
   font-size: 20rpx;
-  background: #0083ff;
+  background: #087f8c;
   color: #fff;
-  border-radius: 999rpx;
+  border-radius: 5rpx;
   padding: 0 10rpx;
   min-width: 28rpx;
   text-align: center;
@@ -367,10 +495,11 @@ onPullDownRefresh(async () => {
 .kanban-col-body { display: flex; flex-direction: column; gap: 12rpx; }
 .kanban-card {
   background: #fff;
-  border-radius: 10rpx;
+  border-radius: 8rpx;
   padding: 16rpx;
-  box-shadow: 0 2rpx 8rpx rgba(17, 24, 39, 0.05);
-  &:active { background: #f5f5f5; }
+  border: 2rpx solid #dfe4e4;
+  box-shadow: 0 2rpx 8rpx rgba(23, 35, 39, 0.04);
+  &:active { border-color: #087f8c; }
 }
 .kanban-card-top {
   display: flex;
@@ -378,19 +507,19 @@ onPullDownRefresh(async () => {
   align-items: center;
   margin-bottom: 6rpx;
 }
-.kanban-card-no { font-size: 24rpx; font-weight: 600; color: #1f2329; }
-.kanban-card-model { font-size: 22rpx; color: #6b7280; display: block; }
+.kanban-card-no { font-size: 24rpx; font-weight: 700; color: #172327; }
+.kanban-card-model { font-size: 22rpx; color: #657174; display: block; }
 .kanban-card-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 8rpx;
 }
-.kanban-card-qty { font-size: 22rpx; color: #0083ff; font-weight: 500; }
+.kanban-card-qty { font-size: 22rpx; color: #087f8c; font-weight: 700; }
 .kanban-pkg {
   font-size: 18rpx;
-  background: #e8f4ff;
-  color: #0083ff;
+  background: #e6f4f3;
+  color: #075e68;
   border-radius: 4rpx;
   padding: 2rpx 8rpx;
 }

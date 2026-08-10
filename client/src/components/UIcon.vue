@@ -44,10 +44,10 @@ const symbol = computed(() => SYMBOLS[props.name] ?? props.name);
 
 const SOLID: Variant[] = ["primary", "success", "warning", "danger"];
 const SOFT_COLOR: Record<string, string> = {
-  soft: "#0083ff",
-  "soft-success": "#07c160",
-  "soft-warning": "#ff9900",
-  "soft-danger": "#fa5151",
+  soft: "#087f8c",
+  "soft-success": "#27865f",
+  "soft-warning": "#d97706",
+  "soft-danger": "#c9483f",
 };
 
 const containerStyle = computed(() => ({
@@ -57,7 +57,7 @@ const containerStyle = computed(() => ({
 
 const symbolStyle = computed(() => {
   const fontSize = Math.round(props.size * 0.56);
-  let color = "#0083ff";
+  let color = "#087f8c";
   let weight = 600;
   if (props.color) {
     color = props.color;
@@ -82,12 +82,12 @@ const symbolStyle = computed(() => {
 }
 .uicon-symbol { line-height: 1; text-align: center; }
 .uicon-plain { background: transparent; }
-.uicon-soft { background: #e8f4ff; border-radius: 20rpx; }
-.uicon-soft-success { background: #e8f8ee; border-radius: 20rpx; }
-.uicon-soft-warning { background: #fff7e6; border-radius: 20rpx; }
-.uicon-soft-danger { background: #ffecec; border-radius: 20rpx; }
-.uicon-primary { background: #0083ff; }
-.uicon-success { background: #07c160; }
-.uicon-warning { background: #ff9900; }
-.uicon-danger { background: #fa5151; }
+.uicon-soft { background: #e6f4f3; border-radius: 10rpx; }
+.uicon-soft-success { background: #e6f3ec; border-radius: 10rpx; }
+.uicon-soft-warning { background: #fff3df; border-radius: 10rpx; }
+.uicon-soft-danger { background: #fcecea; border-radius: 10rpx; }
+.uicon-primary { background: #087f8c; }
+.uicon-success { background: #27865f; }
+.uicon-warning { background: #d97706; }
+.uicon-danger { background: #c9483f; }
 </style>

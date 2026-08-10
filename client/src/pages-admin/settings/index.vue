@@ -168,7 +168,7 @@ onMounted(loadStages);
   justify-content: space-between;
   align-items: center;
   padding: 24rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 2rpx solid #edf0f0;
   &:last-child { border-bottom: none; }
 }
 .stage-info {
@@ -180,9 +180,9 @@ onMounted(loadStages);
 .stage-order-badge {
   width: 48rpx;
   height: 48rpx;
-  border-radius: 50%;
-  background: #f0f7ff;
-  color: #0083ff;
+  border-radius: 6rpx;
+  background: #e6f4f3;
+  color: #087f8c;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -196,8 +196,8 @@ onMounted(loadStages);
   gap: 4rpx;
 }
 .qc-badge {
-  background: #fff3e0;
-  color: #ff9800;
+  background: #fff3df;
+  color: #d97706;
   font-size: 22rpx;
   padding: 4rpx 12rpx;
   border-radius: 8rpx;
@@ -212,20 +212,23 @@ onMounted(loadStages);
 }
 .form-label {
   font-size: 26rpx;
-  color: #666;
+  color: #485458;
+  font-weight: 600;
 }
 .form-input {
-  border: 2rpx solid #e5e5e5;
-  border-radius: 12rpx;
+  border: 2rpx solid #dfe4e4;
+  border-radius: 8rpx;
   padding: 20rpx 24rpx;
   font-size: 28rpx;
+  background: #f5f7f7;
 }
 .form-textarea {
-  border: 2rpx solid #e5e5e5;
-  border-radius: 12rpx;
+  border: 2rpx solid #dfe4e4;
+  border-radius: 8rpx;
   padding: 20rpx 24rpx;
   font-size: 28rpx;
   height: 160rpx;
+  background: #f5f7f7;
 }
 .checkbox {
   width: 36rpx;
@@ -233,8 +236,8 @@ onMounted(loadStages);
   border: 2rpx solid #ccc;
   border-radius: 6rpx;
   &.checked {
-    background: #0083ff;
-    border-color: #0083ff;
+    background: #087f8c;
+    border-color: #087f8c;
     position: relative;
     &::after {
       content: "";
@@ -254,10 +257,10 @@ onMounted(loadStages);
   align-items: center;
 }
 .btn-primary {
-  background: #0083ff;
+  background: #087f8c;
   color: #fff;
   border: none;
-  border-radius: 12rpx;
+  border-radius: 8rpx;
   padding: 24rpx 0;
   font-size: 32rpx;
   text-align: center;

@@ -22,8 +22,8 @@
     }
   ],
   "tabBar": {
-    "color": "#999999",
-    "selectedColor": "#0083FF",
+    "color": "#7d898b",
+    "selectedColor": "#087f8c",
     "backgroundColor": "#ffffff",
     "borderStyle": "black",
     "list": [
@@ -38,6 +38,6 @@
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "生产追踪",
     "navigationBarBackgroundColor": "#ffffff",
-    "backgroundColor": "#f5f5f5"
+    "backgroundColor": "#f1f4f3"
   }
 }

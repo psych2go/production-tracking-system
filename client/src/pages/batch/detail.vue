@@ -1,7 +1,7 @@
 <template>
   <view class="container" v-if="batch">
     <!-- Batch info -->
-    <view class="card">
+    <view class="card batch-info-card">
       <view class="flex-between">
         <view class="flex-center">
           <text class="text-lg text-bold">
@@ -113,7 +113,7 @@
     </view>
 
     <!-- Stage progress -->
-    <view class="card">
+    <view class="card progress-card">
       <text class="section-title">工序进度</text>
       <StageTimeline
         v-if="appStore.stages.length"
@@ -317,34 +317,55 @@ onShow(async () => {
 .info-grid {
   display: grid;
   grid-template-columns: 168rpx 1fr;
-  gap: 20rpx 24rpx;
-  font-size: 28rpx;
+  gap: 0;
+  margin-top: 24rpx;
+  border-top: 2rpx solid #edf0f0;
+  font-size: 27rpx;
+}
+.info-grid > text {
+  min-height: 74rpx;
+  padding: 18rpx 10rpx;
+  border-bottom: 2rpx solid #edf0f0;
+}
+.info-grid > .text-secondary {
+  color: #657174;
+  font-size: 23rpx;
+  font-weight: 600;
+}
+.batch-info-card {
+  border-top: 6rpx solid #087f8c;
+}
+.progress-card {
+  border-left: 6rpx solid #16343a;
 }
 .overdue-warning {
   padding: 14rpx 20rpx;
-  background: #ffecec;
-  border-radius: 10rpx;
-  border-left: 6rpx solid #fa5151;
-  color: #fa5151;
+  background: #fcecea;
+  border-radius: 6rpx;
+  border-left: 6rpx solid #c9483f;
+  color: #c9483f;
 }
 .status-tag {
   font-size: 24rpx;
-  font-weight: 500;
+  font-weight: 700;
+  padding: 6rpx 0;
 }
 .edit-btn {
-  padding: 8rpx 22rpx;
-  border: 2rpx solid #0083ff;
-  border-radius: 999rpx;
+  padding: 8rpx 14rpx;
+  border-bottom: 2rpx solid #087f8c;
   font-size: 24rpx;
-  color: #0083ff;
+  color: #087f8c;
   margin-right: 16rpx;
 }
 .delete-btn {
-  padding: 8rpx 22rpx;
-  border: 2rpx solid #e5e7eb;
-  border-radius: 999rpx;
+  padding: 8rpx 14rpx;
+  border-bottom: 2rpx solid #cbd2d2;
   font-size: 24rpx;
-  color: #8a8f99;
+  color: #657174;
   margin-right: 16rpx;
+}
+
+@media screen and (max-width: 420px) {
+  .info-grid { grid-template-columns: 148rpx 1fr; }
 }
 </style>

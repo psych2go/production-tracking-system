@@ -76,7 +76,11 @@ function getDuration(stageId: number): string {
 </script>
 
 <style scoped lang="scss">
-.stage-timeline { padding: 12rpx 0; }
+.stage-timeline {
+  padding: 24rpx 0 4rpx;
+  margin-top: 16rpx;
+  border-top: 2rpx solid #edf0f0;
+}
 .stage-item {
   display: flex;
   align-items: flex-start;
@@ -90,14 +94,17 @@ function getDuration(stageId: number): string {
   top: 4rpx;
   width: 36rpx;
   height: 36rpx;
-  border-radius: 50%;
-  background: #e5e7eb;
+  border-radius: 6rpx;
+  background: #dfe4e4;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.stage-done .stage-dot { background: #07c160; }
-.stage-current .stage-dot { background: #0083ff; }
+.stage-done .stage-dot { background: #27865f; }
+.stage-current .stage-dot {
+  background: #087f8c;
+  box-shadow: 0 0 0 7rpx rgba(8, 127, 140, 0.12);
+}
 .dot-check { color: #fff; font-size: 22rpx; }
 .dot-active { width: 16rpx; height: 16rpx; background: #fff; border-radius: 50%; }
 .stage-line {
@@ -106,18 +113,18 @@ function getDuration(stageId: number): string {
   top: 40rpx;
   width: 2rpx;
   height: calc(100% - 40rpx);
-  background: #e5e7eb;
+  background: #dfe4e4;
 }
-.stage-done .stage-line { background: #07c160; }
+.stage-done .stage-line { background: #27865f; }
 .stage-info { display: flex; flex-direction: column; gap: 6rpx; flex: 1; }
 .stage-row { display: flex; align-items: center; gap: 12rpx; }
-.stage-name { font-size: 28rpx; color: #1f2329; }
+.stage-name { font-size: 28rpx; color: #172327; font-weight: 600; }
 .stage-meta { display: flex; align-items: center; gap: 16rpx; }
-.stage-date { font-size: 22rpx; color: #8a8f99; }
+.stage-date { font-size: 22rpx; color: #7d898b; }
 .stage-duration {
   font-size: 22rpx;
-  color: #0083ff;
-  background: #e8f4ff;
+  color: #075e68;
+  background: #e6f4f3;
   padding: 2rpx 12rpx;
   border-radius: 6rpx;
 }
