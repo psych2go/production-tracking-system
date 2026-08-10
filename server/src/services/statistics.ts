@@ -50,8 +50,7 @@ function getCurrentStageFromRecords(
 
 // --- Excel Export (online product batches) ---
 export async function exportExcel() {
-  // Dynamic import for xlsx (large library)
-  const XLSX = await import("xlsx");
+  const ExcelJS = (await import("exceljs")).default;
 
   const batches = await prisma.batch.findMany({
     where: { status: "active" },
@@ -62,28 +61,45 @@ export async function exportExcel() {
     orderBy: { createdAt: "desc" },
   });
 
-  const productRows = batches.map(b => {
+  const productRows = batches.map((b) => {
     const currentStage = getCurrentStageFromRecords(b.progressRecords);
-    return {
-      批号: b.batchNo,
-      产品型号: b.product?.model || "",
-      数量: b.quantity,
-      封装形式: b.packageType || "",
-      客户代码: b.customerCode || "",
-      订单编号: b.orderNo || "",
-      优先级: b.priority === "urgent" ? "紧急" : "普通",
-      当前工序: currentStage,
-      备注: b.notes || "",
-      创建时间: b.createdAt.toISOString().slice(0, 10),
-    };
+    return [
+      b.batchNo,
+      b.product?.model || "",
+      b.quantity,
+      b.packageType || "",
+      b.customerCode || "",
+      b.orderNo || "",
+      b.priority === "urgent" ? "紧急" : "普通",
+      currentStage,
+      b.notes || "",
+      b.createdAt.toISOString().slice(0, 10),
+    ];
   });
 
-  const wb = XLSX.utils.book_new();
-  if (productRows.length) {
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(productRows), "在线产品");
-  } else {
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{}]), "空");
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "生产进度追踪系统";
+  workbook.created = new Date();
+
+  const worksheet = workbook.addWorksheet(productRows.length ? "在线产品" : "空");
+  worksheet.columns = [
+    { header: "批号", key: "batchNo", width: 20 },
+    { header: "产品型号", key: "productModel", width: 24 },
+    { header: "数量", key: "quantity", width: 12 },
+    { header: "封装形式", key: "packageType", width: 20 },
+    { header: "客户代码", key: "customerCode", width: 16 },
+    { header: "订单编号", key: "orderNo", width: 18 },
+    { header: "优先级", key: "priority", width: 12 },
+    { header: "当前工序", key: "currentStage", width: 16 },
+    { header: "备注", key: "notes", width: 30 },
+    { header: "创建时间", key: "createdAt", width: 16 },
+  ];
+  worksheet.getRow(1).font = { bold: true };
+
+  for (const row of productRows) {
+    worksheet.addRow(row);
   }
 
-  return XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
 }
