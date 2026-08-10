@@ -93,7 +93,7 @@ apt install -y nodejs nginx && npm install -g pm2
 git clone https://github.com/psych2go/production-tracking-system.git /opt/pts
 
 # 3. 后端
-cd /opt/pts/server && npm install
+cd /opt/pts/server && npm ci
 npx prisma generate && npx prisma migrate deploy
 DATABASE_URL="file:./dev.db" npm run db:seed
 cp .env.example .env && nano .env  # 填入实际配置
@@ -101,7 +101,7 @@ cp .env.example .env && nano .env  # 填入实际配置
 npm run build
 
 # 4. 前端
-cd /opt/pts/client && npm install && npm run build:h5
+cd /opt/pts/client && npm ci && npm run build:h5
 
 # 5. 启动
 NODE_ENV=production pm2 start npm --name pts --cwd /opt/pts/server -- start
@@ -163,8 +163,8 @@ cat ~/.ssh/github_actions  # 复制私钥到 GitHub Secrets
 
 ```bash
 cd /opt/pts && git pull origin main
-cd server && npm install && npx prisma migrate deploy && npm run build && pm2 restart pts
-cd ../client && npm install && npm run build:h5
+cd server && npm ci && npx prisma migrate deploy && npm run build && pm2 restart pts
+cd ../client && npm ci && npm run build:h5
 ```
 
 ## 环境变量

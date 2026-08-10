@@ -27,7 +27,7 @@ jobs:
             # 后端
             cd server
             export NODE_ENV=production
-            npm install
+            npm ci
             DATABASE_URL="file:./dev.db" npx prisma migrate deploy
             DATABASE_URL="file:./dev.db" npx prisma generate
             npm run build
@@ -37,6 +37,6 @@ jobs:
 
             # 前端
             cd ../client
-            npm install
+            npm ci
             rm -rf dist/build/h5
             npm run build:h5
