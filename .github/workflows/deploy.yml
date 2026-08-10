@@ -26,11 +26,12 @@ jobs:
 
             # 后端
             cd server
-            export NODE_ENV=production
-            npm ci
+            npm ci --include=dev
             DATABASE_URL="file:./dev.db" npx prisma migrate deploy
             DATABASE_URL="file:./dev.db" npx prisma generate
             npm run build
+            export NODE_ENV=production
+            node -e "import('./dist/config/index.js')"
             pm2 delete pts 2>/dev/null || true
             pm2 restart pts-api --update-env 2>/dev/null || pm2 start dist/server.js --name pts-api
             pm2 save
