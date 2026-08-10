@@ -20,13 +20,25 @@
   },
   "devDependencies": {
     "@dcloudio/types": "3.4.31",
-    "@dcloudio/uni-automator": "3.0.0-5020320260806002",
     "@dcloudio/uni-cli-shared": "3.0.0-5020320260806002",
-    "@dcloudio/uni-stacktracey": "3.0.0-5020320260806002",
     "@dcloudio/vite-plugin-uni": "3.0.0-5020320260806002",
     "sass": "^1.85.1",
     "typescript": "^5.8.2",
     "vite": "5.2.8",
     "vue-tsc": "^2.2.8"
+  },
+  "overrides": {
+    "@babel/core": "7.29.7",
+    "@intlify/core-base": "9.14.5",
+    "@intlify/message-compiler": "9.14.5",
+    "@intlify/shared": "9.14.5",
+    "@intlify/vue-devtools": "9.14.5",
+    "adm-zip": "0.6.0",
+    "esbuild": "0.25.12",
+    "express": "4.22.2",
+    "jpeg-js": "0.4.4",
+    "phin": "3.7.1",
+    "postcss": "8.5.26",
+    "ws": "8.21.3"
   }
 }
