@@ -83,7 +83,9 @@ function prepareProductionEnv(envPath) {
 
   const currentSecret = getValue(lines, "JWT_SECRET");
   const rotateSecret = currentSecret.length < 32 || insecureSecrets.has(currentSecret);
-  const clientOrigin = secureClientOrigin(getValue(lines, "CLIENT_URL"));
+  const clientOrigin = secureClientOrigin(
+    process.env.PRODUCTION_CLIENT_URL || getValue(lines, "CLIENT_URL"),
+  );
 
   lines = setValue(
     lines,

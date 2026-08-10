@@ -26,7 +26,7 @@ jobs:
 
             # 后端
             cd server
-            node scripts/prepare-production-env.cjs
+            PRODUCTION_CLIENT_URL="https://www.gaokekao.cn" node scripts/prepare-production-env.cjs
             npm ci --include=dev
             DATABASE_URL="file:./dev.db" npx prisma migrate deploy
             DATABASE_URL="file:./dev.db" npx prisma generate

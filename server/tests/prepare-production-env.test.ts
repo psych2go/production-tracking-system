@@ -20,7 +20,7 @@ describe("production environment preparation", () => {
     }
   });
 
-  function runWithEnv(contents: string) {
+  function runWithEnv(contents: string, overrides: Record<string, string> = {}) {
     const directory = mkdtempSync(join(tmpdir(), "pts-production-env-"));
     tempDirectories.push(directory);
     const envPath = join(directory, ".env");
@@ -31,6 +31,7 @@ describe("production environment preparation", () => {
       env: {
         ...process.env,
         PRODUCTION_ENV_PATH: envPath,
+        ...overrides,
       },
       encoding: "utf8",
     });
@@ -68,5 +69,20 @@ describe("production environment preparation", () => {
 
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("CLIENT_URL");
+  });
+
+  it("uses an explicitly configured production client URL", () => {
+    const { envPath, result } = runWithEnv([
+      "JWT_SECRET=a-secure-random-production-secret-at-least-32-chars",
+      "CLIENT_URL=https://wrong.example.com",
+      "",
+    ].join("\n"), {
+      PRODUCTION_CLIENT_URL: "https://www.gaokekao.cn/",
+    });
+
+    expect(result.status).toBe(0);
+    expect(readFileSync(envPath, "utf8")).toContain(
+      "CLIENT_URL=https://www.gaokekao.cn\n",
+    );
   });
 });
