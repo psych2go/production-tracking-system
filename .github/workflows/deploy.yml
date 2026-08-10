@@ -39,6 +39,12 @@ jobs:
 
             # 前端
             cd ../client
-            npm ci
-            rm -rf dist/build/h5
-            npm run build:h5
+            npm ci --include=dev
+            rm -rf dist/build/h5-next
+            UNI_OUTPUT_DIR="$PWD/dist/build/h5-next" npm run build:h5
+            rm -rf dist/build/h5-previous
+            if [ -d dist/build/h5 ]; then
+              mv dist/build/h5 dist/build/h5-previous
+            fi
+            mv dist/build/h5-next dist/build/h5
+            rm -rf dist/build/h5-previous
