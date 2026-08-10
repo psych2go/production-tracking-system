@@ -97,7 +97,8 @@ cd /opt/pts/server && npm ci
 npx prisma generate && npx prisma migrate deploy
 DATABASE_URL="file:./dev.db" npm run db:seed
 cp .env.example .env && nano .env  # 填入实际配置
-# 必须设置 NODE_ENV=production，并使用至少32位随机 JWT_SECRET
+# 必须设置 NODE_ENV=production、HOST=127.0.0.1、HTTPS CLIENT_URL
+# JWT_SECRET 必须使用至少32位随机值
 npm run build
 
 # 4. 前端
@@ -110,12 +111,23 @@ pm2 save && pm2 startup
 # 6. Nginx
 ```
 
-Nginx 配置 `/etc/nginx/sites-available/pts`：
+将仓库中的 `deploy/nginx/production-tracking.conf` 复制为
+`/etc/nginx/sites-available/pts`，替换域名和证书路径。配置会把 HTTP
+请求强制跳转到 HTTPS，并只通过回环地址访问 Node 服务。
 
 ```nginx
 server {
     listen 80;
     server_name 你的域名.com www.你的域名.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name 你的域名.com www.你的域名.com;
+
+    ssl_certificate /etc/letsencrypt/live/你的域名.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/你的域名.com/privkey.pem;
 
     location / {
         root /opt/pts/client/dist/build/h5;
@@ -135,7 +147,7 @@ sudo ln -s /etc/nginx/sites-available/pts /etc/nginx/sites-enabled/
 sudo rm /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 
-# HTTPS（备案后）
+# 申请 HTTPS 证书
 sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d 你的域名.com -d www.你的域名.com
 ```

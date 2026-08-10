@@ -4,6 +4,7 @@ dotenv.config();
 
 const nodeEnv = process.env.NODE_ENV || "development";
 const jwtSecret = process.env.JWT_SECRET;
+const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
 const insecureJwtSecrets = new Set([
   "dev-secret",
   "test-secret",
@@ -14,10 +15,14 @@ if (nodeEnv === "production") {
   if (!jwtSecret || jwtSecret.length < 32 || insecureJwtSecrets.has(jwtSecret)) {
     throw new Error("生产环境 JWT_SECRET 必须设置为至少32位的非示例随机密钥");
   }
+  if (!clientUrl.startsWith("https://")) {
+    throw new Error("生产环境 CLIENT_URL 必须使用 https://");
+  }
 }
 
 export const config = {
   port: parseInt(process.env.PORT || "3000", 10),
+  host: process.env.HOST || (nodeEnv === "production" ? "127.0.0.1" : "0.0.0.0"),
   nodeEnv,
   databaseUrl: process.env.DATABASE_URL || "file:./dev.db",
   jwt: {
@@ -34,6 +39,6 @@ export const config = {
   },
   loginPassword: process.env.LOGIN_PASSWORD || "",
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: clientUrl,
   },
 };
