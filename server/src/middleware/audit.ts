@@ -2,6 +2,8 @@ import { Response, NextFunction } from "express";
 import { AuthRequest } from "./auth.js";
 import { prisma } from "../config/database.js";
 
+const MAX_AUDIT_DETAIL_LENGTH = 8_000;
+
 export function auditLog(action: string, entity: string) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     const originalJson = res.json.bind(res);
@@ -30,6 +32,17 @@ export function auditLog(action: string, entity: string) {
             }
           }
 
+          const serializedDetail = Object.keys(detailObj).length > 0
+            ? JSON.stringify(detailObj)
+            : null;
+          const detail = serializedDetail && serializedDetail.length > MAX_AUDIT_DETAIL_LENGTH
+            ? JSON.stringify({
+                truncated: true,
+                originalLength: serializedDetail.length,
+                params: detailObj.params ?? null,
+              })
+            : serializedDetail;
+
           prisma.auditLog
             .create({
               data: {
@@ -37,7 +50,7 @@ export function auditLog(action: string, entity: string) {
                 action,
                 entity,
                 entityId: entityId && !isNaN(entityId) ? entityId : null,
-                detail: Object.keys(detailObj).length > 0 ? JSON.stringify(detailObj) : null,
+                detail,
                 ip: req.ip ?? req.socket?.remoteAddress ?? null,
               },
             })

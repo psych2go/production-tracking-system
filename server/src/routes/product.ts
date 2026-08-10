@@ -6,19 +6,20 @@ import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 import { parseId } from "../utils/parseId.js";
 import { parsePagination } from "../utils/pagination.js";
+import { optionalText, requiredText, TEXT_LIMITS } from "../utils/validation.js";
 
 const router = Router();
 
 const createSchema = z.object({
-  model: z.string().min(1, "型号不能为空"),
-  name: z.string().optional(),
-  description: z.string().optional(),
+  model: requiredText(TEXT_LIMITS.name, "型号不能为空"),
+  name: optionalText(TEXT_LIMITS.name),
+  description: optionalText(TEXT_LIMITS.notes),
 });
 
 const updateSchema = z.object({
-  model: z.string().min(1).optional(),
-  name: z.string().optional(),
-  description: z.string().optional(),
+  model: requiredText(TEXT_LIMITS.name, "型号不能为空").optional(),
+  name: optionalText(TEXT_LIMITS.name),
+  description: optionalText(TEXT_LIMITS.notes),
 });
 
 router.get("/", authGuard, async (req, res, next) => {

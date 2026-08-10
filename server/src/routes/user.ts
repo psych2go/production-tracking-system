@@ -6,20 +6,21 @@ import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 import { parseId } from "../utils/parseId.js";
 import { parsePagination } from "../utils/pagination.js";
+import { boundedQuery, optionalText, TEXT_LIMITS } from "../utils/validation.js";
 
 const router = Router();
 
 const updateSchema = z.object({
   role: z.enum(["admin", "worker"]).optional(),
-  department: z.string().optional(),
+  department: optionalText(TEXT_LIMITS.name),
   isActive: z.boolean().optional(),
 });
 
 router.get("/", authGuard, roleGuard("admin"), async (req, res, next) => {
   try {
     const result = await listUsers({
-      keyword: req.query.keyword as string | undefined,
-      role: req.query.role as string | undefined,
+      keyword: boundedQuery(req.query.keyword, "搜索关键词"),
+      role: boundedQuery(req.query.role, "角色", 20),
       ...parsePagination(req.query, { pageDefault: 1, pageSizeDefault: 20 }),
     });
     res.json(result);

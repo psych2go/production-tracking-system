@@ -6,21 +6,29 @@ import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 import { parseId } from "../utils/parseId.js";
 import { parsePagination } from "../utils/pagination.js";
+import {
+  boundedQuery,
+  isoDate,
+  nullableText,
+  optionalText,
+  requiredText,
+  TEXT_LIMITS,
+} from "../utils/validation.js";
 
 const router = Router();
 
 // Product batch schema
 const createProductSchema = z.object({
-  batchNo: z.string().min(1, "批号不能为空"),
-  productModel: z.string().min(1, "产品型号不能为空"),
+  batchNo: requiredText(TEXT_LIMITS.shortCode, "批号不能为空"),
+  productModel: requiredText(TEXT_LIMITS.name, "产品型号不能为空"),
   quantity: z.number().int().positive("加工数量必须大于0"),
-  packageType: z.string().min(1, "请选择封装形式"),
-  customerCode: z.string().optional(),
-  orderNo: z.string().optional(),
-  customerDelivery: z.string().optional(),
-  productionDelivery: z.string().optional(),
+  packageType: requiredText(TEXT_LIMITS.packageType, "请选择封装形式"),
+  customerCode: optionalText(TEXT_LIMITS.shortCode),
+  orderNo: optionalText(TEXT_LIMITS.shortCode),
+  customerDelivery: isoDate("客户要求交期").optional(),
+  productionDelivery: isoDate("生产预计交期").optional(),
   priority: z.enum(["normal", "urgent"]).optional(),
-  notes: z.string().optional(),
+  notes: optionalText(TEXT_LIMITS.notes),
 });
 
 const createSchema = createProductSchema;
@@ -28,25 +36,25 @@ const createSchema = createProductSchema;
 const updateSchema = z.object({
   status: z.enum(["active", "completed", "archived"]).optional(),
   priority: z.enum(["normal", "urgent"]).optional(),
-  batchNo: z.string().optional(),
-  productModel: z.string().optional(),
+  batchNo: optionalText(TEXT_LIMITS.shortCode),
+  productModel: optionalText(TEXT_LIMITS.name),
   quantity: z.number().int().min(0).optional(),
-  customerCode: z.string().nullable().optional(),
-  orderNo: z.string().nullable().optional(),
-  packageType: z.string().nullable().optional(),
-  customerDelivery: z.string().nullable().optional(),
-  productionDelivery: z.string().nullable().optional(),
-  notes: z.string().optional(),
+  customerCode: nullableText(TEXT_LIMITS.shortCode),
+  orderNo: nullableText(TEXT_LIMITS.shortCode),
+  packageType: nullableText(TEXT_LIMITS.packageType),
+  customerDelivery: isoDate("客户要求交期").nullable().optional(),
+  productionDelivery: isoDate("生产预计交期").nullable().optional(),
+  notes: optionalText(TEXT_LIMITS.notes),
 });
 
 router.get("/", authGuard, async (req, res, next) => {
   try {
     const result = await listBatches({
-      status: req.query.status as string,
+      status: boundedQuery(req.query.status, "批次状态", 20),
       productId: req.query.productId ? parseId(req.query.productId as string) : undefined,
-      keyword: req.query.keyword as string,
-      customerCode: req.query.customerCode as string,
-      packageType: req.query.packageType as string,
+      keyword: boundedQuery(req.query.keyword, "搜索关键词"),
+      customerCode: boundedQuery(req.query.customerCode, "客户代码"),
+      packageType: boundedQuery(req.query.packageType, "封装形式", TEXT_LIMITS.packageType),
       ...parsePagination(req.query, { pageDefault: 1, pageSizeDefault: 50 }),
     });
     res.json(result);

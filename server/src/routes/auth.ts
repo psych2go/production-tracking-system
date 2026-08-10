@@ -6,15 +6,16 @@ import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 import { rateLimit } from "../middleware/rateLimit.js";
 import { config } from "../config/index.js";
+import { requiredText, TEXT_LIMITS } from "../utils/validation.js";
 
 const router = Router();
 
 const callbackSchema = z.object({
-  code: z.string().min(1),
+  code: requiredText(TEXT_LIMITS.authCode, "企业微信授权码不能为空"),
 });
 
 const passwordSchema = z.object({
-  password: z.string().min(1),
+  password: requiredText(TEXT_LIMITS.password, "密码不能为空"),
 });
 
 const wwLoginLimiter = rateLimit({ windowMs: 60_000, max: 10 });

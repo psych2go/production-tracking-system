@@ -8,6 +8,11 @@ const HAS_CJK = /[一-鿿]/;
 export function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunction) {
   console.error(`[Error] ${err.message}`, err.stack);
 
+  if ("type" in err && (err as { type?: string }).type === "entity.too.large") {
+    res.status(413).json({ error: "请求内容超过1MB限制" });
+    return;
+  }
+
   // Prisma unique constraint error
   if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
     const fields = (err.meta?.target as string[])?.join(", ") || "字段";

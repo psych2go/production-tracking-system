@@ -21,7 +21,7 @@ app.use((_req, res, next) => {
 });
 
 app.use(cors({ origin: config.cors.origin, credentials: true }));
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "1mb" }));
 
 // API routes
 app.use("/api", routes);

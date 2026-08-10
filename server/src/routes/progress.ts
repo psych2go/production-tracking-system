@@ -12,6 +12,7 @@ import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 import { parseId } from "../utils/parseId.js";
 import { parsePagination } from "../utils/pagination.js";
+import { optionalText, TEXT_LIMITS } from "../utils/validation.js";
 
 const router = Router();
 
@@ -19,7 +20,7 @@ const progressSchema = z.object({
   batchId: z.number().int().positive(),
   stageId: z.number().int().positive(),
   status: z.enum(["completed", "in_progress"]).optional(),
-  notes: z.string().optional(),
+  notes: optionalText(TEXT_LIMITS.notes),
 });
 
 // Dashboard

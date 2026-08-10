@@ -5,22 +5,28 @@ import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 import { parseId } from "../utils/parseId.js";
 import { createStage, updateStage, deleteStage, listPackageTypes, createPackageType, updatePackageType, deletePackageType, listCustomerCodes, createCustomerCode, deleteCustomerCode } from "../services/settings.js";
+import {
+  nullableText,
+  optionalText,
+  requiredText,
+  TEXT_LIMITS,
+} from "../utils/validation.js";
 
 export const settingsRoutes = Router();
 
 const createStageSchema = z.object({
-  code: z.string().min(1, "工序代码不能为空"),
-  name: z.string().min(1, "工序名称不能为空"),
+  code: requiredText(TEXT_LIMITS.shortCode, "工序代码不能为空"),
+  name: requiredText(TEXT_LIMITS.name, "工序名称不能为空"),
   stageOrder: z.number().int().positive("排序号必须大于0"),
   isQcStage: z.boolean().optional(),
-  description: z.string().optional(),
+  description: optionalText(TEXT_LIMITS.notes),
 });
 
 const updateStageSchema = z.object({
-  name: z.string().min(1).optional(),
+  name: requiredText(TEXT_LIMITS.name, "工序名称不能为空").optional(),
   stageOrder: z.number().int().positive().optional(),
   isQcStage: z.boolean().optional(),
-  description: z.string().nullable().optional(),
+  description: nullableText(TEXT_LIMITS.notes),
 });
 
 // Create stage
@@ -76,14 +82,14 @@ settingsRoutes.delete(
 // ===== Package Type Routes =====
 
 const createPackageTypeSchema = z.object({
-  name: z.string().min(1, "封装形式名称不能为空"),
-  category: z.string().optional(),
+  name: requiredText(TEXT_LIMITS.name, "封装形式名称不能为空"),
+  category: optionalText(TEXT_LIMITS.name),
   sortOrder: z.number().int().optional(),
 });
 
 const updatePackageTypeSchema = z.object({
-  name: z.string().min(1, "封装形式名称不能为空").optional(),
-  category: z.string().optional(),
+  name: requiredText(TEXT_LIMITS.name, "封装形式名称不能为空").optional(),
+  category: optionalText(TEXT_LIMITS.name),
   sortOrder: z.number().int().optional(),
 });
 
@@ -154,7 +160,7 @@ settingsRoutes.delete(
 // ===== Customer Code Routes =====
 
 const createCustomerCodeSchema = z.object({
-  code: z.string().min(1, "客户代码不能为空"),
+  code: requiredText(TEXT_LIMITS.shortCode, "客户代码不能为空"),
 });
 
 // List customer codes
