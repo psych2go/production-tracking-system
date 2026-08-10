@@ -8,6 +8,6 @@ onLaunch(() => {
 });
 </script>
 
-<style>
-@import "./styles/global.scss";
+<style lang="scss">
+@use "./styles/global.scss";
 </style>
