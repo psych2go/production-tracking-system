@@ -74,23 +74,31 @@
         </view>
       </view>
 
-      <!-- Quick actions for workers -->
-      <view class="card quick-actions" v-if="!userStore.isAdmin()">
+      <!-- Quick actions -->
+      <view class="card quick-actions">
         <text class="section-title">快捷操作</text>
         <view class="action-grid">
-          <view class="action-item" @click="goEntry">
-            <UIcon name="plus" :size="48" variant="soft" />
+          <view v-if="userStore.isAdmin()" class="action-item action-item-primary" @click="go('/pages/batch/create')">
+            <UIcon name="plus" :size="48" variant="primary" />
             <view class="action-copy">
-              <text class="action-label">工序流转</text>
-              <text class="action-meta">录入当前进度</text>
+              <text class="action-label">新建批次</text>
+              <text class="action-meta">录入新的生产批次</text>
             </view>
             <UIcon name="chevron-right" :size="30" color="#7d898b" />
           </view>
-          <view class="action-item" @click="go('/pages/progress/history')">
-            <UIcon name="menu" :size="48" variant="soft-success" />
+          <view class="action-item" @click="goBatchList">
+            <UIcon name="menu" :size="48" variant="soft" />
+            <view class="action-copy">
+              <text class="action-label">查看全部批次</text>
+              <text class="action-meta">搜索并管理生产批次</text>
+            </view>
+            <UIcon name="chevron-right" :size="30" color="#7d898b" />
+          </view>
+          <view v-if="!userStore.isAdmin()" class="action-item" @click="go('/pages/progress/history')">
+            <UIcon name="check" :size="48" variant="soft-success" />
             <view class="action-copy">
               <text class="action-label">我的记录</text>
-              <text class="action-meta">查看流转历史</text>
+              <text class="action-meta">查看个人流转历史</text>
             </view>
             <UIcon name="chevron-right" :size="30" color="#7d898b" />
           </view>
@@ -101,7 +109,10 @@
       <view class="section-block">
         <view class="section-header">
           <text class="section-title">正在加工</text>
-          <text class="collapse-btn" @click="collapsed.batches = !collapsed.batches">{{ collapsed.batches ? '展开' : '收起' }}</text>
+          <view class="section-header-actions">
+            <text class="view-all-btn" @click="goBatchList">查看全部</text>
+            <text class="collapse-btn" @click="collapsed.batches = !collapsed.batches">{{ collapsed.batches ? '展开' : '收起' }}</text>
+          </view>
         </view>
         <view v-if="!collapsed.batches">
           <view class="kanban-mode-switch">
@@ -248,8 +259,8 @@ function goBatchDetail(id: number) {
   uni.navigateTo({ url: `/pages/batch/detail?id=${id}&from=home` });
 }
 
-function goEntry() {
-  uni.switchTab({ url: "/pages/progress/entry" });
+function goBatchList() {
+  uni.switchTab({ url: "/pages/batch/list" });
 }
 
 function go(url: string) {
@@ -491,10 +502,20 @@ onPullDownRefresh(async () => {
 
 .activity-item { padding: 24rpx; }
 
+.section-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.view-all-btn,
 .collapse-btn {
-  font-size: 22rpx;
+  padding: 8rpx 4rpx 8rpx 16rpx;
   color: #087f8c;
-  padding: 8rpx 4rpx 8rpx 20rpx;
+  font-size: 22rpx;
+}
+.view-all-btn {
+  padding-right: 16rpx;
+  border-right: 2rpx solid #dfe4e4;
 }
 
 /* Kanban */

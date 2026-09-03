@@ -278,15 +278,10 @@ async function saveEdit() {
 
 function goRecordProgress() {
   if (!batch.value) return;
-  // 必须在 switchTab 之前写入：目标页 onShow 早于 switchTab 的 success 回调执行，
-  // 否则 onShow 读到的是上一次遗留的 pendingBatchId，会选中错误的批次。
-  uni.setStorageSync("pendingBatchId", batch.value.id);
-  if (openedFromHome.value) {
-    uni.setStorageSync("pendingProgressReturnTab", "/pages/index/index");
-  } else {
-    uni.removeStorageSync("pendingProgressReturnTab");
-  }
-  uni.switchTab({ url: "/pages/progress/entry" });
+  const returnQuery = openedFromHome.value ? "&returnTo=home" : "";
+  uni.navigateTo({
+    url: `/pages/progress/entry?batchId=${batch.value.id}${returnQuery}`,
+  });
 }
 
 async function confirmDelete() {

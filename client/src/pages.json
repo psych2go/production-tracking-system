@@ -28,7 +28,6 @@
     "borderStyle": "black",
     "list": [
       { "pagePath": "pages/index/index", "text": "首页" },
-      { "pagePath": "pages/progress/entry", "text": "工序流转" },
       { "pagePath": "pages/batch/list", "text": "批次管理" },
       { "pagePath": "pages/stats/index", "text": "统计" },
       { "pagePath": "pages/profile/index", "text": "我的" }
