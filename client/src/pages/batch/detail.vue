@@ -86,21 +86,6 @@
 
       <!-- ===== VIEW MODE ===== -->
       <template v-else>
-        <view
-          v-if="batch.status === 'active'"
-          class="progress-action"
-          @click="goRecordProgress"
-        >
-          <view class="progress-action-copy">
-            <text class="progress-action-title">工序流转</text>
-            <text class="progress-action-desc">选择并确认当前批次的工序</text>
-          </view>
-          <view class="progress-action-link">
-            <text>去流转</text>
-            <text class="progress-action-arrow">›</text>
-          </view>
-        </view>
-
         <view class="info-grid">
           <view class="info-item">
             <text class="info-label">产品型号</text>
@@ -151,10 +136,7 @@
 
     <!-- Stage progress -->
     <view class="card progress-card">
-      <view class="progress-card-header">
-        <text class="section-title">工序进度</text>
-        <text class="progress-scroll-hint">左右滑动查看全部</text>
-      </view>
+      <text class="section-title">工序进度</text>
       <StageTimeline
         v-if="appStore.stages.length"
         :stages="appStore.stages"
@@ -162,6 +144,12 @@
       />
     </view>
 
+    <!-- Quick actions -->
+    <view v-if="batch.status === 'active' && !editing" class="card">
+      <button class="btn btn-primary btn-block" @click="goRecordProgress">
+        工序流转
+      </button>
+    </view>
   </view>
 </template>
 
@@ -355,40 +343,6 @@ onShow(async () => {
 </script>
 
 <style scoped lang="scss">
-.progress-action {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20rpx;
-  margin-top: 20rpx;
-  padding: 18rpx 20rpx;
-  border-radius: 10rpx;
-  background: #087f8c;
-  color: #fff;
-  box-shadow: 0 6rpx 14rpx rgba(8, 127, 140, 0.18);
-  &:active { opacity: 0.88; }
-}
-.progress-action-copy {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  flex-direction: column;
-}
-.progress-action-title { font-size: 28rpx; font-weight: 700; }
-.progress-action-desc {
-  margin-top: 2rpx;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 20rpx;
-}
-.progress-action-link {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  gap: 8rpx;
-  font-size: 23rpx;
-  font-weight: 600;
-}
-.progress-action-arrow { font-size: 36rpx; line-height: 1; }
 .info-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -441,16 +395,6 @@ onShow(async () => {
 }
 .progress-card {
   border-left: 6rpx solid #16343a;
-}
-.progress-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16rpx;
-}
-.progress-scroll-hint {
-  color: #7d898b;
-  font-size: 20rpx;
 }
 .overdue-warning {
   padding: 14rpx 20rpx;
