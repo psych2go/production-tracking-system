@@ -104,6 +104,18 @@
           <text class="collapse-btn" @click="collapsed.batches = !collapsed.batches">{{ collapsed.batches ? '展开' : '收起' }}</text>
         </view>
         <view v-if="!collapsed.batches">
+          <view class="kanban-mode-switch">
+            <view
+              class="kanban-mode-option"
+              :class="{ active: kanbanGroupMode === 'stage' }"
+              @click="kanbanGroupMode = 'stage'"
+            >按工序</view>
+            <view
+              class="kanban-mode-option"
+              :class="{ active: kanbanGroupMode === 'package' }"
+              @click="kanbanGroupMode = 'package'"
+            >按封装形式</view>
+          </view>
           <scroll-view scroll-x class="kanban-scroll" v-if="visibleActiveBatches.length">
             <view class="kanban-board">
               <view v-for="col in kanbanColumns" :key="col.key" class="kanban-column">
@@ -123,9 +135,14 @@
                       <view v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</view>
                     </view>
                     <text class="kanban-card-model">{{ batch.product?.model || '-' }}</text>
+                    <view class="kanban-customer">
+                      <text class="kanban-customer-label">客户</text>
+                      <text class="kanban-customer-code">{{ batch.customerCode || '-' }}</text>
+                    </view>
                     <view class="kanban-card-meta">
                       <text class="kanban-card-qty">{{ batch.quantity }}只</text>
-                      <text v-if="batch.packageType" class="kanban-pkg">{{ batch.packageType.split(',')[0].trim() }}</text>
+                      <text v-if="kanbanGroupMode === 'stage' && batch.packageType" class="kanban-pkg">{{ getPrimaryPackageType(batch) }}</text>
+                      <text v-else-if="kanbanGroupMode === 'package'" class="kanban-stage">{{ getCurrentStage(batch)?.name || '未开始' }}</text>
                     </view>
                   </view>
                   <view v-if="!col.batches.length" class="kanban-empty">暂无</view>
@@ -159,6 +176,7 @@ const dashboard = ref<DashboardData | null>(null);
 const loading = ref(false);
 const loginPassword = ref("");
 const collapsed = ref({ alerts: false, batches: false });
+const kanbanGroupMode = ref<"stage" | "package">("stage");
 
 const statCards = computed(() => {
   if (!dashboard.value) return [];
@@ -173,9 +191,28 @@ const visibleActiveBatches = computed(() =>
   dashboard.value?.activeBatchList ?? []
 );
 
+function getPrimaryPackageType(batch: Batch): string {
+  return batch.packageType?.split(",")[0]?.trim() || "未设置封装";
+}
+
 const kanbanColumns = computed(() => {
-  const stages = appStore.stages.filter((s) => s.code !== "completed");
   const batches = visibleActiveBatches.value;
+
+  if (kanbanGroupMode.value === "package") {
+    const packageNames = [...new Set(batches.map(getPrimaryPackageType))].sort((a, b) => {
+      if (a === "未设置封装") return 1;
+      if (b === "未设置封装") return -1;
+      return a.localeCompare(b, "zh-CN");
+    });
+
+    return packageNames.map((name) => ({
+      key: `package-${name}`,
+      name,
+      batches: batches.filter((batch) => getPrimaryPackageType(batch) === name),
+    }));
+  }
+
+  const stages = appStore.stages.filter((s) => s.code !== "completed");
   const cols = stages.map((s) => ({
     key: `stage-${s.id}`,
     name: s.name,
@@ -464,6 +501,30 @@ onPullDownRefresh(async () => {
 }
 
 /* Kanban */
+.kanban-mode-switch {
+  display: inline-flex;
+  margin: 0 2rpx 16rpx;
+  padding: 5rpx;
+  border: 2rpx solid #dfe4e4;
+  border-radius: 9rpx;
+  background: #edf1f1;
+}
+.kanban-mode-option {
+  min-width: 112rpx;
+  padding: 10rpx 20rpx;
+  border-radius: 6rpx;
+  color: #657174;
+  font-size: 22rpx;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  transition: color 0.2s, background-color 0.2s, box-shadow 0.2s;
+  &.active {
+    color: #fff;
+    background: #087f8c;
+    box-shadow: 0 3rpx 8rpx rgba(8, 127, 140, 0.22);
+  }
+}
 .kanban-scroll { white-space: nowrap; }
 .kanban-board { display: inline-flex; gap: 16rpx; padding: 2rpx 2rpx 10rpx; }
 .kanban-column {
@@ -508,20 +569,62 @@ onPullDownRefresh(async () => {
   margin-bottom: 6rpx;
 }
 .kanban-card-no { font-size: 24rpx; font-weight: 700; color: #172327; }
-.kanban-card-model { font-size: 22rpx; color: #657174; display: block; }
+.kanban-card-model {
+  display: block;
+  overflow: hidden;
+  color: #657174;
+  font-size: 22rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kanban-customer {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  min-width: 0;
+  margin-top: 10rpx;
+  padding: 8rpx 10rpx;
+  border-radius: 6rpx;
+  background: #f3f7f7;
+}
+.kanban-customer-label {
+  flex-shrink: 0;
+  color: #7d898b;
+  font-size: 18rpx;
+}
+.kanban-customer-code {
+  overflow: hidden;
+  color: #075e68;
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .kanban-card-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 8rpx;
+  margin-top: 10rpx;
 }
 .kanban-card-qty { font-size: 22rpx; color: #087f8c; font-weight: 700; }
-.kanban-pkg {
-  font-size: 18rpx;
-  background: #e6f4f3;
-  color: #075e68;
+.kanban-pkg,
+.kanban-stage {
+  overflow: hidden;
+  max-width: 128rpx;
   border-radius: 4rpx;
   padding: 2rpx 8rpx;
+  font-size: 18rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kanban-pkg {
+  background: #e6f4f3;
+  color: #075e68;
+}
+.kanban-stage {
+  background: #fff1dc;
+  color: #9a5a00;
 }
 .kanban-empty {
   font-size: 22rpx;
