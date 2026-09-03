@@ -135,10 +135,7 @@
                       <view v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</view>
                     </view>
                     <text class="kanban-card-model">{{ batch.product?.model || '-' }}</text>
-                    <view class="kanban-customer">
-                      <text class="kanban-customer-label">客户</text>
-                      <text class="kanban-customer-code">{{ batch.customerCode || '-' }}</text>
-                    </view>
+                    <text class="kanban-customer-code">{{ batch.customerCode || '-' }}</text>
                     <view class="kanban-card-meta">
                       <text class="kanban-card-qty">{{ batch.quantity }}只</text>
                       <text v-if="kanbanGroupMode === 'stage' && batch.packageType" class="kanban-pkg">{{ getPrimaryPackageType(batch) }}</text>
@@ -577,27 +574,13 @@ onPullDownRefresh(async () => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.kanban-customer {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  min-width: 0;
-  margin-top: 10rpx;
-  padding: 8rpx 10rpx;
-  border-radius: 6rpx;
-  background: #f3f7f7;
-}
-.kanban-customer-label {
-  flex-shrink: 0;
-  color: #7d898b;
-  font-size: 18rpx;
-}
 .kanban-customer-code {
+  display: block;
   overflow: hidden;
-  color: #075e68;
+  margin-top: 5rpx;
+  color: #7d898b;
   font-size: 20rpx;
-  font-weight: 700;
-  letter-spacing: 1rpx;
+  font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
