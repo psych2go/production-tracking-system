@@ -85,36 +85,76 @@
       </template>
 
       <!-- ===== VIEW MODE ===== -->
-      <view v-else class="info-grid mt-md">
-        <text class="text-secondary">产品型号</text>
-        <text>{{ batch.product?.model || '-' }}</text>
-        <text class="text-secondary">加工数量</text>
-        <text>{{ batch.quantity }}</text>
-        <text class="text-secondary">客户代码</text>
-        <text>{{ batch.customerCode || '-' }}</text>
-        <text class="text-secondary">订单编号</text>
-        <text>{{ batch.orderNo || '-' }}</text>
-        <text class="text-secondary">封装形式</text>
-        <text>{{ batch.packageType || '-' }}</text>
-        <text class="text-secondary">客户要求交期</text>
-        <text :class="isOverdue ? 'text-danger' : ''">
-          {{ batch.customerDelivery ? formatDateShort(batch.customerDelivery) : '-' }}
-          <text v-if="isOverdue" class="text-sm"> (已逾期)</text>
-        </text>
-        <text class="text-secondary">生产预计交期</text>
-        <text>{{ batch.productionDelivery ? formatDateShort(batch.productionDelivery) : '-' }}</text>
-        <text class="text-secondary">优先级</text>
-        <text>{{ priorityLabel(batch.priority) }}</text>
-        <text class="text-secondary">创建时间</text>
-        <text>{{ formatDate(batch.createdAt) }}</text>
-        <text class="text-secondary">备注</text>
-        <text>{{ batch.notes || '-' }}</text>
-      </view>
+      <template v-else>
+        <view
+          v-if="batch.status === 'active'"
+          class="progress-action"
+          @click="goRecordProgress"
+        >
+          <view class="progress-action-copy">
+            <text class="progress-action-title">工序流转</text>
+            <text class="progress-action-desc">选择并确认当前批次的工序</text>
+          </view>
+          <view class="progress-action-link">
+            <text>去流转</text>
+            <text class="progress-action-arrow">›</text>
+          </view>
+        </view>
+
+        <view class="info-grid">
+          <view class="info-item">
+            <text class="info-label">产品型号</text>
+            <text class="info-value">{{ batch.product?.model || '-' }}</text>
+          </view>
+          <view class="info-item">
+            <text class="info-label">加工数量</text>
+            <text class="info-value">{{ batch.quantity }}</text>
+          </view>
+          <view class="info-item">
+            <text class="info-label">客户代码</text>
+            <text class="info-value">{{ batch.customerCode || '-' }}</text>
+          </view>
+          <view class="info-item">
+            <text class="info-label">订单编号</text>
+            <text class="info-value">{{ batch.orderNo || '-' }}</text>
+          </view>
+          <view class="info-item">
+            <text class="info-label">封装形式</text>
+            <text class="info-value">{{ batch.packageType || '-' }}</text>
+          </view>
+          <view class="info-item">
+            <text class="info-label">优先级</text>
+            <text class="info-value">{{ priorityLabel(batch.priority) }}</text>
+          </view>
+          <view class="info-item">
+            <text class="info-label">客户交期</text>
+            <text class="info-value" :class="isOverdue ? 'text-danger' : ''">
+              {{ batch.customerDelivery ? formatDateShort(batch.customerDelivery) : '-' }}
+              <text v-if="isOverdue" class="overdue-text">已逾期</text>
+            </text>
+          </view>
+          <view class="info-item">
+            <text class="info-label">预计交期</text>
+            <text class="info-value">{{ batch.productionDelivery ? formatDateShort(batch.productionDelivery) : '-' }}</text>
+          </view>
+          <view class="info-item info-item-wide">
+            <text class="info-label">创建时间</text>
+            <text class="info-value">{{ formatDate(batch.createdAt) }}</text>
+          </view>
+          <view class="info-item info-item-wide">
+            <text class="info-label">备注</text>
+            <text class="info-value info-notes">{{ batch.notes || '-' }}</text>
+          </view>
+        </view>
+      </template>
     </view>
 
     <!-- Stage progress -->
     <view class="card progress-card">
-      <text class="section-title">工序进度</text>
+      <view class="progress-card-header">
+        <text class="section-title">工序进度</text>
+        <text class="progress-scroll-hint">左右滑动查看全部</text>
+      </view>
       <StageTimeline
         v-if="appStore.stages.length"
         :stages="appStore.stages"
@@ -122,12 +162,6 @@
       />
     </view>
 
-    <!-- Quick actions -->
-    <view v-if="batch.status === 'active' && !editing" class="card">
-      <button class="btn btn-primary btn-block" @click="goRecordProgress">
-        工序流转
-      </button>
-    </view>
   </view>
 </template>
 
@@ -151,6 +185,7 @@ const customerCodes = ref<CustomerCode[]>([]);
 const editing = ref(false);
 const saving = ref(false);
 const currentBatchId = ref(0);
+const openedFromHome = ref(false);
 
 const isAdmin = computed(() => userStore.isAdmin());
 
@@ -258,6 +293,11 @@ function goRecordProgress() {
   // 必须在 switchTab 之前写入：目标页 onShow 早于 switchTab 的 success 回调执行，
   // 否则 onShow 读到的是上一次遗留的 pendingBatchId，会选中错误的批次。
   uni.setStorageSync("pendingBatchId", batch.value.id);
+  if (openedFromHome.value) {
+    uni.setStorageSync("pendingProgressReturnTab", "/pages/index/index");
+  } else {
+    uni.removeStorageSync("pendingProgressReturnTab");
+  }
   uni.switchTab({ url: "/pages/progress/entry" });
 }
 
@@ -300,6 +340,7 @@ async function loadBatch(id: number) {
 }
 
 onLoad(async (query) => {
+  openedFromHome.value = query?.from === "home";
   if (query?.id) {
     currentBatchId.value = Number(query.id);
     await loadBatch(currentBatchId.value);
@@ -314,22 +355,85 @@ onShow(async () => {
 </script>
 
 <style scoped lang="scss">
+.progress-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-top: 20rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 10rpx;
+  background: #087f8c;
+  color: #fff;
+  box-shadow: 0 6rpx 14rpx rgba(8, 127, 140, 0.18);
+  &:active { opacity: 0.88; }
+}
+.progress-action-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+.progress-action-title { font-size: 28rpx; font-weight: 700; }
+.progress-action-desc {
+  margin-top: 2rpx;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 20rpx;
+}
+.progress-action-link {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8rpx;
+  font-size: 23rpx;
+  font-weight: 600;
+}
+.progress-action-arrow { font-size: 36rpx; line-height: 1; }
 .info-grid {
   display: grid;
-  grid-template-columns: 168rpx 1fr;
-  gap: 0;
-  margin-top: 24rpx;
-  border-top: 2rpx solid #edf0f0;
-  font-size: 27rpx;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 20rpx;
+  overflow: hidden;
+  border: 2rpx solid #edf0f0;
+  border-radius: 10rpx;
+  background: #edf0f0;
+  gap: 2rpx;
 }
-.info-grid > text {
-  min-height: 74rpx;
-  padding: 18rpx 10rpx;
-  border-bottom: 2rpx solid #edf0f0;
+.info-item {
+  display: flex;
+  min-width: 0;
+  min-height: 92rpx;
+  padding: 13rpx 16rpx;
+  flex-direction: column;
+  justify-content: center;
+  background: #fff;
 }
-.info-grid > .text-secondary {
-  color: #657174;
-  font-size: 23rpx;
+.info-item-wide { grid-column: 1 / -1; }
+.info-label {
+  color: #7d898b;
+  font-size: 20rpx;
+  line-height: 1.3;
+}
+.info-value {
+  display: block;
+  overflow: hidden;
+  margin-top: 4rpx;
+  color: #172327;
+  font-size: 25rpx;
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.info-notes {
+  overflow: visible;
+  font-weight: 400;
+  text-overflow: clip;
+  white-space: normal;
+}
+.overdue-text {
+  margin-left: 6rpx;
+  font-size: 19rpx;
   font-weight: 600;
 }
 .batch-info-card {
@@ -337,6 +441,16 @@ onShow(async () => {
 }
 .progress-card {
   border-left: 6rpx solid #16343a;
+}
+.progress-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+.progress-scroll-hint {
+  color: #7d898b;
+  font-size: 20rpx;
 }
 .overdue-warning {
   padding: 14rpx 20rpx;
@@ -365,7 +479,4 @@ onShow(async () => {
   margin-right: 16rpx;
 }
 
-@media screen and (max-width: 420px) {
-  .info-grid { grid-template-columns: 148rpx 1fr; }
-}
 </style>

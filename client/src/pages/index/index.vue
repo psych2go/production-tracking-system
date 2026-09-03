@@ -245,7 +245,7 @@ async function loadData() {
 }
 
 function goBatchDetail(id: number) {
-  uni.navigateTo({ url: `/pages/batch/detail?id=${id}` });
+  uni.navigateTo({ url: `/pages/batch/detail?id=${id}&from=home` });
 }
 
 function goEntry() {

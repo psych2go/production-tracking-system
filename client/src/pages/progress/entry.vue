@@ -105,9 +105,8 @@
       <!-- Step 2: Select Stage (click to submit) -->
       <view v-if="step === 2" class="card">
         <view class="flex-between">
-          <view class="nav-back" @click="step = 1">
-            <UIcon name="back" :size="40" color="#087f8c" />
-            <text class="nav-back-text">返回</text>
+          <view class="nav-back" aria-label="返回" @click="backToBatchList">
+            <UIcon name="back" :size="44" color="#172327" />
           </view>
           <text class="section-title">选择工序</text>
           <view class="nav-back-placeholder"></view>
@@ -198,6 +197,7 @@ const selectedBatch = ref<Batch | null>(null);
 const selectedStageId = ref<number | null>(null);
 const selectedPackageType = ref("");
 const submitting = ref(false);
+const progressReturnTab = ref<"/pages/index/index" | null>(null);
 const packageTypes = ref<PackageType[]>([]);
 
 /** Count batches per package type */
@@ -294,10 +294,17 @@ async function searchBatches() {
   }
 }
 
-function selectBatch(batch: Batch) {
+function selectBatch(batch: Batch, returnTab: "/pages/index/index" | null = null) {
   selectedBatch.value = batch;
+  progressReturnTab.value = returnTab;
   step.value = 2;
   scrollToSuggestedStage();
+}
+
+function backToBatchList() {
+  selectedBatch.value = null;
+  progressReturnTab.value = null;
+  step.value = 1;
 }
 
 async function confirmStage(stage: ProcessStage) {
@@ -327,9 +334,15 @@ async function confirmStage(stage: ProcessStage) {
     });
     uni.showToast({ title: "流转成功", icon: "success" });
 
-    // Reset and refresh
+    // 从首页进入时，流转成功后回到首页；直接在工序流转页操作时保留连续录入流程。
+    const returnTab = progressReturnTab.value;
     selectedBatch.value = null;
+    progressReturnTab.value = null;
     step.value = 1;
+    if (returnTab) {
+      uni.switchTab({ url: returnTab });
+      return;
+    }
     await searchBatches();
   } catch (e: unknown) {
     uni.showModal({ title: "流转失败", content: (e as Error).message, showCancel: false });
@@ -346,15 +359,18 @@ onShow(async () => {
     }
     const pendingId = uni.getStorageSync("pendingBatchId");
     if (pendingId) {
+      const storedReturnTab = uni.getStorageSync("pendingProgressReturnTab");
+      const returnTab = storedReturnTab === "/pages/index/index" ? storedReturnTab : null;
       uni.removeStorageSync("pendingBatchId");
+      uni.removeStorageSync("pendingProgressReturnTab");
       const batch = batches.value.find((b) => b.id === pendingId);
       if (batch) {
-        selectBatch(batch);
+        selectBatch(batch, returnTab);
       } else {
         try {
           const b = await batchApi.get(pendingId);
           batches.value.unshift(b);
-          selectBatch(b);
+          selectBatch(b, returnTab);
         } catch { /* ignore */ }
       }
     }
@@ -399,16 +415,14 @@ onBeforeUnmount(() => {
 .nav-back {
   display: flex;
   align-items: center;
-  gap: 4rpx;
-  padding: 12rpx 8rpx;
-  min-width: 140rpx;
-}
-.nav-back-text {
-  font-size: 30rpx;
-  color: #087f8c;
+  justify-content: flex-start;
+  width: 56rpx;
+  height: 56rpx;
+  flex-shrink: 0;
 }
 .nav-back-placeholder {
-  min-width: 140rpx;
+  width: 56rpx;
+  height: 56rpx;
   flex-shrink: 0;
 }
 .search-box {
