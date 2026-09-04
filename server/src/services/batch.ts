@@ -1,23 +1,109 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../config/database.js";
 
-async function validatePackageType(tx: Prisma.TransactionClient, packageType: string | undefined | null) {
+export const BATCH_STATUSES = [
+  "pending_card",
+  "pending",
+  "active",
+  "completed",
+  "archived",
+  "cancelled",
+] as const;
+
+export const WORKER_VISIBLE_STATUSES = ["active", "completed", "archived"] as const;
+
+function normalizeText(value: string): string {
+  return value.trim().toLocaleLowerCase("en-US");
+}
+
+function buildOrderIdentity(customerCode: string, orderNo: string): string {
+  return `${customerCode.trim()}\u0000${orderNo.trim()}`;
+}
+
+function translateUniqueError(error: unknown, message: string): never {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+    throw new Error(message);
+  }
+  throw error;
+}
+
+async function validatePackageType(tx: Prisma.TransactionClient, packageType: string | undefined) {
   if (!packageType) return;
-  // 封装形式可多选，存储为逗号分隔；逐个校验存在性
-  const names = packageType.split(",").map((s) => s.trim()).filter(Boolean);
-  for (const name of names) {
-    const exists = await tx.packageType.findUnique({ where: { name } });
-    if (!exists) throw new Error(`封装形式「${name}」不存在，请先在设置中创建`);
+  const exists = await tx.packageType.findUnique({ where: { name: packageType } });
+  if (!exists) throw new Error(`封装形式「${packageType}」不存在，请先在设置中创建`);
+}
+
+async function validateCustomerCode(tx: Prisma.TransactionClient, customerCode: string | undefined) {
+  if (!customerCode) return;
+  const exists = await tx.customerCode.findUnique({ where: { code: customerCode } });
+  if (!exists) throw new Error(`客户代码「${customerCode}」不存在，请先在设置中创建`);
+}
+
+async function findOrCreateProduct(tx: Prisma.TransactionClient, productModel: string) {
+  const model = productModel.trim();
+  const normalized = normalizeText(model);
+  const products = await tx.product.findMany({ select: { id: true, model: true } });
+  const existing = products.find((product) => normalizeText(product.model) === normalized);
+  if (existing) return existing;
+  return tx.product.upsert({
+    where: { modelNormalized: normalized },
+    update: {},
+    create: { model, modelNormalized: normalized },
+    select: { id: true, model: true },
+  });
+}
+
+async function assertOrderUnique(
+  tx: Prisma.TransactionClient,
+  customerCode: string,
+  orderNo: string,
+  excludeId?: number,
+) {
+  const existing = await tx.batch.findFirst({
+    where: {
+      customerCode,
+      orderNo,
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
+    select: { id: true },
+  });
+  if (existing) {
+    throw new Error(`客户「${customerCode}」下已存在订单编号「${orderNo}」，请检查后重新填写`);
   }
 }
 
-async function validateCustomerCode(tx: Prisma.TransactionClient, customerCode: string | undefined | null) {
-  if (!customerCode) return;
-  // 客户代码表为空（全新库未 seed）时跳过校验，避免破坏初始批次创建
-  const total = await tx.customerCode.count();
-  if (total === 0) return;
-  const exists = await tx.customerCode.findUnique({ where: { code: customerCode } });
-  if (!exists) throw new Error(`客户代码「${customerCode}」不存在，请先在设置中创建`);
+async function assertBatchIdentityUnique(
+  tx: Prisma.TransactionClient,
+  batchNo: string,
+  productModel: string,
+  excludeId?: number,
+) {
+  const normalizedBatchNo = normalizeText(batchNo);
+  const normalizedProductModel = normalizeText(productModel);
+  const candidates = await tx.batch.findMany({
+    where: {
+      batchNo: { not: null },
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
+    select: {
+      id: true,
+      batchNo: true,
+      batchNoNormalized: true,
+      productModelNormalized: true,
+      product: { select: { model: true } },
+    },
+  });
+  const existing = candidates.find((candidate) =>
+    (candidate.batchNoNormalized || normalizeText(candidate.batchNo || "")) === normalizedBatchNo
+    && (candidate.productModelNormalized || normalizeText(candidate.product?.model || "")) === normalizedProductModel
+  );
+  if (existing) {
+    throw new Error(`批号「${batchNo}」+ 型号「${productModel}」组合已存在，不可重复`);
+  }
+}
+
+function visibleStatusesForRole(role: string): string[] | undefined {
+  return role === "admin" ? undefined : [...WORKER_VISIBLE_STATUSES];
 }
 
 export async function listBatches(filters: {
@@ -28,17 +114,29 @@ export async function listBatches(filters: {
   packageType?: string;
   page?: number;
   pageSize?: number;
+  role: string;
 }) {
-  const { status, productId, keyword, customerCode, packageType, page = 1, pageSize = 50 } = filters;
+  const { status, productId, keyword, customerCode, packageType, page = 1, pageSize = 50, role } = filters;
+  const roleStatuses = visibleStatusesForRole(role);
+  const where: Prisma.BatchWhereInput = {};
 
-  const where: Record<string, unknown> = {};
-  if (status) where.status = status;
+  if (status) {
+    if (roleStatuses && !roleStatuses.includes(status)) {
+      where.status = { in: [] };
+    } else {
+      where.status = status;
+    }
+  } else if (roleStatuses) {
+    where.status = { in: roleStatuses };
+  }
   if (productId) where.productId = productId;
   if (customerCode) where.customerCode = customerCode;
-  if (packageType) where.packageType = { contains: packageType };
+  if (packageType) where.packageType = packageType;
   if (keyword) {
     where.OR = [
       { batchNo: { contains: keyword } },
+      { orderNo: { contains: keyword } },
+      { customerCode: { contains: keyword } },
       { product: { model: { contains: keyword } } },
       { product: { name: { contains: keyword } } },
     ];
@@ -55,7 +153,11 @@ export async function listBatches(filters: {
           orderBy: { stage: { stageOrder: "asc" } },
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        { priority: "desc" },
+        { customerDelivery: { sort: "asc", nulls: "last" } },
+        { createdAt: "asc" },
+      ],
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
@@ -65,8 +167,25 @@ export async function listBatches(filters: {
   return { items, total, page, pageSize };
 }
 
-export async function getBatchDetail(id: number) {
-  return prisma.batch.findUnique({
+export async function getBatchCounts(role: string) {
+  const roleStatuses = visibleStatusesForRole(role);
+  const rows = await prisma.batch.groupBy({
+    by: ["status"],
+    where: roleStatuses ? { status: { in: roleStatuses } } : undefined,
+    _count: { _all: true },
+  });
+  const counts: Record<string, number> = {};
+  let total = 0;
+  for (const row of rows) {
+    counts[row.status] = row._count._all;
+    total += row._count._all;
+  }
+  counts.all = total;
+  return counts;
+}
+
+export async function getBatchDetail(id: number, role: string) {
+  const batch = await prisma.batch.findUnique({
     where: { id },
     include: {
       product: true,
@@ -77,66 +196,123 @@ export async function getBatchDetail(id: number) {
       },
     },
   });
+  if (batch && role !== "admin" && !WORKER_VISIBLE_STATUSES.includes(batch.status as typeof WORKER_VISIBLE_STATUSES[number])) {
+    return null;
+  }
+  return batch;
 }
 
-export async function createBatch(data: {
-  batchNo?: string;
-  productModel?: string;
-  quantity?: number;
-  packageType?: string;
-  customerCode?: string;
-  orderNo?: string;
+export async function createOrder(data: {
+  productModel: string;
+  quantity: number;
+  packageType: string;
+  customerCode: string;
+  orderNo: string;
   customerDelivery?: string;
-  productionDelivery?: string;
   priority?: string;
   notes?: string;
-  createdBy?: number;
+  createdBy: number;
 }) {
+  const customerCode = data.customerCode.trim();
+  const orderNo = data.orderNo.trim();
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const packageType = data.packageType.trim();
+      await validatePackageType(tx, packageType);
+      await validateCustomerCode(tx, customerCode);
+      await assertOrderUnique(tx, customerCode, orderNo);
+      const product = await findOrCreateProduct(tx, data.productModel);
+
+      return tx.batch.create({
+        data: {
+          batchNo: null,
+          batchNoNormalized: null,
+          productModelNormalized: normalizeText(product.model),
+          orderIdentity: buildOrderIdentity(customerCode, orderNo),
+          productId: product.id,
+          quantity: data.quantity,
+          status: "pending_card",
+          packageType,
+          customerCode,
+          orderNo,
+          customerDelivery: data.customerDelivery ? new Date(data.customerDelivery) : undefined,
+          priority: data.priority || "normal",
+          notes: data.notes?.trim() || undefined,
+          createdBy: data.createdBy,
+        },
+        include: { product: true },
+      });
+    });
+  } catch (error) {
+    translateUniqueError(error, `客户「${customerCode}」下已存在订单编号「${orderNo}」，请检查后重新填写`);
+  }
+}
+
+export async function confirmBatchCard(id: number, data: {
+  batchNo: string;
+  productionDelivery?: string | null;
+  notes?: string;
+  operatorId: number;
+}) {
+  const batchNo = data.batchNo.trim();
+  let productModel = "";
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const batch = await tx.batch.findUnique({ where: { id }, include: { product: true } });
+      if (!batch) throw new Error("生产任务不存在");
+      if (batch.status !== "pending_card") throw new Error("只有待制卡订单可以确认制卡");
+      if (!batch.product) throw new Error("产品型号不存在");
+
+      productModel = batch.product.model;
+      await assertBatchIdentityUnique(tx, batchNo, productModel, id);
+      return tx.batch.update({
+        where: { id },
+        data: {
+          batchNo,
+          batchNoNormalized: normalizeText(batchNo),
+          productModelNormalized: normalizeText(productModel),
+          productionDelivery: data.productionDelivery !== undefined
+            ? (data.productionDelivery ? new Date(data.productionDelivery) : null)
+            : undefined,
+          notes: data.notes !== undefined ? data.notes.trim() || null : undefined,
+          status: "pending",
+          cardCreatedBy: data.operatorId,
+          cardCreatedAt: new Date(),
+        },
+        include: { product: true },
+      });
+    });
+  } catch (error) {
+    translateUniqueError(error, `批号「${batchNo}」+ 型号「${productModel}」组合已存在，不可重复`);
+  }
+}
+
+export async function startBatchProduction(id: number, operatorId: number) {
   return prisma.$transaction(async (tx) => {
-    await validatePackageType(tx, data.packageType);
-    await validateCustomerCode(tx, data.customerCode);
-
-    const product = await tx.product.upsert({
-      where: { model: data.productModel! },
-      update: {},
-      create: { model: data.productModel! },
-    });
-
-    const existing = await tx.batch.findFirst({
-      where: { batchNo: data.batchNo!, productId: product.id },
-    });
-    if (existing) {
-      throw new Error(`批号「${data.batchNo}」+ 型号「${data.productModel}」已存在，不可重复创建`);
-    }
-
-    return tx.batch.create({
-      data: {
-        batchNo: data.batchNo!,
-        productId: product.id,
-        quantity: data.quantity!,
-        packageType: data.packageType || undefined,
-        customerCode: data.customerCode || undefined,
-        orderNo: data.orderNo || undefined,
-        customerDelivery: data.customerDelivery ? new Date(data.customerDelivery) : undefined,
-        productionDelivery: data.productionDelivery ? new Date(data.productionDelivery) : undefined,
-        priority: data.priority || undefined,
-        notes: data.notes || undefined,
-        createdBy: data.createdBy,
-      },
+    const batch = await tx.batch.findUnique({ where: { id } });
+    if (!batch) throw new Error("生产任务不存在");
+    if (batch.status !== "pending") throw new Error("只有待投产任务可以投入加工");
+    return tx.batch.update({
+      where: { id },
+      data: { status: "active", startedBy: operatorId, startedAt: new Date() },
+      include: { product: true },
     });
   });
 }
 
-export async function deleteBatch(id: number) {
-  const batch = await prisma.batch.findUnique({ where: { id } });
-  if (!batch) throw new Error("批次不存在");
-
-  await prisma.$transaction([
-    prisma.progressRecord.deleteMany({ where: { batchId: id } }),
-    prisma.batch.delete({ where: { id } }),
-  ]);
-
-  return { id };
+export async function cancelOrder(id: number, operatorId: number) {
+  return prisma.$transaction(async (tx) => {
+    const batch = await tx.batch.findUnique({ where: { id } });
+    if (!batch) throw new Error("生产任务不存在");
+    if (!(["pending_card", "pending"] as string[]).includes(batch.status)) {
+      throw new Error("只有待制卡或待投产任务可以取消订单");
+    }
+    return tx.batch.update({
+      where: { id },
+      data: { status: "cancelled", cancelledBy: operatorId, cancelledAt: new Date() },
+      include: { product: true },
+    });
+  });
 }
 
 export async function updateBatch(id: number, data: {
@@ -145,84 +321,111 @@ export async function updateBatch(id: number, data: {
   batchNo?: string;
   productModel?: string;
   quantity?: number;
-  customerCode?: string | null;
-  orderNo?: string | null;
-  packageType?: string | null;
+  customerCode?: string;
+  orderNo?: string;
+  packageType?: string;
   customerDelivery?: string | null;
   productionDelivery?: string | null;
   notes?: string;
 }) {
-  return prisma.$transaction(async (tx) => {
-    const batch = await tx.batch.findUnique({
-      where: { id },
-      include: { product: { select: { model: true } } },
-    });
-    if (!batch) throw new Error("批次不存在");
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const batch = await tx.batch.findUnique({ where: { id }, include: { product: true } });
+      if (!batch) throw new Error("生产任务不存在");
+      if (batch.status === "cancelled") throw new Error("已取消的生产任务不可编辑");
 
-    const updateData: Record<string, unknown> = {
-      priority: data.priority,
-      customerCode: data.customerCode,
-      orderNo: data.orderNo,
-      packageType: data.packageType,
-      customerDelivery: data.customerDelivery !== undefined
-        ? (data.customerDelivery ? new Date(data.customerDelivery) : null)
-        : undefined,
-      productionDelivery: data.productionDelivery !== undefined
-        ? (data.productionDelivery ? new Date(data.productionDelivery) : null)
-        : undefined,
-      notes: data.notes,
-    };
+      const updateData: Prisma.BatchUpdateInput = {
+        priority: data.priority,
+        customerDelivery: data.customerDelivery !== undefined
+          ? (data.customerDelivery ? new Date(data.customerDelivery) : null)
+          : undefined,
+        productionDelivery: data.productionDelivery !== undefined
+          ? (data.productionDelivery ? new Date(data.productionDelivery) : null)
+          : undefined,
+        notes: data.notes !== undefined ? data.notes.trim() || null : undefined,
+      };
 
-    if (data.batchNo !== undefined) updateData.batchNo = data.batchNo;
+      const finalCustomerCode = data.customerCode?.trim() ?? batch.customerCode;
+      const finalOrderNo = data.orderNo?.trim() ?? batch.orderNo;
+      const finalPackageType = data.packageType?.trim() ?? batch.packageType;
 
-    // Only allow archiving completed batches via update; other status changes go through progress flow
-    if (data.status !== undefined) {
-      if (data.status === "archived" && batch.status === "completed") {
-        updateData.status = "archived";
-      } else if (data.status !== batch.status) {
-        throw new Error("批次状态变更请通过工序流转操作");
+      if (data.customerCode !== undefined) {
+        await validateCustomerCode(tx, finalCustomerCode || undefined);
+        updateData.customerCode = finalCustomerCode;
       }
-    }
-
-    if (data.quantity !== undefined) {
-      updateData.quantity = data.quantity;
-    }
-
-    // Validate packageType against PackageType table — 仅当传入新值时校验
-    if (data.packageType !== undefined) {
-      await validatePackageType(tx, data.packageType);
-    }
-    // Validate customerCode against CustomerCode table — 仅当传入新值时校验
-    if (data.customerCode !== undefined) {
-      await validateCustomerCode(tx, data.customerCode);
-    }
-
-    if (data.productModel !== undefined) {
-      const product = await tx.product.upsert({
-        where: { model: data.productModel },
-        update: {},
-        create: { model: data.productModel },
-      });
-      updateData.productId = product.id;
-    }
-
-    // Check batchNo + productId uniqueness when batchNo or productModel changes
-    const finalBatchNo = data.batchNo !== undefined ? data.batchNo : batch.batchNo;
-    const finalProductId = updateData.productId !== undefined ? updateData.productId as number : batch.productId;
-    if (data.batchNo !== undefined || data.productModel !== undefined) {
-      const existing = await tx.batch.findFirst({
-        where: { batchNo: finalBatchNo, productId: finalProductId, id: { not: id } },
-        select: { id: true },
-      });
-      if (existing) {
-        const modelLabel = data.productModel || batch.product?.model || "(当前型号)";
-        throw new Error(`批号「${finalBatchNo}」+ 型号「${modelLabel}」组合已存在，不可重复更新`);
+      if (data.packageType !== undefined) {
+        await validatePackageType(tx, finalPackageType || undefined);
+        updateData.packageType = finalPackageType;
       }
-    }
+      if (data.orderNo !== undefined) updateData.orderNo = finalOrderNo;
+      if ((data.customerCode !== undefined || data.orderNo !== undefined) && finalCustomerCode && finalOrderNo) {
+        await assertOrderUnique(tx, finalCustomerCode, finalOrderNo, id);
+        updateData.orderIdentity = buildOrderIdentity(finalCustomerCode, finalOrderNo);
+      }
+      if (data.quantity !== undefined) updateData.quantity = data.quantity;
 
-    return tx.batch.update({
-      where: { id },
-      data: updateData,
+      let finalProductId = batch.productId;
+      let finalProductModel = batch.product?.model || "";
+      if (data.productModel !== undefined) {
+        const product = await findOrCreateProduct(tx, data.productModel);
+        finalProductId = product.id;
+        finalProductModel = product.model;
+        updateData.product = { connect: { id: product.id } };
+        updateData.productModelNormalized = normalizeText(product.model);
+      }
+
+      const finalBatchNo = data.batchNo !== undefined ? data.batchNo.trim() : batch.batchNo;
+      if (data.batchNo !== undefined) {
+        if (batch.status === "pending_card") throw new Error("请通过确认制卡填写生产批号");
+        const newBatchNo = data.batchNo.trim();
+        updateData.batchNo = newBatchNo;
+        updateData.batchNoNormalized = normalizeText(newBatchNo);
+        updateData.productModelNormalized = normalizeText(finalProductModel);
+      }
+      if ((data.batchNo !== undefined || data.productModel !== undefined) && finalBatchNo && finalProductId) {
+        await assertBatchIdentityUnique(tx, finalBatchNo, finalProductModel, id);
+        updateData.batchNoNormalized = normalizeText(finalBatchNo);
+        updateData.productModelNormalized = normalizeText(finalProductModel);
+      }
+
+      if (data.status !== undefined) {
+        if (data.status === "archived" && batch.status === "completed") {
+          updateData.status = "archived";
+        } else if (data.status !== batch.status) {
+          throw new Error("生产任务状态变更请通过对应操作完成");
+        }
+      }
+
+      return tx.batch.update({
+        where: { id },
+        data: updateData,
+        include: { product: true },
+      });
     });
+  } catch (error) {
+    const message = data.batchNo !== undefined || data.productModel !== undefined
+      ? "生产批号与产品型号组合已存在，不可重复"
+      : "该客户下已存在相同订单编号";
+    translateUniqueError(error, message);
+  }
+}
+
+export async function getProductSuggestions(keyword: string) {
+  const normalized = normalizeText(keyword);
+  if (normalized.length < 2) return [];
+  const products = await prisma.product.findMany({
+    where: { isActive: true },
+    select: { id: true, model: true },
   });
+  const uniqueProducts = [...new Map(
+    products.map((product) => [normalizeText(product.model), product]),
+  ).values()];
+  return uniqueProducts
+    .filter((product) => normalizeText(product.model).includes(normalized))
+    .sort((a, b) => {
+      const aPrefix = normalizeText(a.model).startsWith(normalized) ? 0 : 1;
+      const bPrefix = normalizeText(b.model).startsWith(normalized) ? 0 : 1;
+      return aPrefix - bPrefix || a.model.localeCompare(b.model);
+    })
+    .slice(0, 6);
 }

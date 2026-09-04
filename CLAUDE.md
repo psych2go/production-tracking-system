@@ -45,9 +45,18 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 ### 工序流转
 记录流转及数量信息（投入数、产出数、不良品数、不良类型）。所有工序可自由点击（允许跳过）。流转到「已完成」工序时标记批次 completed（需从包装手动流转到已完成）。
 
-### 批次
+### 生产任务（订单与批次一体）
 
-**产品批次**：手动批号、产品型号（upsert Product）、数量、封装形式（校验 PackageType 表）、客户代码、订单编号、客户要求交期、生产预计交期、优先级、备注
+一个订单一一对应一张流程卡和一个生产批次，统一复用 Batch 模型：
+
+`录入订单(pending_card)` → `去制卡/确认制卡（填写生产批号，pending）` → `管理员投入加工(active)` → 工序流转 → `completed` → `archived`
+
+- 录入订单：数字订单编号、客户代码、产品型号、整数数量（单位“只”）、单选封装形式、选填客户交期、普通/紧急、统一备注；不填写生产预计交期和生产批号
+- 订单唯一：客户代码 + 订单编号
+- 制卡：生产批号由管理员自由填写，生产批号 + 产品型号按去空格、忽略大小写后唯一；生产预计交期可在录单后任意阶段选填/修改
+- `pending_card`/`pending` 可由管理员取消为 `cancelled`；`active` 后不可取消
+- 仅管理员可录单、制卡、投入加工、取消、编辑、归档；工人可查看/流转 active 批次
+- 录入/制卡/投产/取消人员与时间后台记录，详情仅显示投产时间
 
 ### 客户代码
 预设客户代码列表（管理员维护），创建/编辑产品批次时从列表选择。管理入口：个人中心 → 客户代码管理。
@@ -55,13 +64,16 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 ### 工序流转防重复
 已流转的工序不可再次流转。前后端双重校验，后端返回明确错误信息（含工序名和流转时间）。
 
-### 批次状态变更
+### 生产任务状态变更
+- `pending_card` → `pending`：管理员确认制卡
+- `pending` → `active`：管理员投入加工
+- `pending_card`/`pending` → `cancelled`：管理员取消订单
 - `active` → `completed`：仅通过工序流转完成（手动流转到「已完成」工序）
 - `completed` → `archived`：管理员手动归档
 - 其他状态转换不允许（通过 update 接口直接修改 status 会被拒绝）
 
 ### 管理员功能入口
-个人中心 → 工序管理 → 封装形式管理 → 客户代码管理 → 用户管理 → 审计日志
+首页快捷操作：录入订单、生产管理。个人中心：工序管理 → 封装形式管理 → 客户代码管理 → 用户管理 → 审计日志
 
 ## 代码约定
 
@@ -77,7 +89,7 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 ## 显示约定
 
 - 紧急标签：全局 `.urgent-tag`（红色背景白字）
-- 状态：active→正在加工、completed→已完成、archived→已归档
+- 状态：pending_card→待制卡、pending→待投产、active→加工中、completed→已完成、archived→已归档、cancelled→已取消
 - 产品交期显示「客户交期」和「预计交期」
 - 工序耗时：超过1天显示"X天X小时"，不足1天显示"X小时X分"或"X分钟"
 

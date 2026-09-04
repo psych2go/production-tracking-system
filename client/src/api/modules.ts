@@ -36,12 +36,19 @@ export const batchApi = {
     return api.get<PaginatedResult<Batch>>(`/api/batches?${query.toString()}`);
   },
   get: (id: number) => api.get<Batch>(`/api/batches/${id}`),
+  counts: () => api.get<Record<string, number>>("/api/batches/counts"),
+  productSuggestions: (keyword: string) =>
+    api.get<Array<{ id: number; model: string }>>(`/api/batches/product-suggestions?keyword=${encodeURIComponent(keyword)}`),
   create: (data: Record<string, unknown>) =>
     api.post<Batch>("/api/batches", data),
+  confirmCard: (id: number, data: { batchNo: string; productionDelivery?: string | null; notes?: string }) =>
+    api.post<Batch>(`/api/batches/${id}/confirm-card`, data),
+  startProduction: (id: number) =>
+    api.post<Batch>(`/api/batches/${id}/start-production`, {}),
+  cancel: (id: number) =>
+    api.post<Batch>(`/api/batches/${id}/cancel`, {}),
   update: (id: number, data: Record<string, unknown>) =>
     api.put<Batch>(`/api/batches/${id}`, data),
-  remove: (id: number) =>
-    api.delete<{ success: boolean }>(`/api/batches/${id}`),
 };
 
 // Progress

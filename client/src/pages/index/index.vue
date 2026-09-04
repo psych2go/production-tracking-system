@@ -81,16 +81,16 @@
           <view v-if="userStore.isAdmin()" class="action-item action-item-primary" @click="go('/pages/batch/create')">
             <UIcon name="plus" :size="48" variant="primary" />
             <view class="action-copy">
-              <text class="action-label">新建批次</text>
-              <text class="action-meta">录入新的生产批次</text>
+              <text class="action-label">录入订单</text>
+              <text class="action-meta">建立新的生产任务</text>
             </view>
             <UIcon name="chevron-right" :size="30" color="#7d898b" />
           </view>
           <view class="action-item" @click="goBatchList">
             <UIcon name="menu" :size="48" variant="soft" />
             <view class="action-copy">
-              <text class="action-label">查看全部批次</text>
-              <text class="action-meta">搜索并管理生产批次</text>
+              <text class="action-label">生产管理</text>
+              <text class="action-meta">查看全部生产任务</text>
             </view>
             <UIcon name="chevron-right" :size="30" color="#7d898b" />
           </view>
@@ -102,6 +102,72 @@
             </view>
             <UIcon name="chevron-right" :size="30" color="#7d898b" />
           </view>
+        </view>
+      </view>
+
+      <!-- Pre-production tasks (admin only) -->
+      <view v-if="userStore.isAdmin()" class="section-block">
+        <view class="section-header">
+          <view class="flex-center">
+            <text class="section-title">待制卡</text>
+            <text class="section-count">{{ pendingCardBatches.length }}</text>
+          </view>
+          <text class="collapse-btn" @click="collapsed.pendingCard = !collapsed.pendingCard">{{ collapsed.pendingCard ? '展开' : '收起' }}</text>
+        </view>
+        <view v-if="!collapsed.pendingCard" class="preproduction-list">
+          <view v-for="item in pendingCardBatches" :key="item.id" class="card preproduction-card" @click="goBatchDetail(item.id)">
+            <view class="preproduction-heading">
+              <view class="preproduction-title-wrap">
+                <text class="preproduction-order">订单 {{ item.orderNo }}</text>
+                <text class="preproduction-title">{{ item.product?.model || '' }}</text>
+              </view>
+              <view v-if="item.priority === 'urgent'" class="urgent-tag">紧急</view>
+            </view>
+            <text class="preproduction-customer">{{ item.customerCode || '' }}</text>
+            <view class="preproduction-meta">
+              <text>{{ item.quantity }}只</text>
+              <text>{{ item.packageType || '' }}</text>
+            </view>
+            <view class="preproduction-footer">
+              <text class="preproduction-date">客户交期：{{ formatOptionalDate(item.customerDelivery) }}</text>
+              <view class="preproduction-action" @click.stop="goCard(item.id)">去制卡 ›</view>
+            </view>
+          </view>
+          <view v-if="!pendingCardBatches.length" class="empty-state card"><text>暂无待制卡订单</text></view>
+        </view>
+      </view>
+
+      <view v-if="userStore.isAdmin()" class="section-block">
+        <view class="section-header">
+          <view class="flex-center">
+            <text class="section-title">待投产</text>
+            <text class="section-count">{{ pendingProductionBatches.length }}</text>
+          </view>
+          <text class="collapse-btn" @click="collapsed.pendingProduction = !collapsed.pendingProduction">{{ collapsed.pendingProduction ? '展开' : '收起' }}</text>
+        </view>
+        <view v-if="!collapsed.pendingProduction" class="preproduction-list">
+          <view v-for="item in pendingProductionBatches" :key="item.id" class="card preproduction-card pending-production-card" @click="goBatchDetail(item.id)">
+            <view class="preproduction-heading">
+              <view class="preproduction-title-wrap">
+                <text class="preproduction-order">订单 {{ item.orderNo }}</text>
+                <text class="preproduction-title">{{ item.batchNo }} {{ item.product?.model || '' }}</text>
+              </view>
+              <view v-if="item.priority === 'urgent'" class="urgent-tag">紧急</view>
+            </view>
+            <text class="preproduction-customer">{{ item.customerCode || '' }}</text>
+            <view class="preproduction-meta">
+              <text>{{ item.quantity }}只</text>
+              <text>{{ item.packageType || '' }}</text>
+            </view>
+            <view class="preproduction-dates">
+              <text>客户交期：{{ formatOptionalDate(item.customerDelivery) }}</text>
+              <text>预计交期：{{ formatOptionalDate(item.productionDelivery) }}</text>
+            </view>
+            <view class="preproduction-footer action-only">
+              <view class="preproduction-action" @click.stop="startProduction(item)">投入加工 ›</view>
+            </view>
+          </view>
+          <view v-if="!pendingProductionBatches.length" class="empty-state card"><text>暂无待投产任务</text></view>
         </view>
       </view>
 
@@ -173,8 +239,8 @@ import { ref, computed, onMounted } from "vue";
 import { onPullDownRefresh, onShow } from "@dcloudio/uni-app";
 import { useUserStore } from "../../store/user";
 import { useAppStore } from "../../store/app";
-import { progressApi } from "../../api/modules";
-import { getCurrentStage } from "../../utils/format";
+import { batchApi, progressApi } from "../../api/modules";
+import { formatDateShort, getCurrentStage } from "../../utils/format";
 import type { Batch, DashboardData } from "../../types";
 import UIcon from "../../components/UIcon.vue";
 
@@ -183,7 +249,7 @@ const appStore = useAppStore();
 const dashboard = ref<DashboardData | null>(null);
 const loading = ref(false);
 const loginPassword = ref("");
-const collapsed = ref({ alerts: false, batches: false });
+const collapsed = ref({ alerts: false, pendingCard: false, pendingProduction: false, batches: false });
 const kanbanGroupMode = ref<"stage" | "package">("stage");
 
 const statCards = computed(() => {
@@ -195,9 +261,9 @@ const statCards = computed(() => {
   ];
 });
 
-const visibleActiveBatches = computed(() =>
-  dashboard.value?.activeBatchList ?? []
-);
+const pendingCardBatches = computed(() => dashboard.value?.pendingCardList ?? []);
+const pendingProductionBatches = computed(() => dashboard.value?.pendingProductionList ?? []);
+const visibleActiveBatches = computed(() => dashboard.value?.activeBatchList ?? []);
 
 function getPrimaryPackageType(batch: Batch): string {
   return batch.packageType?.split(",")[0]?.trim() || "未设置封装";
@@ -255,8 +321,31 @@ async function loadData() {
   } catch { /* dashboard is non-critical */ }
 }
 
+function formatOptionalDate(value: string | null | undefined) {
+  return value ? formatDateShort(value) : "";
+}
+
 function goBatchDetail(id: number) {
   uni.navigateTo({ url: `/pages/batch/detail?id=${id}&from=home` });
+}
+
+function goCard(id: number) {
+  uni.navigateTo({ url: `/pages/batch/card?id=${id}` });
+}
+
+async function startProduction(batch: Batch) {
+  const result = await uni.showModal({
+    title: "确认投入加工",
+    content: `${batch.batchNo || ''} ${batch.product?.model || ''}\n数量：${batch.quantity}只\n封装形式：${batch.packageType || ''}`,
+  });
+  if (result.cancel) return;
+  try {
+    await batchApi.startProduction(batch.id);
+    uni.showToast({ title: "已投入加工", icon: "success" });
+    await loadData();
+  } catch (e: unknown) {
+    uni.showModal({ title: "操作失败", content: (e as Error).message, showCancel: false });
+  }
 }
 
 function goBatchList() {
@@ -516,6 +605,61 @@ onPullDownRefresh(async () => {
 .view-all-btn {
   padding-right: 16rpx;
   border-right: 2rpx solid #dfe4e4;
+}
+
+/* Pre-production */
+.section-count {
+  min-width: 34rpx;
+  margin-left: 10rpx;
+  padding: 1rpx 8rpx;
+  border-radius: 5rpx;
+  background: #edf0f0;
+  color: #657174;
+  font-size: 20rpx;
+  text-align: center;
+}
+.preproduction-list { display: flex; flex-direction: column; gap: 14rpx; }
+.preproduction-card {
+  margin-bottom: 0;
+  padding: 20rpx;
+  border-left: 6rpx solid #d97706;
+}
+.pending-production-card { border-left-color: #087f8c; }
+.preproduction-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14rpx; }
+.preproduction-title-wrap { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.preproduction-order { color: #7d898b; font-size: 20rpx; }
+.preproduction-title {
+  overflow: hidden;
+  margin-top: 3rpx;
+  color: #172327;
+  font-size: 28rpx;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preproduction-customer { display: block; margin-top: 8rpx; color: #657174; font-size: 21rpx; }
+.preproduction-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 2rpx solid #edf0f0;
+  color: #2c383c;
+  font-size: 23rpx;
+  font-weight: 600;
+}
+.preproduction-dates { display: flex; margin-top: 10rpx; flex-direction: column; color: #7d898b; font-size: 20rpx; }
+.preproduction-footer { display: flex; align-items: center; justify-content: space-between; gap: 14rpx; margin-top: 12rpx; }
+.preproduction-footer.action-only { justify-content: flex-end; }
+.preproduction-date { min-width: 0; flex: 1; color: #7d898b; font-size: 20rpx; }
+.preproduction-action {
+  flex-shrink: 0;
+  padding: 8rpx 13rpx;
+  border-radius: 6rpx;
+  background: #e6f4f3;
+  color: #075e68;
+  font-size: 21rpx;
+  font-weight: 600;
 }
 
 /* Kanban */

@@ -140,10 +140,11 @@ async function main() {
   // 2. 创建产品
   const productIds: number[] = [];
   for (const p of PRODUCTS) {
+    const modelNormalized = p.model.trim().toLocaleLowerCase("en-US");
     const product = await prisma.product.upsert({
-      where: { model: p.model },
+      where: { modelNormalized },
       update: {},
-      create: p,
+      create: { ...p, modelNormalized },
     });
     productIds.push(product.id);
   }

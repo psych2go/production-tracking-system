@@ -1,58 +1,82 @@
 <template>
   <view class="batch-card card" @click="$emit('click')">
-    <view class="batch-accent" :class="{ urgent: batch.priority === 'urgent', overdue: isOverdue }"></view>
+    <view class="batch-accent" :class="accentClass"></view>
     <view class="batch-card-main">
       <view class="batch-heading">
         <view class="batch-identity">
-          <text class="batch-no">{{ batch.batchNo }}</text>
-          <text class="batch-model">{{ batch.product?.model || '未填写型号' }}</text>
+          <text v-if="batch.orderNo" class="order-no">订单 {{ batch.orderNo }}</text>
+          <text class="batch-title">{{ displayTitle }}</text>
         </view>
         <view class="batch-statuses">
           <view v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</view>
           <view v-if="isOverdue" class="overdue-badge">逾期</view>
+          <view class="status-badge" :class="`status-${batch.status}`">{{ statusLabel }}</view>
         </view>
       </view>
 
-      <view class="batch-info">
-        <template v-if="batch.packageType">
-          <view v-for="pt in batch.packageType.split(',')" :key="pt" class="package-tag">{{ pt.trim() }}</view>
-        </template>
-      </view>
+      <text class="customer-code">{{ batch.customerCode || '' }}</text>
 
-      <view class="batch-metrics">
+      <view class="batch-metrics" :class="{ 'two-columns': batch.status !== 'active' }">
         <view class="metric">
-          <text class="metric-label">加工数量</text>
-          <text class="metric-value">{{ batch.quantity }}</text>
+          <text class="metric-label">数量</text>
+          <text class="metric-value">{{ batch.quantity }}只</text>
         </view>
-        <view class="metric metric-stage">
+        <view class="metric metric-border">
+          <text class="metric-label">封装形式</text>
+          <text class="metric-value">{{ batch.packageType || '' }}</text>
+        </view>
+        <view v-if="batch.status === 'active'" class="metric metric-border">
           <text class="metric-label">当前工序</text>
-          <text v-if="currentStage" class="metric-value stage-value">{{ currentStage }}</text>
-          <text v-else class="metric-value muted">待开始</text>
+          <text class="metric-value stage-value">{{ currentStage || '未开始' }}</text>
         </view>
       </view>
 
-      <view v-if="(batch.customerDelivery || batch.productionDelivery) && batch.status === 'active'" class="delivery-hint">
-        <text>
-          <template v-if="batch.customerDelivery">客户 {{ formatDateShort(batch.customerDelivery) }}</template>
-          <template v-if="batch.customerDelivery && batch.productionDelivery"> · </template>
-          <template v-if="batch.productionDelivery">预计 {{ formatDateShort(batch.productionDelivery) }}</template>
-        </text>
+      <view class="batch-footer">
+        <view class="delivery-lines">
+          <text class="delivery-line">客户交期：{{ customerDelivery }}</text>
+          <text class="delivery-line">预计交期：{{ productionDelivery }}</text>
+        </view>
+        <view class="card-action" @click.stop="$emit('action')">
+          <text>{{ actionLabel }}</text>
+          <text class="action-arrow">›</text>
+        </view>
       </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import type { Batch } from "../types";
 import { computed } from "vue";
+import type { Batch } from "../types";
+import { STATUS_LABELS } from "../utils/constants";
 import { formatDateShort, getCurrentStage, isOverdue as checkOverdue } from "../utils/format";
 
-const props = defineProps<{ batch: Batch }>();
-defineEmits<{ click: [] }>();
+const props = defineProps<{ batch: Batch; isAdmin?: boolean }>();
+defineEmits<{ click: []; action: [] }>();
 
+const statusLabel = computed(() => STATUS_LABELS[props.batch.status] || props.batch.status);
 const currentStage = computed(() => getCurrentStage(props.batch)?.name ?? null);
-
 const isOverdue = computed(() => checkOverdue(props.batch.customerDelivery, props.batch.status));
+const displayTitle = computed(() =>
+  [props.batch.batchNo, props.batch.product?.model].filter(Boolean).join(" ") || "未填写产品型号"
+);
+const customerDelivery = computed(() =>
+  props.batch.customerDelivery ? formatDateShort(props.batch.customerDelivery) : ""
+);
+const productionDelivery = computed(() =>
+  props.batch.productionDelivery ? formatDateShort(props.batch.productionDelivery) : ""
+);
+const actionLabel = computed(() => {
+  if (props.isAdmin && props.batch.status === "pending_card") return "去制卡";
+  if (props.isAdmin && props.batch.status === "pending") return "投入加工";
+  if (props.isAdmin && props.batch.status === "completed") return "归档";
+  return "查看详情";
+});
+const accentClass = computed(() => ({
+  urgent: props.batch.priority === "urgent",
+  overdue: isOverdue.value,
+  cancelled: props.batch.status === "cancelled",
+}));
 </script>
 
 <style scoped lang="scss">
@@ -69,93 +93,81 @@ const isOverdue = computed(() => checkOverdue(props.batch.customerDelivery, prop
   background: #087f8c;
   &.urgent { background: #d97706; }
   &.overdue { background: #c9483f; }
+  &.cancelled { background: #aab4b5; }
 }
-.batch-card-main {
-  width: 100%;
-  min-width: 0;
-  padding: 24rpx;
-}
-.batch-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16rpx;
-}
-.batch-identity {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.batch-no {
+.batch-card-main { width: 100%; min-width: 0; padding: 22rpx; }
+.batch-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 14rpx; }
+.batch-identity { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.order-no { color: #7d898b; font-size: 20rpx; }
+.batch-title {
+  overflow: hidden;
+  margin-top: 3rpx;
   color: #172327;
-  font-size: 31rpx;
+  font-size: 30rpx;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.batch-model {
-  margin-top: 6rpx;
+.batch-statuses { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6rpx; }
+.status-badge {
+  padding: 4rpx 10rpx;
+  border-radius: 5rpx;
+  background: #edf0f0;
   color: #657174;
-  font-size: 24rpx;
+  font-size: 19rpx;
+  font-weight: 600;
 }
-.batch-statuses { display: flex; align-items: center; }
-.batch-info {
+.status-pending_card { background: #fff3df; color: #9a5a00; }
+.status-pending { background: #e6f4f3; color: #075e68; }
+.status-active { background: #e8f2ff; color: #0067c7; }
+.status-completed { background: #e6f3ec; color: #27865f; }
+.status-cancelled { background: #f1f2f2; color: #7d898b; }
+.customer-code { display: block; margin-top: 9rpx; color: #657174; font-size: 22rpx; }
+.batch-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16rpx;
+  padding: 14rpx 0;
+  border-top: 2rpx solid #edf0f0;
+  border-bottom: 2rpx solid #edf0f0;
+  &.two-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.metric { display: flex; min-width: 0; padding: 0 12rpx; flex-direction: column; }
+.metric:first-child { padding-left: 0; }
+.metric-border { border-left: 2rpx solid #edf0f0; }
+.metric-label { color: #7d898b; font-size: 19rpx; }
+.metric-value {
+  overflow: hidden;
+  margin-top: 2rpx;
+  color: #2c383c;
+  font-size: 23rpx;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stage-value { color: #087f8c; }
+.batch-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 16rpx; margin-top: 14rpx; }
+.delivery-lines { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.delivery-line { min-height: 30rpx; color: #7d898b; font-size: 20rpx; }
+.card-action {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 8rpx;
-  margin-top: 18rpx;
-}
-.package-tag {
-  font-size: 20rpx;
-  padding: 4rpx 12rpx;
+  flex-shrink: 0;
+  padding: 8rpx 12rpx;
   border-radius: 6rpx;
   background: #e6f4f3;
   color: #075e68;
+  font-size: 21rpx;
   font-weight: 600;
 }
-.batch-metrics {
-  display: grid;
-  grid-template-columns: 1fr 1.4fr;
-  margin-top: 20rpx;
-  padding-top: 18rpx;
-  border-top: 2rpx solid #edf0f0;
-}
-.metric {
-  display: flex;
-  flex-direction: column;
-}
-.metric-stage {
-  padding-left: 24rpx;
-  border-left: 2rpx solid #edf0f0;
-}
-.metric-label {
-  color: #7d898b;
-  font-size: 20rpx;
-}
-.metric-value {
-  margin-top: 3rpx;
-  color: #2c383c;
-  font-size: 27rpx;
-  font-weight: 700;
-}
-.stage-value { color: #087f8c; }
-.muted { color: #7d898b; font-weight: 500; }
+.action-arrow { margin-left: 5rpx; font-size: 30rpx; line-height: 1; }
 .overdue-badge {
-  margin-left: 8rpx;
-  font-size: 20rpx;
-  padding: 4rpx 12rpx;
-  border-radius: 6rpx;
+  padding: 4rpx 9rpx;
+  border-radius: 5rpx;
   background: #fcecea;
   color: #c9483f;
+  font-size: 19rpx;
   font-weight: 700;
-}
-.delivery-hint {
-  display: flex;
-  margin-top: 16rpx;
-  padding: 10rpx 14rpx;
-  background: #f5f7f7;
-  border-radius: 6rpx;
-  color: #657174;
-  font-size: 21rpx;
 }
 </style>

@@ -29,11 +29,24 @@ jobs:
             cd server
             PRODUCTION_CLIENT_URL="https://www.gaokekao.cn" node scripts/prepare-production-env.cjs
             npm ci --include=dev
-            DATABASE_URL="file:./dev.db" npx prisma migrate deploy
             DATABASE_URL="file:./dev.db" npx prisma generate
             npm run build
             export NODE_ENV=production
             node -e "import('./dist/config/index.js')"
+
+            # 先完成构建，再短暂停止 API，备份 SQLite 后执行迁移，避免迁移时仍有写入。
+            migration_complete=0
+            trap 'if [ "$migration_complete" -eq 0 ]; then pm2 restart pts-api --update-env 2>/dev/null || true; fi' EXIT
+            pm2 stop pts-api 2>/dev/null || true
+            mkdir -p /opt/pts-backups
+            if [ -f prisma/dev.db ]; then
+              cp -p prisma/dev.db "/opt/pts-backups/pts-$(date +%Y%m%d-%H%M%S).db"
+              find /opt/pts-backups -type f -name 'pts-*.db' -mtime +30 -delete
+            fi
+            DATABASE_URL="file:./dev.db" npx prisma migrate deploy
+            migration_complete=1
+            trap - EXIT
+
             pm2 delete pts 2>/dev/null || true
             pm2 restart pts-api --update-env 2>/dev/null || pm2 start dist/server.js --name pts-api
             pm2 save

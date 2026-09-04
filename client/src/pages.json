@@ -3,9 +3,10 @@
     { "path": "pages/index/index", "style": { "navigationBarTitleText": "生产追踪" } },
     { "path": "pages/progress/entry", "style": { "navigationBarTitleText": "工序流转" } },
     { "path": "pages/progress/history", "style": { "navigationBarTitleText": "产品详情" } },
-    { "path": "pages/batch/list", "style": { "navigationBarTitleText": "批次管理" } },
-    { "path": "pages/batch/detail", "style": { "navigationBarTitleText": "批次详情" } },
-    { "path": "pages/batch/create", "style": { "navigationBarTitleText": "新建批次" } },
+    { "path": "pages/batch/list", "style": { "navigationBarTitleText": "生产管理" } },
+    { "path": "pages/batch/detail", "style": { "navigationBarTitleText": "生产详情" } },
+    { "path": "pages/batch/create", "style": { "navigationBarTitleText": "录入订单" } },
+    { "path": "pages/batch/card", "style": { "navigationBarTitleText": "制卡" } },
     { "path": "pages/stats/index", "style": { "navigationBarTitleText": "统计分析" } },
     { "path": "pages/profile/index", "style": { "navigationBarTitleText": "个人中心" } }
   ],
@@ -28,7 +29,7 @@
     "borderStyle": "black",
     "list": [
       { "pagePath": "pages/index/index", "text": "首页" },
-      { "pagePath": "pages/batch/list", "text": "批次管理" },
+      { "pagePath": "pages/batch/list", "text": "生产管理" },
       { "pagePath": "pages/stats/index", "text": "统计" },
       { "pagePath": "pages/profile/index", "text": "我的" }
     ]

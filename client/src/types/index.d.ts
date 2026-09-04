@@ -18,7 +18,7 @@ export interface Product {
 
 export interface Batch {
   id: number;
-  batchNo: string;
+  batchNo: string | null;
   productId: number | null;
   quantity: number;
   customerCode: string | null;
@@ -26,10 +26,13 @@ export interface Batch {
   packageType: string | null;
   customerDelivery: string | null;
   productionDelivery: string | null;
-  status: "active" | "completed" | "archived";
+  status: "pending_card" | "pending" | "active" | "completed" | "archived" | "cancelled";
   priority: "normal" | "urgent";
   notes: string | null;
   createdBy: number | null;
+  cardCreatedAt: string | null;
+  startedAt: string | null;
+  cancelledAt: string | null;
   createdAt: string;
   updatedAt: string;
   product?: Product | null;
@@ -73,6 +76,8 @@ export interface DashboardData {
   };
   recentActivity: ProgressRecord[];
   activeBatchList: Batch[];
+  pendingCardList: Batch[];
+  pendingProductionList: Batch[];
   anomalies?: AnomalyItem[];
 }
 

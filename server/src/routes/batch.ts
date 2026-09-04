@@ -1,6 +1,17 @@
 import { Router } from "express";
 import { z } from "zod";
-import { listBatches, getBatchDetail, createBatch, updateBatch, deleteBatch } from "../services/batch.js";
+import {
+  BATCH_STATUSES,
+  cancelOrder,
+  confirmBatchCard,
+  createOrder,
+  getBatchCounts,
+  getBatchDetail,
+  getProductSuggestions,
+  listBatches,
+  startBatchProduction,
+  updateBatch,
+} from "../services/batch.js";
 import { authGuard, roleGuard, AuthRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
@@ -9,7 +20,6 @@ import { parsePagination } from "../utils/pagination.js";
 import {
   boundedQuery,
   isoDate,
-  nullableText,
   optionalText,
   requiredText,
   TEXT_LIMITS,
@@ -17,44 +27,68 @@ import {
 
 const router = Router();
 
-// Product batch schema
-const createProductSchema = z.object({
-  batchNo: requiredText(TEXT_LIMITS.shortCode, "批号不能为空"),
+const orderNoSchema = z.string()
+  .min(1, "订单编号不能为空")
+  .max(TEXT_LIMITS.shortCode, `订单编号不能超过${TEXT_LIMITS.shortCode}个字符`)
+  .regex(/^\d+$/, "订单编号只能包含数字");
+
+const createOrderSchema = z.object({
   productModel: requiredText(TEXT_LIMITS.name, "产品型号不能为空"),
-  quantity: z.number().int().positive("加工数量必须大于0"),
+  quantity: z.number().int("订单数量必须为整数").positive("订单数量必须大于0"),
   packageType: requiredText(TEXT_LIMITS.packageType, "请选择封装形式"),
-  customerCode: optionalText(TEXT_LIMITS.shortCode),
-  orderNo: optionalText(TEXT_LIMITS.shortCode),
+  customerCode: requiredText(TEXT_LIMITS.shortCode, "请选择客户代码"),
+  orderNo: orderNoSchema,
   customerDelivery: isoDate("客户要求交期").optional(),
-  productionDelivery: isoDate("生产预计交期").optional(),
   priority: z.enum(["normal", "urgent"]).optional(),
   notes: optionalText(TEXT_LIMITS.notes),
 });
 
-const createSchema = createProductSchema;
+const confirmCardSchema = z.object({
+  batchNo: requiredText(TEXT_LIMITS.shortCode, "生产批号不能为空"),
+  productionDelivery: isoDate("生产预计交期").nullable().optional(),
+  notes: optionalText(TEXT_LIMITS.notes),
+});
 
 const updateSchema = z.object({
-  status: z.enum(["active", "completed", "archived"]).optional(),
+  status: z.enum(BATCH_STATUSES).optional(),
   priority: z.enum(["normal", "urgent"]).optional(),
-  batchNo: optionalText(TEXT_LIMITS.shortCode),
-  productModel: optionalText(TEXT_LIMITS.name),
-  quantity: z.number().int().min(0).optional(),
-  customerCode: nullableText(TEXT_LIMITS.shortCode),
-  orderNo: nullableText(TEXT_LIMITS.shortCode),
-  packageType: nullableText(TEXT_LIMITS.packageType),
+  batchNo: requiredText(TEXT_LIMITS.shortCode, "生产批号不能为空").optional(),
+  productModel: requiredText(TEXT_LIMITS.name, "产品型号不能为空").optional(),
+  quantity: z.number().int("订单数量必须为整数").positive("订单数量必须大于0").optional(),
+  customerCode: requiredText(TEXT_LIMITS.shortCode, "请选择客户代码").optional(),
+  orderNo: orderNoSchema.optional(),
+  packageType: requiredText(TEXT_LIMITS.packageType, "请选择封装形式").optional(),
   customerDelivery: isoDate("客户要求交期").nullable().optional(),
   productionDelivery: isoDate("生产预计交期").nullable().optional(),
   notes: optionalText(TEXT_LIMITS.notes),
 });
 
-router.get("/", authGuard, async (req, res, next) => {
+router.get("/counts", authGuard, async (req: AuthRequest, res, next) => {
+  try {
+    res.json(await getBatchCounts(req.user!.role));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/product-suggestions", authGuard, async (req, res, next) => {
+  try {
+    const keyword = boundedQuery(req.query.keyword, "产品型号") || "";
+    res.json(await getProductSuggestions(keyword));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/", authGuard, async (req: AuthRequest, res, next) => {
   try {
     const result = await listBatches({
-      status: boundedQuery(req.query.status, "批次状态", 20),
+      status: boundedQuery(req.query.status, "生产状态", 20),
       productId: req.query.productId ? parseId(req.query.productId as string) : undefined,
       keyword: boundedQuery(req.query.keyword, "搜索关键词"),
       customerCode: boundedQuery(req.query.customerCode, "客户代码"),
       packageType: boundedQuery(req.query.packageType, "封装形式", TEXT_LIMITS.packageType),
+      role: req.user!.role,
       ...parsePagination(req.query, { pageDefault: 1, pageSizeDefault: 50 }),
     });
     res.json(result);
@@ -63,11 +97,11 @@ router.get("/", authGuard, async (req, res, next) => {
   }
 });
 
-router.get("/:id", authGuard, async (req, res, next) => {
+router.get("/:id", authGuard, async (req: AuthRequest, res, next) => {
   try {
-    const batch = await getBatchDetail(parseId(req.params.id));
+    const batch = await getBatchDetail(parseId(req.params.id), req.user!.role);
     if (!batch) {
-      res.status(404).json({ error: "批次不存在" });
+      res.status(404).json({ error: "生产任务不存在" });
       return;
     }
     res.json(batch);
@@ -76,31 +110,50 @@ router.get("/:id", authGuard, async (req, res, next) => {
   }
 });
 
-router.post("/", authGuard, roleGuard("admin"), auditLog("create", "batch"), validate(createSchema), async (req: AuthRequest, res, next) => {
+router.post("/", authGuard, roleGuard("admin"), auditLog("create", "production"), validate(createOrderSchema), async (req: AuthRequest, res, next) => {
   try {
-    const batch = await createBatch({ ...req.body, createdBy: req.user!.id });
+    const batch = await createOrder({ ...req.body, createdBy: req.user!.id });
     res.status(201).json(batch);
   } catch (err) {
     next(err);
   }
 });
 
-router.put("/:id", authGuard, roleGuard("admin"), auditLog("update", "batch"), validate(updateSchema), async (req, res, next) => {
+router.post("/:id/confirm-card", authGuard, roleGuard("admin"), auditLog("confirm_card", "production"), validate(confirmCardSchema), async (req: AuthRequest, res, next) => {
   try {
-    const batch = await updateBatch(parseId(req.params.id), req.body);
+    const batch = await confirmBatchCard(parseId(req.params.id), { ...req.body, operatorId: req.user!.id });
     res.json(batch);
   } catch (err) {
     next(err);
   }
 });
 
-router.delete("/:id", authGuard, roleGuard("admin"), auditLog("delete", "batch"), async (req: AuthRequest, res, next) => {
+router.post("/:id/start-production", authGuard, roleGuard("admin"), auditLog("start", "production"), async (req: AuthRequest, res, next) => {
   try {
-    await deleteBatch(parseId(req.params.id));
-    res.json({ success: true });
+    res.json(await startBatchProduction(parseId(req.params.id), req.user!.id));
   } catch (err) {
     next(err);
   }
+});
+
+router.post("/:id/cancel", authGuard, roleGuard("admin"), auditLog("cancel", "production"), async (req: AuthRequest, res, next) => {
+  try {
+    res.json(await cancelOrder(parseId(req.params.id), req.user!.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/:id", authGuard, roleGuard("admin"), auditLog("update", "production"), validate(updateSchema), async (req, res, next) => {
+  try {
+    res.json(await updateBatch(parseId(req.params.id), req.body));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/:id", authGuard, roleGuard("admin"), (_req, res) => {
+  res.status(405).json({ error: "生产任务不可直接删除，请使用取消订单" });
 });
 
 export const batchRoutes = router;

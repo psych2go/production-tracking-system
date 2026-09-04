@@ -10,16 +10,22 @@ export const ROLE_LABELS: Record<string, string> = {
   worker: "作业员",
 };
 
-// 批次状态标签
+// 生产任务状态标签
 export const STATUS_LABELS: Record<string, string> = {
-  active: "正在加工",
+  pending_card: "待制卡",
+  pending: "待投产",
+  active: "加工中",
   completed: "已完成",
   archived: "已归档",
+  cancelled: "已取消",
 };
 
-// 批次状态颜色
+// 生产任务状态颜色
 export const STATUS_COLORS: Record<string, string> = {
-  completed: "#07c160",
+  pending_card: "#d97706",
+  pending: "#087f8c",
   active: "#0083ff",
-  archived: "#999999",
+  completed: "#27865f",
+  archived: "#7d898b",
+  cancelled: "#c9483f",
 };

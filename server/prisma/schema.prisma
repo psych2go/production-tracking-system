@@ -8,31 +8,35 @@ datasource db {
 }
 
 model User {
-  id          Int      @id @default(autoincrement())
-  wwUserId    String   @unique(map: "ww_user_id") @map("ww_user_id")
-  name        String
-  department  String?
-  role        String   @default("worker") // admin, worker
-  avatarUrl   String?  @map("avatar_url")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id         Int      @id @default(autoincrement())
+  wwUserId   String   @unique(map: "ww_user_id") @map("ww_user_id")
+  name       String
+  department String?
+  role       String   @default("worker") // admin, worker
+  avatarUrl  String?  @map("avatar_url")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
-  batchesCreated   Batch[]           @relation("BatchCreator")
-  progressRecords  ProgressRecord[]  @relation("ProgressOperator")
+  batchesCreated   Batch[]          @relation("BatchCreator")
+  batchesCarded    Batch[]          @relation("BatchCardCreator")
+  batchesStarted   Batch[]          @relation("BatchStarter")
+  batchesCancelled Batch[]          @relation("BatchCanceller")
+  progressRecords  ProgressRecord[] @relation("ProgressOperator")
   auditLogs        AuditLog[]
 
   @@map("users")
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
-  model       String   @unique
-  name        String?
-  description String?
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  model           String
+  modelNormalized String?  @unique @map("model_normalized")
+  name            String?
+  description     String?
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   batches Batch[]
 
@@ -40,36 +44,50 @@ model Product {
 }
 
 model Batch {
-  id         Int      @id @default(autoincrement())
-  batchNo    String   @map("batch_no")
-  productId  Int?     @map("product_id")
-  quantity   Int      @default(0)
-  status     String   @default("active") // active, completed, archived
-  priority   String   @default("normal") // normal, urgent
-  customerCode     String?   @map("customer_code")
-  orderNo          String?   @map("order_no")
-  packageType        String?   @map("package_type")
-  customerDelivery   DateTime? @map("customer_delivery")
-  productionDelivery DateTime? @map("production_delivery")
-  notes            String?
-  createdBy        Int?      @map("created_by")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id                     Int       @id @default(autoincrement())
+  batchNo                String?   @map("batch_no")
+  batchNoNormalized      String?   @map("batch_no_normalized")
+  productModelNormalized String?   @map("product_model_normalized")
+  orderIdentity          String?   @unique(map: "order_identity_unique") @map("order_identity")
+  productId              Int?      @map("product_id")
+  quantity               Int       @default(0)
+  status                 String    @default("active") // pending_card, pending, active, completed, archived, cancelled
+  priority               String    @default("normal") // normal, urgent
+  customerCode           String?   @map("customer_code")
+  orderNo                String?   @map("order_no")
+  packageType            String?   @map("package_type")
+  customerDelivery       DateTime? @map("customer_delivery")
+  productionDelivery     DateTime? @map("production_delivery")
+  notes                  String?
+  createdBy              Int?      @map("created_by")
+  cardCreatedBy          Int?      @map("card_created_by")
+  cardCreatedAt          DateTime? @map("card_created_at")
+  startedBy              Int?      @map("started_by")
+  startedAt              DateTime? @map("started_at")
+  cancelledBy            Int?      @map("cancelled_by")
+  cancelledAt            DateTime? @map("cancelled_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   product         Product?         @relation(fields: [productId], references: [id])
   creator         User?            @relation("BatchCreator", fields: [createdBy], references: [id])
+  cardCreator     User?            @relation("BatchCardCreator", fields: [cardCreatedBy], references: [id])
+  starter         User?            @relation("BatchStarter", fields: [startedBy], references: [id])
+  canceller       User?            @relation("BatchCanceller", fields: [cancelledBy], references: [id])
   progressRecords ProgressRecord[]
 
   @@unique([batchNo, productId], map: "batch_no_product_unique")
+  @@unique([batchNoNormalized, productModelNormalized], map: "batch_identity_normalized_unique")
+  @@index([customerCode, orderNo], map: "customer_order_idx")
   @@map("batches")
 }
 
 model ProcessStage {
-  id          Int       @id @default(autoincrement())
-  code        String    @unique
+  id          Int     @id @default(autoincrement())
+  code        String  @unique
   name        String
-  stageOrder  Int       @unique(map: "stage_order") @map("stage_order")
-  isQcStage   Boolean   @default(false) @map("is_qc_stage")
+  stageOrder  Int     @unique(map: "stage_order") @map("stage_order")
+  isQcStage   Boolean @default(false) @map("is_qc_stage")
   description String?
 
   progressRecords ProgressRecord[]
@@ -78,14 +96,14 @@ model ProcessStage {
 }
 
 model ProgressRecord {
-  id              Int       @id @default(autoincrement())
-  batchId         Int       @map("batch_id")
-  stageId         Int       @map("stage_id")
-  operatorId      Int       @map("operator_id")
-  status          String    @default("completed") // completed, in_progress
-  notes           String?
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id         Int      @id @default(autoincrement())
+  batchId    Int      @map("batch_id")
+  stageId    Int      @map("stage_id")
+  operatorId Int      @map("operator_id")
+  status     String   @default("completed") // completed, in_progress
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   batch    Batch        @relation(fields: [batchId], references: [id])
   stage    ProcessStage @relation(fields: [stageId], references: [id])
@@ -116,10 +134,10 @@ model CustomerCode {
 model AuditLog {
   id        Int      @id @default(autoincrement())
   userId    Int      @map("user_id")
-  action    String                     // create, update, delete, login...
-  entity    String                     // batch, progress, user, stage...
+  action    String // create, update, delete, login...
+  entity    String // batch, progress, user, stage...
   entityId  Int?     @map("entity_id")
-  detail    String?                    // JSON
+  detail    String? // JSON
   ip        String?
   createdAt DateTime @default(now()) @map("created_at")
 

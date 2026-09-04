@@ -47,7 +47,7 @@ export function getCurrentStage(batch: { progressRecords?: { status: string; cre
 
 /** 判断批次是否逾期（按天比较，忽略时分秒） */
 export function isOverdue(customerDelivery: string | null | undefined, status: string | undefined): boolean {
-  if (!customerDelivery || status !== "active") return false;
+  if (!customerDelivery || !status || ["completed", "archived", "cancelled"].includes(status)) return false;
   const deliveryDate = new Date(customerDelivery);
   const today = new Date();
   deliveryDate.setHours(0, 0, 0, 0);

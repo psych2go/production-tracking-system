@@ -26,7 +26,7 @@ export async function getAnomalies() {
         type: "batch_delay",
         severity: "major",
         batchId: b.id,
-        batchNo: b.batchNo,
+        batchNo: b.batchNo || "",
         description: `超过5天无进度更新`,
         value: Math.round((Date.now() - new Date(lastUpdate).getTime()) / (24 * 60 * 60 * 1000)),
         threshold: 5,

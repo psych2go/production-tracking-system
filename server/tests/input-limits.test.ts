@@ -22,7 +22,8 @@ describe("input limits", () => {
       .post("/api/batches")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
-        batchNo: "DATE-INVALID",
+        orderNo: "90001",
+        customerCode: "CUST001",
         productModel: "DATE-MODEL",
         quantity: 1,
         packageType: "SOP8L",

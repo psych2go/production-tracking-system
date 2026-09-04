@@ -79,7 +79,7 @@ export async function listProgress(filters: {
   return { items, total, page, pageSize };
 }
 
-export async function getDashboardData() {
+export async function getDashboardData(role: string) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -99,7 +99,30 @@ export async function getDashboardData() {
     },
   });
 
-  // Batches currently in progress (with latest stage info, capped at 50)
+  const preProductionLists = role === "admin"
+    ? await Promise.all([
+        prisma.batch.findMany({
+          where: { status: "pending_card" },
+          include: { product: true },
+          orderBy: [
+            { priority: "desc" },
+            { customerDelivery: { sort: "asc", nulls: "last" } },
+            { createdAt: "asc" },
+          ],
+        }),
+        prisma.batch.findMany({
+          where: { status: "pending" },
+          include: { product: true },
+          orderBy: [
+            { priority: "desc" },
+            { customerDelivery: { sort: "asc", nulls: "last" } },
+            { createdAt: "asc" },
+          ],
+        }),
+      ])
+    : [[], []];
+
+  // Batches currently in progress
   const activeBatchList = await prisma.batch.findMany({
     where: { status: "active" },
     include: {
@@ -110,7 +133,6 @@ export async function getDashboardData() {
       },
     },
     orderBy: { createdAt: "desc" },
-    take: 50,
   });
 
   // Get anomalies (batch delay only)
@@ -127,6 +149,8 @@ export async function getDashboardData() {
     stats: { activeProductBatches, activeProductQuantity: activeProductQuantity._sum.quantity ?? 0 },
     recentActivity,
     activeBatchList,
+    pendingCardList: preProductionLists[0],
+    pendingProductionList: preProductionLists[1],
     anomalies,
   };
 }

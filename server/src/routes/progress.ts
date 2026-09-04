@@ -24,9 +24,9 @@ const progressSchema = z.object({
 });
 
 // Dashboard
-router.get("/dashboard", authGuard, async (_req, res, next) => {
+router.get("/dashboard", authGuard, async (req: AuthRequest, res, next) => {
   try {
-    const data = await getDashboardData();
+    const data = await getDashboardData(req.user!.role);
     res.json(data);
   } catch (err) {
     next(err);
