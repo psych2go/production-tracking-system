@@ -92,8 +92,29 @@ export async function listCustomerCodes() {
   return prisma.customerCode.findMany({ orderBy: { code: "asc" } });
 }
 
-export async function createCustomerCode(data: { code: string }) {
-  return prisma.customerCode.create({ data: { code: data.code } });
+export async function createCustomerCode(data: { code: string; name?: string; type?: string }) {
+  return prisma.customerCode.create({
+    data: {
+      code: data.code,
+      name: data.name?.trim() || null,
+      type: data.type || null,
+    },
+  });
+}
+
+export async function updateCustomerCode(
+  id: number,
+  data: { name?: string; type?: string }
+) {
+  const cc = await prisma.customerCode.findUnique({ where: { id } });
+  if (!cc) throw new Error("客户代码不存在");
+  return prisma.customerCode.update({
+    where: { id },
+    data: {
+      name: data.name !== undefined ? data.name.trim() || null : undefined,
+      type: data.type !== undefined ? data.type || null : undefined,
+    },
+  });
 }
 
 export async function deleteCustomerCode(id: number) {

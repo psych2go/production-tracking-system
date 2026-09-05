@@ -4,7 +4,7 @@ import { authGuard, roleGuard } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 import { parseId } from "../utils/parseId.js";
-import { createStage, updateStage, deleteStage, listPackageTypes, createPackageType, updatePackageType, deletePackageType, listCustomerCodes, createCustomerCode, deleteCustomerCode } from "../services/settings.js";
+import { createStage, updateStage, deleteStage, listPackageTypes, createPackageType, updatePackageType, deletePackageType, listCustomerCodes, createCustomerCode, updateCustomerCode, deleteCustomerCode } from "../services/settings.js";
 import {
   nullableText,
   optionalText,
@@ -161,6 +161,13 @@ settingsRoutes.delete(
 
 const createCustomerCodeSchema = z.object({
   code: requiredText(TEXT_LIMITS.shortCode, "客户代码不能为空"),
+  name: optionalText(TEXT_LIMITS.name),
+  type: z.enum(["internal", "external"]).optional(),
+});
+
+const updateCustomerCodeSchema = z.object({
+  name: optionalText(TEXT_LIMITS.name),
+  type: z.enum(["internal", "external"]).nullable().optional(),
 });
 
 // List customer codes
@@ -188,6 +195,23 @@ settingsRoutes.post(
     try {
       const cc = await createCustomerCode(req.body);
       res.status(201).json(cc);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Update customer code (name / type)
+settingsRoutes.put(
+  "/customer-codes/:id",
+  authGuard,
+  roleGuard("admin"),
+  auditLog("update", "customer_code"),
+  validate(updateCustomerCodeSchema),
+  async (req, res, next) => {
+    try {
+      const cc = await updateCustomerCode(parseId(req.params.id), req.body);
+      res.json(cc);
     } catch (err) {
       next(err);
     }

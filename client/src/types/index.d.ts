@@ -41,6 +41,8 @@ export interface Batch {
   creator?: { id: number; name: string };
   progressRecords?: ProgressRecord[];
   pauseRecords?: BatchPauseRecord[];
+  customerName?: string | null;
+  customerType?: "internal" | "external" | null;
 }
 
 export interface BatchPauseRecord {
@@ -142,4 +144,6 @@ export interface PackageType {
 export interface CustomerCode {
   id: number;
   code: string;
+  name: string | null;
+  type: "internal" | "external" | null;
 }

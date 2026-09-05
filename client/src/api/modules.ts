@@ -106,8 +106,10 @@ export const settingsApi = {
 
   // Customer codes
   listCustomerCodes: () => api.get<CustomerCode[]>("/api/settings/customer-codes"),
-  createCustomerCode: (data: { code: string }) =>
+  createCustomerCode: (data: { code: string; name?: string; type?: string }) =>
     api.post<CustomerCode>("/api/settings/customer-codes", data),
+  updateCustomerCode: (id: number, data: { name?: string; type?: string | null }) =>
+    api.put<CustomerCode>(`/api/settings/customer-codes/${id}`, data),
   deleteCustomerCode: (id: number) => api.delete(`/api/settings/customer-codes/${id}`),
 };
 

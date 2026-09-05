@@ -29,3 +29,14 @@ export const STATUS_COLORS: Record<string, string> = {
   archived: "#7d898b",
   cancelled: "#c9483f",
 };
+
+// 客户类型
+export const CUSTOMER_TYPES = [
+  { label: "所内", value: "internal" },
+  { label: "所外", value: "external" },
+];
+
+export const CUSTOMER_TYPE_LABELS: Record<string, string> = {
+  internal: "所内",
+  external: "所外",
+};

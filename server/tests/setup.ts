@@ -79,7 +79,7 @@ async function seedTestData() {
   });
 
   // Create customer code referenced by the seeded batch (validateCustomerCode enforces existence)
-  await prisma.customerCode.create({ data: { code: "CUST001" } });
+  await prisma.customerCode.create({ data: { code: "CUST001", name: "测试客户", type: "internal" } });
 
   // Create product
   const product = await prisma.product.create({ data: { model: "GD32F303" } });

@@ -108,6 +108,25 @@ function visibleStatusesForRole(role: string): string[] | undefined {
   return role === "admin" ? undefined : [...WORKER_VISIBLE_STATUSES];
 }
 
+/** 补充客户名称/客户类型（统计与展示用），不改变原有字段。 */
+async function enrichCustomerInfo<T extends { customerCode: string | null }>(
+  items: T[],
+): Promise<(T & { customerName: string | null; customerType: string | null })[]> {
+  const codes = [...new Set(items.map((item) => item.customerCode).filter((code): code is string => !!code))];
+  const customers = codes.length
+    ? await prisma.customerCode.findMany({ where: { code: { in: codes } }, select: { code: true, name: true, type: true } })
+    : [];
+  const customerMap = new Map(customers.map((customer) => [customer.code, customer]));
+  return items.map((item) => {
+    const customer = item.customerCode ? customerMap.get(item.customerCode) : undefined;
+    return {
+      ...item,
+      customerName: customer?.name ?? null,
+      customerType: customer?.type ?? null,
+    };
+  });
+}
+
 export async function listBatches(filters: {
   status?: string;
   productId?: number;
@@ -168,7 +187,7 @@ export async function listBatches(filters: {
     prisma.batch.count({ where }),
   ]);
 
-  return { items, total, page, pageSize };
+  return { items: await enrichCustomerInfo(items), total, page, pageSize };
 }
 
 export async function getBatchCounts(role: string) {
@@ -216,7 +235,9 @@ export async function getBatchDetail(id: number, role: string) {
   if (batch && role !== "admin" && !WORKER_VISIBLE_STATUSES.includes(batch.status as typeof WORKER_VISIBLE_STATUSES[number])) {
     return null;
   }
-  return batch;
+  if (!batch) return batch;
+  const [enriched] = await enrichCustomerInfo([batch]);
+  return enriched;
 }
 
 export async function createOrder(data: {

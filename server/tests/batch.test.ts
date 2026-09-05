@@ -13,6 +13,12 @@ describe("Batch Routes", () => {
       expect(res.body.items).toBeInstanceOf(Array);
       expect(res.body.total).toBeGreaterThanOrEqual(1);
       expect(res.body.page).toBe(1);
+      // 客户信息增强：名称与类型来自客户代码表
+      const withCustomer = res.body.items.find((item: { customerCode: string | null }) => item.customerCode === "CUST001");
+      if (withCustomer) {
+        expect(withCustomer.customerName).toBe("测试客户");
+        expect(withCustomer.customerType).toBe("internal");
+      }
     });
 
     it("should filter by status", async () => {

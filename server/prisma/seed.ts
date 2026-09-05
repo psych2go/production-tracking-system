@@ -61,8 +61,34 @@ const PACKAGE_TYPES = [
 ];
 
 const CUSTOMER_CODES = [
-  "HIC", "SJ", "XIC", "JSC20", "JSC21", "JSC22",
-  "GS01-J", "LN02-J", "ZD47", "ZK01-J", "ZK02-J", "ZK03-J", "XA53-J",
+  // name/type 源自《高可靠在线产品在线加工统计表》，可在客户代码管理中维护
+  { code: "HIC", name: "混合", type: "internal" },
+  { code: "SJ", name: "设计", type: "internal" },
+  { code: "XIC", name: "新集成", type: "internal" },
+  { code: "TZ", name: "特种", type: "internal" },
+  { code: "JSC20", name: "成都华微", type: "external" },
+  { code: "JSC21", name: "振芯", type: "external" },
+  { code: "JSC22", name: null, type: null },
+  { code: "JSC23", name: "蜀郡微", type: "external" },
+  { code: "JSC28", name: "环宇芯", type: "external" },
+  { code: "JSC29", name: "鸿立芯", type: "external" },
+  { code: "JSC30", name: null, type: "external" },
+  { code: "GS01-J", name: "天光", type: "external" },
+  { code: "LN02-J", name: "锦州777", type: "external" },
+  { code: "ZD47", name: "47所", type: "external" },
+  { code: "ZD58", name: "58所", type: "external" },
+  { code: "ZK01-J", name: "中科院", type: "external" },
+  { code: "ZK02-J", name: null, type: null },
+  { code: "ZK03-J", name: "中科院", type: "external" },
+  { code: "XA53-J", name: null, type: null },
+  { code: "JS10-J", name: "中微爱芯", type: "external" },
+  { code: "GZ01-J", name: "振华风光", type: "external" },
+  { code: "WH02-J", name: "芯景", type: "external" },
+  { code: "SX71-J", name: "矽联", type: "external" },
+  { code: "SH21-J", name: "翔腾", type: "external" },
+  { code: "SD03-J", name: "中科驭思", type: "external" },
+  { code: "AH22-J", name: "华东光电", type: "external" },
+  { code: "GD389-J", name: "沈阳自动化", type: "external" },
 ];
 
 async function main() {
@@ -92,9 +118,9 @@ async function main() {
   console.log("Seeding customer codes...");
   for (const code of CUSTOMER_CODES) {
     await prisma.customerCode.upsert({
-      where: { code },
-      update: {},
-      create: { code },
+      where: { code: code.code },
+      update: { name: code.name, type: code.type },
+      create: code,
     });
   }
   console.log(`Seeded ${CUSTOMER_CODES.length} customer codes.`);

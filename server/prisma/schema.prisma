@@ -152,6 +152,8 @@ model PackageType {
 model CustomerCode {
   id        Int      @id @default(autoincrement())
   code      String   @unique
+  name      String?
+  type      String? // internal, external
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("customer_codes")

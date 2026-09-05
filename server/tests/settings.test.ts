@@ -91,4 +91,42 @@ describe("Settings Routes", () => {
       expect(res.status).toBe(400);
     });
   });
+
+  describe("Customer Codes", () => {
+    it("should create customer code with name and type (admin)", async () => {
+      const res = await request(app)
+        .post("/api/settings/customer-codes")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ code: "TEST-CC", name: "测试客户", type: "external" });
+
+      expect(res.status).toBe(201);
+      expect(res.body.name).toBe("测试客户");
+      expect(res.body.type).toBe("external");
+    });
+
+    it("should update customer code name and type (admin)", async () => {
+      const cc = await prisma.customerCode.findUnique({ where: { code: "TEST-CC" } });
+      expect(cc).not.toBeNull();
+
+      const res = await request(app)
+        .put(`/api/settings/customer-codes/${cc!.id}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ name: "更名客户", type: "internal" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.name).toBe("更名客户");
+      expect(res.body.type).toBe("internal");
+    });
+
+    it("should reject worker updating customer code", async () => {
+      const cc = await prisma.customerCode.findUnique({ where: { code: "TEST-CC" } });
+
+      const res = await request(app)
+        .put(`/api/settings/customer-codes/${cc!.id}`)
+        .set("Authorization", `Bearer ${workerToken}`)
+        .send({ name: "未授权" });
+
+      expect(res.status).toBe(403);
+    });
+  });
 });
