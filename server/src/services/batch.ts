@@ -12,6 +12,8 @@ export const BATCH_STATUSES = [
 
 export const WORKER_VISIBLE_STATUSES = ["active", "completed", "archived"] as const;
 
+export const PAUSABLE_STATUSES = ["pending_card", "pending", "active"] as const;
+
 function normalizeText(value: string): string {
   return value.trim().toLocaleLowerCase("en-US");
 }
@@ -112,11 +114,12 @@ export async function listBatches(filters: {
   keyword?: string;
   customerCode?: string;
   packageType?: string;
+  paused?: boolean;
   page?: number;
   pageSize?: number;
   role: string;
 }) {
-  const { status, productId, keyword, customerCode, packageType, page = 1, pageSize = 50, role } = filters;
+  const { status, productId, keyword, customerCode, packageType, paused, page = 1, pageSize = 50, role } = filters;
   const roleStatuses = visibleStatusesForRole(role);
   const where: Prisma.BatchWhereInput = {};
 
@@ -132,6 +135,7 @@ export async function listBatches(filters: {
   if (productId) where.productId = productId;
   if (customerCode) where.customerCode = customerCode;
   if (packageType) where.packageType = packageType;
+  if (paused !== undefined) where.pausedAt = paused ? { not: null } : null;
   if (keyword) {
     where.OR = [
       { batchNo: { contains: keyword } },
@@ -181,6 +185,12 @@ export async function getBatchCounts(role: string) {
     total += row._count._all;
   }
   counts.all = total;
+  counts.paused = await prisma.batch.count({
+    where: {
+      ...(roleStatuses ? { status: { in: roleStatuses } } : {}),
+      pausedAt: { not: null },
+    },
+  });
   return counts;
 }
 
@@ -193,6 +203,13 @@ export async function getBatchDetail(id: number, role: string) {
       progressRecords: {
         include: { stage: true, operator: { select: { id: true, name: true } } },
         orderBy: { stage: { stageOrder: "asc" } },
+      },
+      pauseRecords: {
+        include: {
+          starter: { select: { id: true, name: true } },
+          ender: { select: { id: true, name: true } },
+        },
+        orderBy: { startedAt: "desc" },
       },
     },
   });
@@ -261,6 +278,7 @@ export async function confirmBatchCard(id: number, data: {
       const batch = await tx.batch.findUnique({ where: { id }, include: { product: true } });
       if (!batch) throw new Error("生产任务不存在");
       if (batch.status !== "pending_card") throw new Error("只有待制卡订单可以确认制卡");
+      if (batch.pausedAt) throw new Error("生产任务暂停中，请先解除暂停");
       if (!batch.product) throw new Error("产品型号不存在");
 
       productModel = batch.product.model;
@@ -292,6 +310,7 @@ export async function startBatchProduction(id: number, operatorId: number) {
     const batch = await tx.batch.findUnique({ where: { id } });
     if (!batch) throw new Error("生产任务不存在");
     if (batch.status !== "pending") throw new Error("只有待投产任务可以投入加工");
+    if (batch.pausedAt) throw new Error("生产任务暂停中，请先解除暂停");
     return tx.batch.update({
       where: { id },
       data: { status: "active", startedBy: operatorId, startedAt: new Date() },
@@ -307,9 +326,62 @@ export async function cancelOrder(id: number, operatorId: number) {
     if (!(["pending_card", "pending"] as string[]).includes(batch.status)) {
       throw new Error("只有待制卡或待投产任务可以取消订单");
     }
+    if (batch.pausedAt) {
+      // 取消暂停中的订单时，同步闭合暂停记录，保留完整历史。
+      await tx.batchPauseRecord.updateMany({
+        where: { batchId: id, endedAt: null },
+        data: { endedAt: new Date(), endedBy: operatorId },
+      });
+    }
     return tx.batch.update({
       where: { id },
-      data: { status: "cancelled", cancelledBy: operatorId, cancelledAt: new Date() },
+      data: {
+        status: "cancelled",
+        cancelledBy: operatorId,
+        cancelledAt: new Date(),
+        pausedAt: null,
+        pauseReason: null,
+        pausedBy: null,
+      },
+      include: { product: true },
+    });
+  });
+}
+
+export async function pauseBatch(id: number, reason: string, operatorId: number) {
+  const normalizedReason = reason.trim();
+  return prisma.$transaction(async (tx) => {
+    const batch = await tx.batch.findUnique({ where: { id } });
+    if (!batch) throw new Error("生产任务不存在");
+    if (!(PAUSABLE_STATUSES as readonly string[]).includes(batch.status)) {
+      throw new Error("只有待制卡、待投产或加工中的任务可以暂停");
+    }
+    if (batch.pausedAt) throw new Error("该任务已在暂停中");
+    const now = new Date();
+    await tx.batchPauseRecord.create({
+      data: { batchId: id, reason: normalizedReason, startedBy: operatorId, startedAt: now },
+    });
+    return tx.batch.update({
+      where: { id },
+      data: { pausedAt: now, pauseReason: normalizedReason, pausedBy: operatorId },
+      include: { product: true },
+    });
+  });
+}
+
+export async function resumeBatch(id: number, operatorId: number) {
+  return prisma.$transaction(async (tx) => {
+    const batch = await tx.batch.findUnique({ where: { id } });
+    if (!batch) throw new Error("生产任务不存在");
+    if (!batch.pausedAt) throw new Error("该任务不在暂停中");
+    const now = new Date();
+    await tx.batchPauseRecord.updateMany({
+      where: { batchId: id, endedAt: null },
+      data: { endedAt: now, endedBy: operatorId },
+    });
+    return tx.batch.update({
+      where: { id },
+      data: { pausedAt: null, pauseReason: null, pausedBy: null },
       include: { product: true },
     });
   });

@@ -25,6 +25,7 @@ export async function upsertProgress(data: {
     const batch = await tx.batch.findUnique({ where: { id: data.batchId } });
     if (!batch) throw new Error("批次不存在");
     if (batch.status !== "active") throw new Error("批次已结束，不可流转");
+    if (batch.pausedAt) throw new Error("生产任务暂停中，请先解除暂停再流转工序");
 
     const record = await tx.progressRecord.create({
       data: {

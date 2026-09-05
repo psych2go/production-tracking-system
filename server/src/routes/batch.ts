@@ -9,6 +9,8 @@ import {
   getBatchDetail,
   getProductSuggestions,
   listBatches,
+  pauseBatch,
+  resumeBatch,
   startBatchProduction,
   updateBatch,
 } from "../services/batch.js";
@@ -47,6 +49,10 @@ const confirmCardSchema = z.object({
   batchNo: requiredText(TEXT_LIMITS.shortCode, "生产批号不能为空"),
   productionDelivery: isoDate("生产预计交期").nullable().optional(),
   notes: optionalText(TEXT_LIMITS.notes),
+});
+
+const pauseSchema = z.object({
+  reason: requiredText(TEXT_LIMITS.notes, "请填写暂停原因"),
 });
 
 const updateSchema = z.object({
@@ -88,6 +94,7 @@ router.get("/", authGuard, async (req: AuthRequest, res, next) => {
       keyword: boundedQuery(req.query.keyword, "搜索关键词"),
       customerCode: boundedQuery(req.query.customerCode, "客户代码"),
       packageType: boundedQuery(req.query.packageType, "封装形式", TEXT_LIMITS.packageType),
+      paused: req.query.paused === "true" ? true : req.query.paused === "false" ? false : undefined,
       role: req.user!.role,
       ...parsePagination(req.query, { pageDefault: 1, pageSizeDefault: 50 }),
     });
@@ -139,6 +146,23 @@ router.post("/:id/start-production", authGuard, roleGuard("admin"), auditLog("st
 router.post("/:id/cancel", authGuard, roleGuard("admin"), auditLog("cancel", "production"), async (req: AuthRequest, res, next) => {
   try {
     res.json(await cancelOrder(parseId(req.params.id), req.user!.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 暂停/恢复：管理员和工人都可操作（异常多由工人发现），全部留审计。
+router.post("/:id/pause", authGuard, auditLog("pause", "production"), validate(pauseSchema), async (req: AuthRequest, res, next) => {
+  try {
+    res.json(await pauseBatch(parseId(req.params.id), req.body.reason, req.user!.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/:id/resume", authGuard, auditLog("resume", "production"), async (req: AuthRequest, res, next) => {
+  try {
+    res.json(await resumeBatch(parseId(req.params.id), req.user!.id));
   } catch (err) {
     next(err);
   }

@@ -33,11 +33,26 @@ export interface Batch {
   cardCreatedAt: string | null;
   startedAt: string | null;
   cancelledAt: string | null;
+  pausedAt: string | null;
+  pauseReason: string | null;
   createdAt: string;
   updatedAt: string;
   product?: Product | null;
   creator?: { id: number; name: string };
   progressRecords?: ProgressRecord[];
+  pauseRecords?: BatchPauseRecord[];
+}
+
+export interface BatchPauseRecord {
+  id: number;
+  batchId: number;
+  reason: string;
+  startedBy: number;
+  startedAt: string;
+  endedAt: string | null;
+  endedBy: number | null;
+  starter?: { id: number; name: string } | null;
+  ender?: { id: number; name: string } | null;
 }
 
 export interface ProcessStage {

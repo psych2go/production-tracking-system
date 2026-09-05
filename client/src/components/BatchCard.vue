@@ -9,9 +9,14 @@
         </view>
         <view class="batch-statuses">
           <view v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</view>
+          <view v-if="isPaused" class="paused-tag">暂停中</view>
           <view v-if="isOverdue" class="overdue-badge">逾期</view>
           <view class="status-badge" :class="`status-${batch.status}`">{{ statusLabel }}</view>
         </view>
+      </view>
+
+      <view v-if="isPaused" class="paused-line">
+        <text class="paused-line-text">暂停：{{ batch.pauseReason }}</text>
       </view>
 
       <text class="customer-code">{{ batch.customerCode || '' }}</text>
@@ -57,6 +62,7 @@ defineEmits<{ click: []; action: [] }>();
 const statusLabel = computed(() => STATUS_LABELS[props.batch.status] || props.batch.status);
 const currentStage = computed(() => getCurrentStage(props.batch)?.name ?? null);
 const isOverdue = computed(() => checkOverdue(props.batch.customerDelivery, props.batch.status));
+const isPaused = computed(() => !!props.batch.pausedAt);
 const displayTitle = computed(() =>
   [props.batch.batchNo, props.batch.product?.model].filter(Boolean).join(" ") || "未填写产品型号"
 );
@@ -75,6 +81,7 @@ const actionLabel = computed(() => {
 const accentClass = computed(() => ({
   urgent: props.batch.priority === "urgent",
   overdue: isOverdue.value,
+  paused: isPaused.value,
   cancelled: props.batch.status === "cancelled",
 }));
 </script>
@@ -93,6 +100,7 @@ const accentClass = computed(() => ({
   background: #087f8c;
   &.urgent { background: #d97706; }
   &.overdue { background: #c9483f; }
+  &.paused { background: #c9483f; }
   &.cancelled { background: #aab4b5; }
 }
 .batch-card-main { width: 100%; min-width: 0; padding: 22rpx; }
@@ -169,5 +177,25 @@ const accentClass = computed(() => ({
   color: #c9483f;
   font-size: 19rpx;
   font-weight: 700;
+}
+.paused-tag {
+  padding: 4rpx 9rpx;
+  border-radius: 5rpx;
+  background: #c9483f;
+  color: #fff;
+  font-size: 19rpx;
+  font-weight: 700;
+}
+.paused-line {
+  margin-top: 10rpx;
+  padding: 10rpx 14rpx;
+  border-left: 5rpx solid #c9483f;
+  border-radius: 6rpx;
+  background: #fcecea;
+}
+.paused-line-text {
+  color: #c9483f;
+  font-size: 21rpx;
+  font-weight: 600;
 }
 </style>

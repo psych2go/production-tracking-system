@@ -18,11 +18,14 @@ model User {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  batchesCreated   Batch[]          @relation("BatchCreator")
-  batchesCarded    Batch[]          @relation("BatchCardCreator")
-  batchesStarted   Batch[]          @relation("BatchStarter")
-  batchesCancelled Batch[]          @relation("BatchCanceller")
-  progressRecords  ProgressRecord[] @relation("ProgressOperator")
+  batchesCreated   Batch[]            @relation("BatchCreator")
+  batchesCarded    Batch[]            @relation("BatchCardCreator")
+  batchesStarted   Batch[]            @relation("BatchStarter")
+  batchesCancelled Batch[]            @relation("BatchCanceller")
+  batchesPaused    Batch[]            @relation("BatchPauser")
+  pausesStarted    BatchPauseRecord[] @relation("PauseStarter")
+  pausesEnded      BatchPauseRecord[] @relation("PauseEnder")
+  progressRecords  ProgressRecord[]   @relation("ProgressOperator")
   auditLogs        AuditLog[]
 
   @@map("users")
@@ -66,20 +69,43 @@ model Batch {
   startedAt              DateTime? @map("started_at")
   cancelledBy            Int?      @map("cancelled_by")
   cancelledAt            DateTime? @map("cancelled_at")
+  pausedBy               Int?      @map("paused_by")
+  pausedAt               DateTime? @map("paused_at")
+  pauseReason            String?   @map("pause_reason")
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
 
-  product         Product?         @relation(fields: [productId], references: [id])
-  creator         User?            @relation("BatchCreator", fields: [createdBy], references: [id])
-  cardCreator     User?            @relation("BatchCardCreator", fields: [cardCreatedBy], references: [id])
-  starter         User?            @relation("BatchStarter", fields: [startedBy], references: [id])
-  canceller       User?            @relation("BatchCanceller", fields: [cancelledBy], references: [id])
+  product         Product?           @relation(fields: [productId], references: [id])
+  creator         User?              @relation("BatchCreator", fields: [createdBy], references: [id])
+  cardCreator     User?              @relation("BatchCardCreator", fields: [cardCreatedBy], references: [id])
+  starter         User?              @relation("BatchStarter", fields: [startedBy], references: [id])
+  canceller       User?              @relation("BatchCanceller", fields: [cancelledBy], references: [id])
+  pauser          User?              @relation("BatchPauser", fields: [pausedBy], references: [id])
   progressRecords ProgressRecord[]
+  pauseRecords    BatchPauseRecord[]
 
   @@unique([batchNo, productId], map: "batch_no_product_unique")
   @@unique([batchNoNormalized, productModelNormalized], map: "batch_identity_normalized_unique")
   @@index([customerCode, orderNo], map: "customer_order_idx")
   @@map("batches")
+}
+
+model BatchPauseRecord {
+  id        Int       @id @default(autoincrement())
+  batchId   Int       @map("batch_id")
+  reason    String
+  startedBy Int       @map("started_by")
+  startedAt DateTime  @default(now()) @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+  endedBy   Int?      @map("ended_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  batch   Batch @relation(fields: [batchId], references: [id])
+  starter User  @relation("PauseStarter", fields: [startedBy], references: [id])
+  ender   User? @relation("PauseEnder", fields: [endedBy], references: [id])
+
+  @@index([batchId], map: "batch_pause_records_batch_idx")
+  @@map("batch_pause_records")
 }
 
 model ProcessStage {

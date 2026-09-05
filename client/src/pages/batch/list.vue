@@ -81,6 +81,7 @@ const adminTabs = [
   { label: "待制卡", value: "pending_card" },
   { label: "待投产", value: "pending" },
   { label: "加工中", value: "active" },
+  { label: "暂停中", value: "paused" },
   { label: "已完成", value: "completed" },
   { label: "已归档", value: "archived" },
   { label: "已取消", value: "cancelled" },
@@ -88,6 +89,7 @@ const adminTabs = [
 ];
 const workerTabs = [
   { label: "加工中", value: "active" },
+  { label: "暂停中", value: "paused" },
   { label: "已完成", value: "completed" },
   { label: "已归档", value: "archived" },
   { label: "全部", value: "" },
@@ -116,11 +118,7 @@ async function loadData() {
   loading.value = true;
   currentPage.value = 1;
   try {
-    const result = await batchApi.list({
-      status: currentTab.value || undefined,
-      keyword: keyword.value.trim() || undefined,
-      page: 1,
-    });
+    const result = await batchApi.list({ ...listParams(), page: 1 });
     batches.value = result.items;
     hasMore.value = result.items.length < result.total;
   } catch (e: unknown) {
@@ -130,16 +128,17 @@ async function loadData() {
   }
 }
 
+function listParams() {
+  if (currentTab.value === "paused") return { paused: true, keyword: keyword.value.trim() || undefined };
+  return { status: currentTab.value || undefined, keyword: keyword.value.trim() || undefined };
+}
+
 async function loadMore() {
   if (loadingMore.value || !hasMore.value) return;
   loadingMore.value = true;
   currentPage.value++;
   try {
-    const result = await batchApi.list({
-      status: currentTab.value || undefined,
-      keyword: keyword.value.trim() || undefined,
-      page: currentPage.value,
-    });
+    const result = await batchApi.list({ ...listParams(), page: currentPage.value });
     batches.value = [...batches.value, ...result.items];
     hasMore.value = batches.value.length < result.total;
   } catch (e: unknown) {

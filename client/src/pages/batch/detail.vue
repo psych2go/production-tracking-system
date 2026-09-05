@@ -19,6 +19,15 @@
         <text class="text-sm">已超过客户要求交期 {{ overdueDays }} 天</text>
       </view>
 
+      <view v-if="!editing && isPaused" class="pause-banner mt-sm">
+        <view class="pause-banner-head">
+          <text class="pause-banner-title">暂停中</text>
+          <text class="pause-banner-duration">已 {{ pauseDuration }}</text>
+        </view>
+        <text class="pause-banner-reason">{{ batch.pauseReason }}</text>
+        <text class="pause-banner-meta">自 {{ batch.pausedAt ? formatDate(batch.pausedAt) : '' }}{{ pauseStarterName ? ' · ' + pauseStarterName : '' }}起，暂停期间不可制卡、投产和工序流转</text>
+      </view>
+
       <template v-if="editing">
         <view v-if="batch.status !== 'pending_card'" class="form-group mt-lg">
           <text class="form-label">生产批号</text>
@@ -105,11 +114,30 @@
       <StageTimeline v-if="appStore.stages.length" :stages="appStore.stages" :progressRecords="batch.progressRecords || []" />
     </view>
 
+    <view v-if="!editing && batch.pauseRecords?.length" class="card pause-history-card">
+      <text class="section-title">暂停记录</text>
+      <view v-for="record in batch.pauseRecords" :key="record.id" class="pause-history-item">
+        <view class="pause-history-head">
+          <text class="pause-history-reason">{{ record.reason }}</text>
+          <text class="pause-history-duration" :class="{ 'text-danger': !record.endedAt }">{{ record.endedAt ? formatDuration(record.startedAt, record.endedAt) : formatDuration(record.startedAt, null, nowTick) }}</text>
+        </view>
+        <text class="pause-history-meta">{{ formatDate(record.startedAt) }} · {{ record.starter?.name || '未知' }} 暂停{{ record.endedAt ? '　' + formatDate(record.endedAt) + ' · ' + (record.ender?.name || '未知') + ' 解除' : '　尚未解除' }}</text>
+      </view>
+    </view>
+
     <view v-if="!editing && hasActions" class="card action-card">
-      <button v-if="batch.status === 'pending_card' && isAdmin" class="btn btn-primary btn-block" @click="goCard">去制卡</button>
-      <button v-if="batch.status === 'pending' && isAdmin" class="btn btn-primary btn-block" @click="startProduction">投入加工</button>
-      <button v-if="batch.status === 'active'" class="btn btn-primary btn-block" @click="goRecordProgress">工序流转</button>
+      <button v-if="batch.status === 'pending_card' && isAdmin && !batch.pausedAt" class="btn btn-primary btn-block" @click="goCard">去制卡</button>
+      <button v-if="batch.status === 'pending' && isAdmin && !batch.pausedAt" class="btn btn-primary btn-block" @click="startProduction">投入加工</button>
+      <button v-if="batch.status === 'active' && !batch.pausedAt" class="btn btn-primary btn-block" @click="goRecordProgress">工序流转</button>
       <button v-if="batch.status === 'completed' && isAdmin" class="btn btn-primary btn-block" @click="archiveBatch">归档</button>
+      <template v-if="canPause">
+        <button class="btn btn-outline btn-block mt-sm" @click="showPauseForm = !showPauseForm">标记暂停</button>
+        <view v-if="showPauseForm" class="pause-form mt-sm">
+          <textarea v-model="pauseReason" class="form-textarea" maxlength="2000" placeholder="请填写暂停原因（必填），如：订单型号有误 / 原材料未到 / 设备故障" />
+          <button class="btn btn-danger btn-block mt-sm" :loading="pausing" @click="confirmPause">确认暂停</button>
+        </view>
+      </template>
+      <button v-if="isPaused" class="btn btn-primary btn-block mt-sm" @click="resumeBatch">解除暂停</button>
       <button v-if="canCancel" class="btn btn-outline btn-block mt-sm" @click="cancelOrder">取消订单</button>
     </view>
   </view>
@@ -122,7 +150,7 @@ import { useAppStore } from "../../store/app";
 import { useUserStore } from "../../store/user";
 import { batchApi, settingsApi } from "../../api/modules";
 import { STATUS_LABELS, PRIORITIES } from "../../utils/constants";
-import { formatDate, formatDateShort, isOverdue as checkOverdue, getOverdueDays } from "../../utils/format";
+import { formatDate, formatDateShort, formatDuration, isOverdue as checkOverdue, getOverdueDays } from "../../utils/format";
 import type { Batch, PackageType, CustomerCode } from "../../types";
 import StageTimeline from "../../components/StageTimeline.vue";
 
@@ -142,13 +170,30 @@ let suggestionTimer: ReturnType<typeof setTimeout> | null = null;
 const isAdmin = computed(() => userStore.isAdmin());
 const canEdit = computed(() => isAdmin.value && batch.value?.status !== "cancelled");
 const canCancel = computed(() => isAdmin.value && ["pending_card", "pending"].includes(batch.value?.status || ""));
+const isPaused = computed(() => !!batch.value?.pausedAt);
+const canPause = computed(() =>
+  !editing.value && !isPaused.value && ["pending_card", "pending", "active"].includes(batch.value?.status || "")
+);
 const showProgress = computed(() => ["active", "completed", "archived"].includes(batch.value?.status || ""));
 const showStartedAt = computed(() => ["active", "completed", "archived"].includes(batch.value?.status || ""));
 const hasActions = computed(() => {
   if (!batch.value) return false;
+  if (isPaused.value || canPause.value) return true;
   if (batch.value.status === "active") return true;
   return isAdmin.value && ["pending_card", "pending", "completed"].includes(batch.value.status);
 });
+const showPauseForm = ref(false);
+const pauseReason = ref("");
+const pausing = ref(false);
+const nowTick = ref(Date.now());
+let tickTimer: ReturnType<typeof setInterval> | null = null;
+const pauseStarterName = computed(() => {
+  const openRecord = batch.value?.pauseRecords?.find((record) => !record.endedAt);
+  return openRecord?.starter?.name || "";
+});
+const pauseDuration = computed(() =>
+  batch.value?.pausedAt ? formatDuration(batch.value.pausedAt, null, nowTick.value) : ""
+);
 const displayTitle = computed(() => [batch.value?.batchNo, batch.value?.product?.model].filter(Boolean).join(" "));
 const customerDeliveryText = computed(() => batch.value?.customerDelivery ? formatDateShort(batch.value.customerDelivery) : "");
 const productionDeliveryText = computed(() => batch.value?.productionDelivery ? formatDateShort(batch.value.productionDelivery) : "");
@@ -261,6 +306,31 @@ async function cancelOrder() {
   try { await batchApi.cancel(batch.value.id); uni.showToast({ title: "订单已取消", icon: "success" }); await loadBatch(batch.value.id); }
   catch (e: unknown) { uni.showModal({ title: "取消失败", content: (e as Error).message, showCancel: false }); }
 }
+async function confirmPause() {
+  if (!batch.value || pausing.value) return;
+  const reason = pauseReason.value.trim();
+  if (!reason) {
+    uni.showToast({ title: "请填写暂停原因", icon: "none" });
+    return;
+  }
+  pausing.value = true;
+  try {
+    await batchApi.pause(batch.value.id, reason);
+    showPauseForm.value = false;
+    pauseReason.value = "";
+    uni.showToast({ title: "已标记暂停", icon: "success" });
+    await loadBatch(batch.value.id);
+  } catch (e: unknown) {
+    uni.showModal({ title: "暂停失败", content: (e as Error).message, showCancel: false });
+  } finally { pausing.value = false; }
+}
+async function resumeBatch() {
+  if (!batch.value) return;
+  const result = await uni.showModal({ title: "解除暂停", content: "确定解除暂停并继续该任务吗？" });
+  if (result.cancel) return;
+  try { await batchApi.resume(batch.value.id); uni.showToast({ title: "已解除暂停", icon: "success" }); await loadBatch(batch.value.id); }
+  catch (e: unknown) { uni.showModal({ title: "操作失败", content: (e as Error).message, showCancel: false }); }
+}
 async function archiveBatch() {
   if (!batch.value) return;
   const result = await uni.showModal({ title: "确认归档", content: `确定归档 ${displayTitle.value} 吗？` });
@@ -282,9 +352,13 @@ onLoad(async (query) => {
   openedFromHome.value = query?.from === "home";
   currentBatchId.value = Number(query?.id || 0);
   if (currentBatchId.value) await loadBatch(currentBatchId.value);
+  tickTimer = setInterval(() => { nowTick.value = Date.now(); }, 30 * 1000);
 });
 onShow(async () => { if (currentBatchId.value) await loadBatch(currentBatchId.value); });
-onBeforeUnmount(() => { if (suggestionTimer) clearTimeout(suggestionTimer); });
+onBeforeUnmount(() => {
+  if (suggestionTimer) clearTimeout(suggestionTimer);
+  if (tickTimer) clearInterval(tickTimer);
+});
 </script>
 
 <style scoped lang="scss">
@@ -307,6 +381,21 @@ onBeforeUnmount(() => { if (suggestionTimer) clearTimeout(suggestionTimer); });
 .progress-card { border-left: 6rpx solid #16343a; }
 .action-card { display: flex; flex-direction: column; }
 .overdue-warning { padding: 14rpx 20rpx; border-left: 6rpx solid #c9483f; border-radius: 6rpx; background: #fcecea; color: #c9483f; }
+.pause-banner { padding: 18rpx 20rpx; border-left: 6rpx solid #c9483f; border-radius: 8rpx; background: #fcecea; }
+.pause-banner-head { display: flex; align-items: center; justify-content: space-between; }
+.pause-banner-title { color: #c9483f; font-size: 27rpx; font-weight: 700; }
+.pause-banner-duration { color: #c9483f; font-size: 22rpx; font-weight: 600; }
+.pause-banner-reason { display: block; margin-top: 8rpx; color: #172327; font-size: 24rpx; font-weight: 600; }
+.pause-banner-meta { display: block; margin-top: 6rpx; color: #a05248; font-size: 20rpx; }
+.pause-history-card { border-left: 6rpx solid #c9483f; }
+.pause-history-item { padding: 18rpx 0; border-bottom: 2rpx solid #edf0f0;
+  &:last-child { border-bottom: none; padding-bottom: 4rpx; }
+}
+.pause-history-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14rpx; }
+.pause-history-reason { min-width: 0; flex: 1; color: #172327; font-size: 24rpx; font-weight: 600; }
+.pause-history-duration { flex-shrink: 0; color: #657174; font-size: 21rpx; }
+.pause-history-meta { display: block; margin-top: 5rpx; color: #7d898b; font-size: 20rpx; }
+.pause-form textarea { width: 100%; min-height: 140rpx; padding: 18rpx; box-sizing: border-box; border: 2rpx solid #dfe4e4; border-radius: 10rpx; background: #f5f7f7; font-size: 25rpx; }
 .form-label-row { display: flex; align-items: center; justify-content: space-between; }
 .clear-value { color: #087f8c; font-size: 21rpx; }
 .product-model-field { position: relative; }

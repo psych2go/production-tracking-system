@@ -121,9 +121,13 @@
                 <text class="preproduction-order">订单 {{ item.orderNo }}</text>
                 <text class="preproduction-title">{{ item.product?.model || '' }}</text>
               </view>
-              <view v-if="item.priority === 'urgent'" class="urgent-tag">紧急</view>
+              <view class="badge-group">
+                <view v-if="item.pausedAt" class="paused-tag">暂停中</view>
+                <view v-if="item.priority === 'urgent'" class="urgent-tag">紧急</view>
+              </view>
             </view>
             <text class="preproduction-customer">{{ item.customerCode || '' }}</text>
+            <text v-if="item.pausedAt" class="paused-reason">暂停：{{ item.pauseReason }}</text>
             <view class="preproduction-meta">
               <text>{{ item.quantity }}只</text>
               <text>{{ item.packageType || '' }}</text>
@@ -152,9 +156,13 @@
                 <text class="preproduction-order">订单 {{ item.orderNo }}</text>
                 <text class="preproduction-title">{{ item.batchNo }} {{ item.product?.model || '' }}</text>
               </view>
-              <view v-if="item.priority === 'urgent'" class="urgent-tag">紧急</view>
+              <view class="badge-group">
+                <view v-if="item.pausedAt" class="paused-tag">暂停中</view>
+                <view v-if="item.priority === 'urgent'" class="urgent-tag">紧急</view>
+              </view>
             </view>
             <text class="preproduction-customer">{{ item.customerCode || '' }}</text>
+            <text v-if="item.pausedAt" class="paused-reason">暂停：{{ item.pauseReason }}</text>
             <view class="preproduction-meta">
               <text>{{ item.quantity }}只</text>
               <text>{{ item.packageType || '' }}</text>
@@ -205,13 +213,18 @@
                     v-for="batch in col.batches"
                     :key="batch.id"
                     class="kanban-card"
+                    :class="{ 'kanban-card-paused': batch.pausedAt }"
                     @click="goBatchDetail(batch.id)"
                   >
                     <view class="kanban-card-top">
                       <text class="kanban-card-no">{{ batch.batchNo }}</text>
-                      <view v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</view>
+                      <view class="badge-group">
+                        <view v-if="batch.pausedAt" class="paused-tag">暂停中</view>
+                        <view v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</view>
+                      </view>
                     </view>
                     <text class="kanban-card-model">{{ batch.product?.model || '-' }}</text>
+                    <text v-if="batch.pausedAt" class="kanban-paused-reason">暂停：{{ batch.pauseReason }}</text>
                     <text class="kanban-customer-code">{{ batch.customerCode || '-' }}</text>
                     <view class="kanban-card-meta">
                       <text class="kanban-card-qty">{{ batch.quantity }}只</text>
@@ -619,6 +632,26 @@ onPullDownRefresh(async () => {
   text-align: center;
 }
 .preproduction-list { display: flex; flex-direction: column; gap: 14rpx; }
+.badge-group { display: flex; flex-shrink: 0; align-items: center; gap: 8rpx; }
+.paused-tag {
+  padding: 4rpx 9rpx;
+  border-radius: 5rpx;
+  background: #c9483f;
+  color: #fff;
+  font-size: 19rpx;
+  font-weight: 700;
+}
+.paused-reason {
+  display: block;
+  margin-top: 8rpx;
+  padding: 8rpx 12rpx;
+  border-left: 5rpx solid #c9483f;
+  border-radius: 6rpx;
+  background: #fcecea;
+  color: #c9483f;
+  font-size: 20rpx;
+  font-weight: 600;
+}
 .preproduction-card {
   margin-bottom: 0;
   padding: 20rpx;
@@ -723,6 +756,7 @@ onPullDownRefresh(async () => {
   border: 2rpx solid #dfe4e4;
   box-shadow: 0 2rpx 8rpx rgba(23, 35, 39, 0.04);
   &:active { border-color: #087f8c; }
+  &.kanban-card-paused { border-color: #c9483f; box-shadow: 0 2rpx 10rpx rgba(201, 72, 63, 0.18); }
 }
 .kanban-card-top {
   display: flex;
@@ -731,6 +765,16 @@ onPullDownRefresh(async () => {
   margin-bottom: 6rpx;
 }
 .kanban-card-no { font-size: 24rpx; font-weight: 700; color: #172327; }
+.kanban-paused-reason {
+  display: block;
+  overflow: hidden;
+  margin-top: 5rpx;
+  color: #c9483f;
+  font-size: 20rpx;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .kanban-card-model {
   display: block;
   overflow: hidden;

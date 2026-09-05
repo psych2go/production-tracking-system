@@ -24,13 +24,14 @@ export const userApi = {
 
 // Batches
 export const batchApi = {
-  list: (params?: { status?: string; productId?: number; keyword?: string; customerCode?: string; packageType?: string; page?: number; pageSize?: number }) => {
+  list: (params?: { status?: string; productId?: number; keyword?: string; customerCode?: string; packageType?: string; paused?: boolean; page?: number; pageSize?: number }) => {
     const query = new URLSearchParams();
     if (params?.status) query.set("status", params.status);
     if (params?.productId) query.set("productId", String(params.productId));
     if (params?.keyword) query.set("keyword", params.keyword);
     if (params?.customerCode) query.set("customerCode", params.customerCode);
     if (params?.packageType) query.set("packageType", params.packageType);
+    if (params?.paused !== undefined) query.set("paused", String(params.paused));
     if (params?.page) query.set("page", String(params.page));
     if (params?.pageSize) query.set("pageSize", String(params.pageSize));
     return api.get<PaginatedResult<Batch>>(`/api/batches?${query.toString()}`);
@@ -47,6 +48,10 @@ export const batchApi = {
     api.post<Batch>(`/api/batches/${id}/start-production`, {}),
   cancel: (id: number) =>
     api.post<Batch>(`/api/batches/${id}/cancel`, {}),
+  pause: (id: number, reason: string) =>
+    api.post<Batch>(`/api/batches/${id}/pause`, { reason }),
+  resume: (id: number) =>
+    api.post<Batch>(`/api/batches/${id}/resume`, {}),
   update: (id: number, data: Record<string, unknown>) =>
     api.put<Batch>(`/api/batches/${id}`, data),
 };

@@ -41,6 +41,7 @@ async function seedTestData() {
   // Clean all tables (order matters for FK)
   await prisma.auditLog.deleteMany();
   await prisma.progressRecord.deleteMany();
+  await prisma.batchPauseRecord.deleteMany();
   await prisma.batch.deleteMany();
   await prisma.packageType.deleteMany();
   await prisma.customerCode.deleteMany();

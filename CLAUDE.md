@@ -57,6 +57,7 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 - `pending_card`/`pending` 可由管理员取消为 `cancelled`；`active` 后不可取消
 - 仅管理员可录单、制卡、投入加工、取消、编辑、归档；工人可查看/流转 active 批次
 - 录入/制卡/投产/取消人员与时间后台记录，详情仅显示投产时间
+- 暂停/恢复：待制卡、待投产、加工中任务可由管理员或工人标记暂停（原因必填），暂停中不可制卡/投产/工序流转，可编辑和取消（取消时自动闭合暂停记录）；解除后恢复原状态；每次暂停/解除记录原因、起止时间和操作人
 
 ### 客户代码
 预设客户代码列表（管理员维护），创建/编辑产品批次时从列表选择。管理入口：个人中心 → 客户代码管理。
@@ -85,6 +86,7 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 - 审计日志：`auditLog(action, entity)` 中间件拦截 `res.json`，记录请求参数和 POST/PUT 请求体（自动排除 password 字段），异步写入
 - 样式：`rpx` 单位，颜色变量在 `global.scss`（Primary `#0083ff`、Success `#07c160`、Warning `#ff9900`、Danger `#fa5151`）
 - 产品批次显示：`批号 型号`（同一行）
+- 暂停任务突出显示：红色「暂停中」标签 + 原因，生产管理列表有「暂停中」页签，详情页显示暂停横幅和暂停记录（含每次起止时间与时长）
 
 ## 显示约定
 
@@ -93,9 +95,9 @@ Route (Zod 校验 + authGuard/roleGuard + rateLimit + auditLog) → Service (业
 - 产品交期显示「客户交期」和「预计交期」
 - 工序耗时：超过1天显示"X天X小时"，不足1天显示"X小时X分"或"X分钟"
 
-## 数据模型（8 个）
+## 数据模型（9 个）
 
-User、Product、Batch、ProcessStage、ProgressRecord（批次+工序唯一）、PackageType、CustomerCode、AuditLog
+User、Product、Batch、BatchPauseRecord、ProcessStage、ProgressRecord（批次+工序唯一）、PackageType、CustomerCode、AuditLog
 
 ## 工序（16 道，4 道质检）
 

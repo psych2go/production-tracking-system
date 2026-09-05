@@ -61,3 +61,19 @@ export function getOverdueDays(customerDelivery: string | null | undefined): num
   const diff = Date.now() - new Date(customerDelivery).getTime();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
+
+/**
+ * 格式化耗时：超过1天显示“X天X小时”，不足1天显示“X小时X分”或“X分钟”
+ * endedAt 为空时按当前时间计算（进行中）
+ */
+export function formatDuration(startedAt: string, endedAt?: string | null, now: number = Date.now()): string {
+  const start = new Date(startedAt).getTime();
+  const end = endedAt ? new Date(endedAt).getTime() : now;
+  const totalMinutes = Math.max(0, Math.floor((end - start) / (1000 * 60)));
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `${days}天${hours > 0 ? hours + "小时" : ""}`;
+  if (hours > 0) return `${hours}小时${minutes > 0 ? minutes + "分" : ""}`;
+  return `${minutes}分钟`;
+}

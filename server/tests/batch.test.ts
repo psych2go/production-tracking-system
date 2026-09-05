@@ -289,6 +289,234 @@ describe("Batch Routes", () => {
     });
   });
 
+  describe("POST /api/batches/:id/pause & resume", () => {
+    it("should pause and resume a pending_card order with history", async () => {
+      const order = await prisma.batch.create({
+        data: {
+          orderNo: "30001",
+          customerCode: "CUST001",
+          productId: (await prisma.product.findFirst())!.id,
+          quantity: 30,
+          packageType: "SOP8L",
+          status: "pending_card",
+        },
+      });
+
+      const pauseRes = await request(app)
+        .post(`/api/batches/${order.id}/pause`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ reason: "订单型号有误，待与客户确认" });
+      expect(pauseRes.status).toBe(200);
+      expect(pauseRes.body.pausedAt).toBeTruthy();
+      expect(pauseRes.body.pauseReason).toBe("订单型号有误，待与客户确认");
+      expect(pauseRes.body.status).toBe("pending_card");
+
+      const records = await prisma.batchPauseRecord.findMany({ where: { batchId: order.id } });
+      expect(records).toHaveLength(1);
+      expect(records[0].endedAt).toBeNull();
+
+      const resumeRes = await request(app)
+        .post(`/api/batches/${order.id}/resume`)
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(resumeRes.status).toBe(200);
+      expect(resumeRes.body.pausedAt).toBeNull();
+      expect(resumeRes.body.pauseReason).toBeNull();
+
+      const closed = await prisma.batchPauseRecord.findMany({ where: { batchId: order.id } });
+      expect(closed).toHaveLength(1);
+      expect(closed[0].endedAt).toBeTruthy();
+      expect(closed[0].endedBy).toBeDefined();
+    });
+
+    it("should require a pause reason", async () => {
+      const order = await prisma.batch.create({
+        data: {
+          orderNo: "30002",
+          customerCode: "CUST001",
+          productId: (await prisma.product.findFirst())!.id,
+          quantity: 10,
+          packageType: "SOP8L",
+          status: "pending_card",
+        },
+      });
+      const res = await request(app)
+        .post(`/api/batches/${order.id}/pause`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({});
+      expect(res.status).toBe(400);
+    });
+
+    it("should reject double pause and resume when not paused", async () => {
+      const order = await prisma.batch.create({
+        data: {
+          orderNo: "30003",
+          customerCode: "CUST001",
+          productId: (await prisma.product.findFirst())!.id,
+          quantity: 10,
+          packageType: "SOP8L",
+          status: "active",
+        },
+      });
+      const pauseRes = await request(app)
+        .post(`/api/batches/${order.id}/pause`)
+        .set("Authorization", `Bearer ${workerToken}`)
+        .send({ reason: "压焊机故障待修" });
+      expect(pauseRes.status).toBe(200);
+
+      const doublePause = await request(app)
+        .post(`/api/batches/${order.id}/pause`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ reason: "再次暂停" });
+      expect(doublePause.status).toBe(400);
+      expect(doublePause.body.error).toContain("已在暂停中");
+
+      const notPausedOrder = await prisma.batch.create({
+        data: {
+          orderNo: "30004",
+          customerCode: "CUST001",
+          productId: (await prisma.product.findFirst())!.id,
+          quantity: 10,
+          packageType: "SOP8L",
+          status: "active",
+        },
+      });
+      const resumeRes = await request(app)
+        .post(`/api/batches/${notPausedOrder.id}/resume`)
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(resumeRes.status).toBe(400);
+      expect(resumeRes.body.error).toContain("不在暂停中");
+    });
+
+    it("should block lifecycle actions while paused but allow edit and cancel", async () => {
+      const order = await prisma.batch.create({
+        data: {
+          orderNo: "30005",
+          customerCode: "CUST001",
+          productId: (await prisma.product.findFirst())!.id,
+          quantity: 10,
+          packageType: "SOP8L",
+          status: "pending_card",
+        },
+      });
+      await request(app)
+        .post(`/api/batches/${order.id}/pause`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ reason: "订单信息有误" });
+
+      const confirmRes = await request(app)
+        .post(`/api/batches/${order.id}/confirm-card`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ batchNo: "PAUSED-CARD" });
+      expect(confirmRes.status).toBe(400);
+      expect(confirmRes.body.error).toContain("暂停中");
+
+      const progressRes = await request(app)
+        .post("/api/progress")
+        .set("Authorization", `Bearer ${workerToken}`)
+        .send({ batchId: order.id, stageId: (await prisma.processStage.findFirst())!.id });
+      expect(progressRes.status).toBe(400);
+
+      const editRes = await request(app)
+        .put(`/api/batches/${order.id}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ notes: "暂停期间修正备注" });
+      expect(editRes.status).toBe(200);
+
+      const cancelRes = await request(app)
+        .post(`/api/batches/${order.id}/cancel`)
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(cancelRes.status).toBe(200);
+      expect(cancelRes.body.status).toBe("cancelled");
+      expect(cancelRes.body.pausedAt).toBeNull();
+
+      const records = await prisma.batchPauseRecord.findMany({ where: { batchId: order.id } });
+      expect(records).toHaveLength(1);
+      expect(records[0].endedAt).toBeTruthy();
+    });
+
+    it("should block progress transitions for paused active batches", async () => {
+      const order = await prisma.batch.create({
+        data: {
+          orderNo: "30006",
+          customerCode: "CUST001",
+          productId: (await prisma.product.findFirst())!.id,
+          quantity: 10,
+          packageType: "SOP8L",
+          status: "active",
+        },
+      });
+      await request(app)
+        .post(`/api/batches/${order.id}/pause`)
+        .set("Authorization", `Bearer ${workerToken}`)
+        .send({ reason: "原材料未到" });
+
+      const progressRes = await request(app)
+        .post("/api/progress")
+        .set("Authorization", `Bearer ${workerToken}`)
+        .send({ batchId: order.id, stageId: (await prisma.processStage.findFirst())!.id });
+      expect(progressRes.status).toBe(400);
+      expect(progressRes.body.error).toContain("暂停中");
+
+      const resumeRes = await request(app)
+        .post(`/api/batches/${order.id}/resume`)
+        .set("Authorization", `Bearer ${workerToken}`);
+      expect(resumeRes.status).toBe(200);
+
+      const progressAfterRes = await request(app)
+        .post("/api/progress")
+        .set("Authorization", `Bearer ${workerToken}`)
+        .send({ batchId: order.id, stageId: (await prisma.processStage.findFirst())!.id });
+      expect(progressAfterRes.status).toBe(201);
+    });
+
+    it("should reject pausing non-pausable tasks", async () => {
+      const batch = await prisma.batch.create({
+        data: {
+          batchNo: "PAUSED-DENY",
+          productId: (await prisma.product.findFirst())!.id,
+          quantity: 10,
+          status: "completed",
+        },
+      });
+      const res = await request(app)
+        .post(`/api/batches/${batch.id}/pause`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ reason: "不应成功" });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("暂停");
+    });
+
+    it("should filter paused tasks in list and counts", async () => {
+      const order = await prisma.batch.create({
+        data: {
+          orderNo: "30007",
+          customerCode: "CUST001",
+          productId: (await prisma.product.findFirst())!.id,
+          quantity: 10,
+          packageType: "SOP8L",
+          status: "active",
+        },
+      });
+      await request(app)
+        .post(`/api/batches/${order.id}/pause`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ reason: "等待客户回复" });
+
+      const listRes = await request(app)
+        .get("/api/batches?paused=true")
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(listRes.status).toBe(200);
+      expect(listRes.body.items.length).toBeGreaterThan(0);
+      expect(listRes.body.items.every((item: { pausedAt: string | null }) => item.pausedAt)).toBe(true);
+
+      const countsRes = await request(app)
+        .get("/api/batches/counts")
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(countsRes.status).toBe(200);
+      expect(countsRes.body.paused).toBeGreaterThan(0);
+    });
+  });
+
   describe("PUT /api/batches/:id", () => {
     it("should update batch status", async () => {
       const batch = await prisma.batch.create({
