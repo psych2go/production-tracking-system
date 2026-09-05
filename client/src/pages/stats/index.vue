@@ -66,7 +66,7 @@
         </view>
       </scroll-view>
       <view v-else class="empty-chart">
-        <text class="text-secondary">{{ scope === 'active' ? '暂无在线加工批次' : '暂无已发货批次' }}</text>
+        <text class="text-secondary">{{ scope === 'active' ? '暂无正在加工批次' : '暂无已发货批次' }}</text>
       </view>
     </view>
   </view>
@@ -87,7 +87,7 @@ const appStore = useAppStore();
 const userStore = useUserStore();
 
 const scopeTabs: Array<{ label: string; value: "active" | "shipped" }> = [
-  { label: "在途", value: "active" },
+  { label: "正在加工", value: "active" },
   { label: "已发货", value: "shipped" },
 ];
 const scope = ref<"active" | "shipped">("active");
