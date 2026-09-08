@@ -43,11 +43,8 @@
       <!-- Stats cards -->
       <view class="stats-row">
         <view v-for="(card, i) in statCards" :key="i" class="stat-card" :class="`stat-card-${i + 1}`">
-          <view class="stat-index">0{{ i + 1 }}</view>
-          <view>
-            <text class="stat-value">{{ card.value }}</text>
-            <text class="stat-label">{{ card.label }}</text>
-          </view>
+          <text class="stat-value">{{ card.value }}</text>
+          <text class="stat-label">{{ card.label }}</text>
         </view>
       </view>
 
@@ -74,37 +71,6 @@
         </view>
       </view>
 
-      <!-- Quick actions -->
-      <view class="card quick-actions">
-        <text class="section-title">快捷操作</text>
-        <view class="action-grid">
-          <view v-if="userStore.isAdmin()" class="action-item action-item-primary" @click="go('/pages/batch/create')">
-            <UIcon name="plus" :size="48" variant="primary" />
-            <view class="action-copy">
-              <text class="action-label">录入订单</text>
-              <text class="action-meta">建立新的生产任务</text>
-            </view>
-            <UIcon name="chevron-right" :size="30" color="#7d898b" />
-          </view>
-          <view class="action-item" @click="goBatchList">
-            <UIcon name="menu" :size="48" variant="soft" />
-            <view class="action-copy">
-              <text class="action-label">生产管理</text>
-              <text class="action-meta">查看全部生产任务</text>
-            </view>
-            <UIcon name="chevron-right" :size="30" color="#7d898b" />
-          </view>
-          <view v-if="!userStore.isAdmin()" class="action-item" @click="go('/pages/progress/history')">
-            <UIcon name="check" :size="48" variant="soft-success" />
-            <view class="action-copy">
-              <text class="action-label">我的记录</text>
-              <text class="action-meta">查看个人流转历史</text>
-            </view>
-            <UIcon name="chevron-right" :size="30" color="#7d898b" />
-          </view>
-        </view>
-      </view>
-
       <!-- Pre-production tasks (admin only) -->
       <view v-if="userStore.isAdmin()" class="section-block">
         <view class="section-header">
@@ -114,31 +80,33 @@
           </view>
           <text class="collapse-btn" @click="collapsed.pendingCard = !collapsed.pendingCard">{{ collapsed.pendingCard ? '展开' : '收起' }}</text>
         </view>
-        <view v-if="!collapsed.pendingCard" class="preproduction-list">
-          <view v-for="item in pendingCardBatches" :key="item.id" class="card preproduction-card" @click="goBatchDetail(item.id)">
-            <view class="preproduction-heading">
-              <view class="preproduction-title-wrap">
-                <text class="preproduction-order">订单 {{ item.orderNo }}</text>
-                <text class="preproduction-title">{{ item.product?.model || '' }}</text>
+        <scroll-view v-if="!collapsed.pendingCard && pendingCardBatches.length" scroll-x class="preproduction-scroll">
+          <view class="preproduction-row">
+            <view
+              v-for="item in pendingCardBatches"
+              :key="item.id"
+              class="preproduction-block"
+              :class="{ 'preproduction-block-paused': item.pausedAt }"
+              @click="goBatchDetail(item.id)"
+            >
+              <view class="preproduction-block-top">
+                <text class="preproduction-block-no">订单 {{ item.orderNo }}</text>
+                <view class="badge-group">
+                  <view v-if="item.pausedAt" class="paused-tag">暂停中</view>
+                  <view v-if="item.priority === 'urgent'" class="urgent-tag">紧急</view>
+                </view>
               </view>
-              <view class="badge-group">
-                <view v-if="item.pausedAt" class="paused-tag">暂停中</view>
-                <view v-if="item.priority === 'urgent'" class="urgent-tag">紧急</view>
+              <text class="preproduction-block-model">{{ item.product?.model || '' }}</text>
+              <text v-if="item.pausedAt" class="preproduction-block-pause-reason">暂停：{{ item.pauseReason }}</text>
+              <text class="preproduction-block-customer">{{ item.customerCode || '' }}</text>
+              <view class="preproduction-block-meta">
+                <text class="preproduction-block-qty">{{ item.quantity }}只</text>
+                <view class="preproduction-action" @click.stop="goCard(item.id)">去制卡 ›</view>
               </view>
-            </view>
-            <text class="preproduction-customer">{{ item.customerCode || '' }}</text>
-            <text v-if="item.pausedAt" class="paused-reason">暂停：{{ item.pauseReason }}</text>
-            <view class="preproduction-meta">
-              <text>{{ item.quantity }}只</text>
-              <text>{{ item.packageType || '' }}</text>
-            </view>
-            <view class="preproduction-footer">
-              <text class="preproduction-date">客户交期：{{ formatOptionalDate(item.customerDelivery) }}</text>
-              <view class="preproduction-action" @click.stop="goCard(item.id)">去制卡 ›</view>
             </view>
           </view>
-          <view v-if="!pendingCardBatches.length" class="empty-state card"><text>暂无待制卡订单</text></view>
-        </view>
+        </scroll-view>
+        <view v-else-if="!collapsed.pendingCard" class="empty-state card"><text>暂无待制卡订单</text></view>
       </view>
 
       <view v-if="userStore.isAdmin()" class="section-block">
@@ -149,34 +117,33 @@
           </view>
           <text class="collapse-btn" @click="collapsed.pendingProduction = !collapsed.pendingProduction">{{ collapsed.pendingProduction ? '展开' : '收起' }}</text>
         </view>
-        <view v-if="!collapsed.pendingProduction" class="preproduction-list">
-          <view v-for="item in pendingProductionBatches" :key="item.id" class="card preproduction-card pending-production-card" @click="goBatchDetail(item.id)">
-            <view class="preproduction-heading">
-              <view class="preproduction-title-wrap">
-                <text class="preproduction-order">订单 {{ item.orderNo }}</text>
-                <text class="preproduction-title">{{ item.batchNo }} {{ item.product?.model || '' }}</text>
+        <scroll-view v-if="!collapsed.pendingProduction && pendingProductionBatches.length" scroll-x class="preproduction-scroll">
+          <view class="preproduction-row">
+            <view
+              v-for="item in pendingProductionBatches"
+              :key="item.id"
+              class="preproduction-block pending-production-block"
+              :class="{ 'preproduction-block-paused': item.pausedAt }"
+              @click="goBatchDetail(item.id)"
+            >
+              <view class="preproduction-block-top">
+                <text class="preproduction-block-no">{{ item.batchNo }}</text>
+                <view class="badge-group">
+                  <view v-if="item.pausedAt" class="paused-tag">暂停中</view>
+                  <view v-if="item.priority === 'urgent'" class="urgent-tag">紧急</view>
+                </view>
               </view>
-              <view class="badge-group">
-                <view v-if="item.pausedAt" class="paused-tag">暂停中</view>
-                <view v-if="item.priority === 'urgent'" class="urgent-tag">紧急</view>
+              <text class="preproduction-block-model">{{ item.product?.model || '' }}</text>
+              <text v-if="item.pausedAt" class="preproduction-block-pause-reason">暂停：{{ item.pauseReason }}</text>
+              <text class="preproduction-block-customer">{{ item.customerCode || '' }}</text>
+              <view class="preproduction-block-meta">
+                <text class="preproduction-block-qty">{{ item.quantity }}只</text>
+                <view class="preproduction-action" @click.stop="startProduction(item)">投入加工 ›</view>
               </view>
-            </view>
-            <text class="preproduction-customer">{{ item.customerCode || '' }}</text>
-            <text v-if="item.pausedAt" class="paused-reason">暂停：{{ item.pauseReason }}</text>
-            <view class="preproduction-meta">
-              <text>{{ item.quantity }}只</text>
-              <text>{{ item.packageType || '' }}</text>
-            </view>
-            <view class="preproduction-dates">
-              <text>客户交期：{{ formatOptionalDate(item.customerDelivery) }}</text>
-              <text>预计交期：{{ formatOptionalDate(item.productionDelivery) }}</text>
-            </view>
-            <view class="preproduction-footer action-only">
-              <view class="preproduction-action" @click.stop="startProduction(item)">投入加工 ›</view>
             </view>
           </view>
-          <view v-if="!pendingProductionBatches.length" class="empty-state card"><text>暂无待投产任务</text></view>
-        </view>
+        </scroll-view>
+        <view v-else-if="!collapsed.pendingProduction" class="empty-state card"><text>暂无待投产任务</text></view>
       </view>
 
       <!-- Active batches kanban -->
@@ -184,7 +151,6 @@
         <view class="section-header">
           <text class="section-title">正在加工</text>
           <view class="section-header-actions">
-            <text class="view-all-btn" @click="goBatchList">查看全部</text>
             <text class="collapse-btn" @click="collapsed.batches = !collapsed.batches">{{ collapsed.batches ? '展开' : '收起' }}</text>
           </view>
         </view>
@@ -243,6 +209,14 @@
         </view>
       </view>
 
+      <!-- Floating create-order button (admin only) -->
+      <view v-if="userStore.isAdmin()" class="fab-create" @click="goCreateOrder">
+        <view class="fab-circle">
+          <UIcon name="plus" :size="44" color="#ffffff" />
+        </view>
+        <text class="fab-label">订单录入</text>
+      </view>
+
     </view>
   </view>
 </template>
@@ -253,7 +227,7 @@ import { onPullDownRefresh, onShow } from "@dcloudio/uni-app";
 import { useUserStore } from "../../store/user";
 import { useAppStore } from "../../store/app";
 import { batchApi, progressApi } from "../../api/modules";
-import { formatDateShort, getCurrentStage } from "../../utils/format";
+import { getCurrentStage } from "../../utils/format";
 import type { Batch, DashboardData } from "../../types";
 import UIcon from "../../components/UIcon.vue";
 
@@ -265,17 +239,25 @@ const loginPassword = ref("");
 const collapsed = ref({ alerts: false, pendingCard: false, pendingProduction: false, batches: false });
 const kanbanGroupMode = ref<"stage" | "package">("stage");
 
+const pendingCardBatches = computed(() => dashboard.value?.pendingCardList ?? []);
+const pendingProductionBatches = computed(() => dashboard.value?.pendingProductionList ?? []);
+
 const statCards = computed(() => {
   if (!dashboard.value) return [];
   const s = dashboard.value.stats;
-  return [
+  const cards = [
     { value: s.activeProductBatches, label: "在线产品总批次" },
     { value: s.activeProductQuantity, label: "在线产品总数量" },
   ];
+  if (userStore.isAdmin()) {
+    cards.push(
+      { value: pendingCardBatches.value.length, label: "待制卡" },
+      { value: pendingProductionBatches.value.length, label: "待投产" },
+    );
+  }
+  return cards;
 });
 
-const pendingCardBatches = computed(() => dashboard.value?.pendingCardList ?? []);
-const pendingProductionBatches = computed(() => dashboard.value?.pendingProductionList ?? []);
 const visibleActiveBatches = computed(() => dashboard.value?.activeBatchList ?? []);
 
 function getPrimaryPackageType(batch: Batch): string {
@@ -334,10 +316,6 @@ async function loadData() {
   } catch { /* dashboard is non-critical */ }
 }
 
-function formatOptionalDate(value: string | null | undefined) {
-  return value ? formatDateShort(value) : "";
-}
-
 function goBatchDetail(id: number) {
   uni.navigateTo({ url: `/pages/batch/detail?id=${id}&from=home` });
 }
@@ -361,12 +339,8 @@ async function startProduction(batch: Batch) {
   }
 }
 
-function goBatchList() {
-  uni.switchTab({ url: "/pages/batch/list" });
-}
-
-function go(url: string) {
-  uni.navigateTo({ url });
+function goCreateOrder() {
+  uni.navigateTo({ url: "/pages/batch/create" });
 }
 
 onMounted(async () => {
@@ -502,16 +476,17 @@ onPullDownRefresh(async () => {
 /* Stats */
 .stats-row {
   display: flex;
-  gap: 16rpx;
+  gap: 12rpx;
 }
 .stat-card {
   position: relative;
   flex: 1;
+  min-width: 0;
   background: #fff;
   border: 2rpx solid #dfe4e4;
   border-radius: 12rpx;
   box-shadow: 0 5rpx 18rpx rgba(23, 35, 39, 0.06);
-  padding: 26rpx 22rpx 24rpx;
+  padding: 18rpx 14rpx 16rpx;
   overflow: hidden;
 }
 .stat-card::before {
@@ -520,32 +495,31 @@ onPullDownRefresh(async () => {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 7rpx;
+  width: 6rpx;
   background: #087f8c;
 }
 .stat-card-2::before {
   background: #d97706;
 }
-.stat-index {
-  position: absolute;
-  right: 16rpx;
-  top: 12rpx;
-  color: #cbd2d2;
-  font-size: 18rpx;
-  font-weight: 700;
+.stat-card-3::before {
+  background: #c9483f;
+}
+.stat-card-4::before {
+  background: #27865f;
 }
 .stat-value {
   display: block;
   color: #172327;
-  font-size: 52rpx;
+  font-size: 38rpx;
   font-weight: 700;
   line-height: 1.2;
 }
 .stat-label {
   display: block;
-  margin-top: 6rpx;
-  font-size: 22rpx;
+  margin-top: 4rpx;
+  font-size: 18rpx;
   color: #657174;
+  white-space: nowrap;
 }
 
 /* Sections */
@@ -571,53 +545,15 @@ onPullDownRefresh(async () => {
 }
 .alert-content { flex: 1; }
 
-/* Quick actions */
-.quick-actions { padding-bottom: 12rpx; }
-.action-grid {
-  display: flex;
-  flex-direction: column;
-  margin-top: 14rpx;
-}
-.action-item {
-  display: flex;
-  align-items: center;
-  gap: 18rpx;
-  min-height: 86rpx;
-  border-bottom: 2rpx solid #edf0f0;
-  &:last-child { border-bottom: none; }
-}
-.action-copy {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.action-label {
-  font-size: 27rpx;
-  font-weight: 600;
-  color: #172327;
-}
-.action-meta {
-  margin-top: 2rpx;
-  font-size: 21rpx;
-  color: #7d898b;
-}
-
-.activity-item { padding: 24rpx; }
-
 .section-header-actions {
   display: flex;
   align-items: center;
   gap: 8rpx;
 }
-.view-all-btn,
 .collapse-btn {
   padding: 8rpx 4rpx 8rpx 16rpx;
   color: #087f8c;
   font-size: 22rpx;
-}
-.view-all-btn {
-  padding-right: 16rpx;
-  border-right: 2rpx solid #dfe4e4;
 }
 
 /* Pre-production */
@@ -631,60 +567,72 @@ onPullDownRefresh(async () => {
   font-size: 20rpx;
   text-align: center;
 }
-.preproduction-list { display: flex; flex-direction: column; gap: 14rpx; }
-.badge-group { display: flex; flex-shrink: 0; align-items: center; gap: 8rpx; }
-.paused-tag {
-  padding: 4rpx 9rpx;
-  border-radius: 5rpx;
-  background: #c9483f;
-  color: #fff;
-  font-size: 19rpx;
-  font-weight: 700;
-}
-.paused-reason {
-  display: block;
-  margin-top: 8rpx;
-  padding: 8rpx 12rpx;
-  border-left: 5rpx solid #c9483f;
-  border-radius: 6rpx;
-  background: #fcecea;
-  color: #c9483f;
-  font-size: 20rpx;
-  font-weight: 600;
-}
-.preproduction-card {
-  margin-bottom: 0;
-  padding: 20rpx;
+.preproduction-scroll { white-space: nowrap; }
+.preproduction-row { display: inline-flex; gap: 14rpx; padding: 2rpx 2rpx 10rpx; }
+.preproduction-block {
+  display: inline-block;
+  width: 260rpx;
+  padding: 16rpx;
+  vertical-align: top;
+  background: #fff;
+  border: 2rpx solid #dfe4e4;
   border-left: 6rpx solid #d97706;
+  border-radius: 10rpx;
+  box-shadow: 0 2rpx 8rpx rgba(23, 35, 39, 0.04);
+  &:active { border-color: #d97706; }
+  &.pending-production-block { border-left-color: #087f8c; }
+  &.preproduction-block-paused { border-color: #c9483f; box-shadow: 0 2rpx 10rpx rgba(201, 72, 63, 0.18); }
 }
-.pending-production-card { border-left-color: #087f8c; }
-.preproduction-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14rpx; }
-.preproduction-title-wrap { display: flex; min-width: 0; flex: 1; flex-direction: column; }
-.preproduction-order { color: #7d898b; font-size: 20rpx; }
-.preproduction-title {
+.preproduction-block-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8rpx;
+  margin-bottom: 6rpx;
+}
+.preproduction-block-no {
   overflow: hidden;
-  margin-top: 3rpx;
+  min-width: 0;
   color: #172327;
-  font-size: 28rpx;
+  font-size: 22rpx;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.preproduction-customer { display: block; margin-top: 8rpx; color: #657174; font-size: 21rpx; }
-.preproduction-meta {
+.preproduction-block-model {
+  display: block;
+  overflow: hidden;
+  color: #657174;
+  font-size: 22rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preproduction-block-pause-reason {
+  display: block;
+  overflow: hidden;
+  margin-top: 5rpx;
+  color: #c9483f;
+  font-size: 20rpx;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preproduction-block-customer {
+  display: block;
+  overflow: hidden;
+  margin-top: 5rpx;
+  color: #7d898b;
+  font-size: 20rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preproduction-block-meta {
   display: flex;
   justify-content: space-between;
-  margin-top: 12rpx;
-  padding-top: 12rpx;
-  border-top: 2rpx solid #edf0f0;
-  color: #2c383c;
-  font-size: 23rpx;
-  font-weight: 600;
+  align-items: center;
+  margin-top: 10rpx;
 }
-.preproduction-dates { display: flex; margin-top: 10rpx; flex-direction: column; color: #7d898b; font-size: 20rpx; }
-.preproduction-footer { display: flex; align-items: center; justify-content: space-between; gap: 14rpx; margin-top: 12rpx; }
-.preproduction-footer.action-only { justify-content: flex-end; }
-.preproduction-date { min-width: 0; flex: 1; color: #7d898b; font-size: 20rpx; }
+.preproduction-block-qty { font-size: 22rpx; color: #087f8c; font-weight: 700; }
 .preproduction-action {
   flex-shrink: 0;
   padding: 8rpx 13rpx;
@@ -823,5 +771,39 @@ onPullDownRefresh(async () => {
   color: #c0c4cc;
   text-align: center;
   padding: 24rpx 0;
+}
+
+/* Floating create-order button */
+.fab-create {
+  position: fixed;
+  right: 36rpx;
+  bottom: 160rpx;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+.fab-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: #087f8c;
+  box-shadow: 0 8rpx 24rpx rgba(8, 127, 140, 0.35);
+  transition: transform 0.15s;
+  &:active { transform: scale(0.92); }
+}
+.fab-label {
+  padding: 3rpx 12rpx;
+  border: 2rpx solid #dfe4e4;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.95);
+  color: #087f8c;
+  font-size: 20rpx;
+  font-weight: 700;
+  white-space: nowrap;
 }
 </style>
