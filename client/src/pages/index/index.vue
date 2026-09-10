@@ -98,7 +98,10 @@
               </view>
               <text class="preproduction-block-model">{{ item.product?.model || '' }}</text>
               <text v-if="item.pausedAt" class="preproduction-block-pause-reason">暂停：{{ item.pauseReason }}</text>
-              <text class="preproduction-block-customer">{{ item.customerCode || '' }}</text>
+              <view class="preproduction-block-sub">
+                <text class="preproduction-block-customer">{{ item.customerCode || '' }}</text>
+                <text v-for="(pkg, i) in getPackageTypes(item)" :key="i" class="preproduction-block-pkg">{{ pkg }}</text>
+              </view>
               <view class="preproduction-block-meta">
                 <text class="preproduction-block-qty">{{ item.quantity }}只</text>
                 <view class="preproduction-action" @click.stop="goCard(item.id)">去制卡 ›</view>
@@ -135,7 +138,10 @@
               </view>
               <text class="preproduction-block-model">{{ item.product?.model || '' }}</text>
               <text v-if="item.pausedAt" class="preproduction-block-pause-reason">暂停：{{ item.pauseReason }}</text>
-              <text class="preproduction-block-customer">{{ item.customerCode || '' }}</text>
+              <view class="preproduction-block-sub">
+                <text class="preproduction-block-customer">{{ item.customerCode || '' }}</text>
+                <text v-for="(pkg, i) in getPackageTypes(item)" :key="i" class="preproduction-block-pkg">{{ pkg }}</text>
+              </view>
               <view class="preproduction-block-meta">
                 <text class="preproduction-block-qty">{{ item.quantity }}只</text>
                 <view class="preproduction-action" @click.stop="startProduction(item)">投入加工 ›</view>
@@ -195,7 +201,7 @@
                     <view class="kanban-card-meta">
                       <text class="kanban-card-qty">{{ batch.quantity }}只</text>
                       <text v-if="kanbanGroupMode === 'stage' && batch.packageType" class="kanban-pkg">{{ getPrimaryPackageType(batch) }}</text>
-                      <text v-else-if="kanbanGroupMode === 'package'" class="kanban-stage">{{ getCurrentStage(batch)?.name || '未开始' }}</text>
+                      <text v-else-if="kanbanGroupMode === 'package'" class="kanban-stage">{{ getCurrentStage(batch)?.name || firstStageName }}</text>
                     </view>
                   </view>
                   <view v-if="!col.batches.length" class="kanban-empty">暂无</view>
@@ -251,8 +257,8 @@ const statCards = computed(() => {
   ];
   if (userStore.isAdmin()) {
     cards.push(
-      { value: pendingCardBatches.value.length, label: "待制卡" },
-      { value: pendingProductionBatches.value.length, label: "待投产" },
+      { value: pendingCardBatches.value.length, label: "待制卡批次" },
+      { value: pendingProductionBatches.value.length, label: "待投产批次" },
     );
   }
   return cards;
@@ -260,8 +266,14 @@ const statCards = computed(() => {
 
 const visibleActiveBatches = computed(() => dashboard.value?.activeBatchList ?? []);
 
+const firstStageName = computed(() => appStore.stages.find((s) => s.code !== "completed")?.name || "来料检验");
+
 function getPrimaryPackageType(batch: Batch): string {
   return batch.packageType?.split(",")[0]?.trim() || "未设置封装";
+}
+
+function getPackageTypes(batch: Batch): string[] {
+  return (batch.packageType || "").split(",").map((s) => s.trim()).filter(Boolean);
 }
 
 const kanbanColumns = computed(() => {
@@ -282,14 +294,14 @@ const kanbanColumns = computed(() => {
   }
 
   const stages = appStore.stages.filter((s) => s.code !== "completed");
-  const cols = stages.map((s) => ({
+  // 投入加工后批次即进入首道工序（来料检验），尚无流转记录的批次归入首道工序列
+  return stages.map((s, i) => ({
     key: `stage-${s.id}`,
     name: s.name,
-    batches: batches.filter((b) => getCurrentStage(b)?.id === s.id),
+    batches: batches.filter(
+      (b) => getCurrentStage(b)?.id === s.id || (i === 0 && getCurrentStage(b) === null),
+    ),
   }));
-  const notStarted = batches.filter((b) => getCurrentStage(b) === null);
-  cols.push({ key: "not-started", name: "未开始", batches: notStarted });
-  return cols;
 });
 
 async function handleLogin() {
@@ -617,12 +629,34 @@ onPullDownRefresh(async () => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.preproduction-block-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4rpx 8rpx;
+  margin-top: 6rpx;
+  min-width: 0;
+}
 .preproduction-block-customer {
   display: block;
   overflow: hidden;
-  margin-top: 5rpx;
+  min-width: 0;
   color: #7d898b;
   font-size: 20rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preproduction-block-pkg {
+  flex-shrink: 0;
+  overflow: hidden;
+  max-width: 150rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 4rpx;
+  background: #e6f4f3;
+  color: #075e68;
+  font-size: 18rpx;
+  font-weight: 600;
+  line-height: 1.5;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

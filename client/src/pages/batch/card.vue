@@ -36,18 +36,6 @@
       </view>
 
       <view class="form-group mt-md">
-        <view class="form-label-row">
-          <text class="form-label">生产预计交期</text>
-          <text v-if="productionDelivery" class="clear-value" @click="productionDelivery = ''">清除</text>
-        </view>
-        <picker mode="date" :value="productionDelivery" @change="onProductionDeliveryChange">
-          <view class="form-input picker-value" :class="{ placeholder: !productionDelivery }">
-            {{ productionDelivery || '请选择日期（选填）' }}
-          </view>
-        </picker>
-      </view>
-
-      <view class="form-group mt-md">
         <text class="form-label">备注</text>
         <textarea v-model="notes" maxlength="2000" placeholder="备注信息（选填）" class="form-textarea" />
       </view>
@@ -65,14 +53,9 @@ import type { Batch } from "../../types";
 
 const batch = ref<Batch | null>(null);
 const batchNo = ref("");
-const productionDelivery = ref("");
 const notes = ref("");
 const loading = ref(true);
 const submitting = ref(false);
-
-function onProductionDeliveryChange(event: any) {
-  productionDelivery.value = event.detail.value ?? "";
-}
 
 async function submit() {
   if (!batch.value || submitting.value) return;
@@ -85,7 +68,6 @@ async function submit() {
   try {
     await batchApi.confirmCard(batch.value.id, {
       batchNo: batchNo.value.trim(),
-      productionDelivery: productionDelivery.value || null,
       notes: notes.value.trim(),
     });
     uni.showToast({ title: "制卡成功", icon: "success" });
@@ -109,7 +91,6 @@ onLoad(async (query) => {
     if (batch.value.status !== "pending_card") {
       uni.showToast({ title: "该订单已经完成制卡", icon: "none" });
     }
-    productionDelivery.value = batch.value.productionDelivery?.slice(0, 10) || "";
     notes.value = batch.value.notes || "";
   } catch (e: unknown) {
     uni.showToast({ title: (e as Error).message, icon: "none" });
@@ -152,7 +133,5 @@ onLoad(async (query) => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.form-label-row { display: flex; align-items: center; justify-content: space-between; }
-.clear-value { color: #087f8c; font-size: 21rpx; }
-.placeholder { color: #aab4b5; }
+
 </style>
