@@ -90,7 +90,7 @@
               @click="goBatchDetail(item.id)"
             >
               <view class="preproduction-block-top">
-                <text class="preproduction-block-no">订单 {{ item.orderNo }}</text>
+                <text class="preproduction-block-no">{{ item.orderNo }}</text>
                 <view class="badge-group">
                   <view v-if="item.pausedAt" class="paused-tag">暂停中</view>
                   <view v-if="item.priority === 'urgent'" class="urgent-tag">紧急</view>
