@@ -15,10 +15,6 @@
         </view>
       </view>
 
-      <view v-if="isPaused" class="paused-line">
-        <text class="paused-line-text">暂停：{{ batch.pauseReason }}</text>
-      </view>
-
       <text class="customer-code">{{ batch.customerCode || '' }}</text>
 
       <view class="batch-metrics" :class="{ 'two-columns': batch.status !== 'active' }">
@@ -45,6 +41,10 @@
           <text>{{ actionLabel }}</text>
           <text class="action-arrow">›</text>
         </view>
+      </view>
+
+      <view v-if="isPaused" class="paused-line">
+        <text class="paused-line-text">暂停：{{ batch.pauseReason }}</text>
       </view>
     </view>
   </view>

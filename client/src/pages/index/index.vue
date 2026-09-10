@@ -97,7 +97,6 @@
                 </view>
               </view>
               <text class="preproduction-block-model">{{ item.product?.model || '' }}</text>
-              <text v-if="item.pausedAt" class="preproduction-block-pause-reason">暂停：{{ item.pauseReason }}</text>
               <view class="preproduction-block-sub">
                 <text class="preproduction-block-customer">{{ item.customerCode || '' }}</text>
                 <text v-for="(pkg, i) in getPackageTypes(item)" :key="i" class="preproduction-block-pkg">{{ pkg }}</text>
@@ -106,6 +105,7 @@
                 <text class="preproduction-block-qty">{{ item.quantity }}只</text>
                 <view class="preproduction-action" @click.stop="goCard(item.id)">去制卡 ›</view>
               </view>
+              <text v-if="item.pausedAt" class="preproduction-block-pause-reason">暂停：{{ item.pauseReason }}</text>
             </view>
           </view>
         </scroll-view>
@@ -137,7 +137,6 @@
                 </view>
               </view>
               <text class="preproduction-block-model">{{ item.product?.model || '' }}</text>
-              <text v-if="item.pausedAt" class="preproduction-block-pause-reason">暂停：{{ item.pauseReason }}</text>
               <view class="preproduction-block-sub">
                 <text class="preproduction-block-customer">{{ item.customerCode || '' }}</text>
                 <text v-for="(pkg, i) in getPackageTypes(item)" :key="i" class="preproduction-block-pkg">{{ pkg }}</text>
@@ -146,6 +145,7 @@
                 <text class="preproduction-block-qty">{{ item.quantity }}只</text>
                 <view class="preproduction-action" @click.stop="startProduction(item)">投入加工 ›</view>
               </view>
+              <text v-if="item.pausedAt" class="preproduction-block-pause-reason">暂停：{{ item.pauseReason }}</text>
             </view>
           </view>
         </scroll-view>
@@ -196,7 +196,6 @@
                       </view>
                     </view>
                     <text class="kanban-card-model">{{ batch.product?.model || '-' }}</text>
-                    <text v-if="batch.pausedAt" class="kanban-paused-reason">暂停：{{ batch.pauseReason }}</text>
                     <view class="kanban-card-sub">
                       <text class="kanban-customer-code">{{ batch.customerCode || '-' }}</text>
                       <text v-if="kanbanGroupMode === 'stage' && batch.packageType" class="kanban-pkg">{{ getPrimaryPackageType(batch) }}</text>
@@ -206,6 +205,7 @@
                       <text class="kanban-card-qty">{{ batch.quantity }}只</text>
                       <view v-if="!batch.pausedAt" class="kanban-action" @click.stop="goRecordProgress(batch.id)">流转 ›</view>
                     </view>
+                    <text v-if="batch.pausedAt" class="kanban-paused-reason">暂停：{{ batch.pauseReason }}</text>
                   </view>
                   <view v-if="!col.batches.length" class="kanban-empty">暂无</view>
                 </view>
@@ -628,13 +628,13 @@ onPullDownRefresh(async () => {
 }
 .preproduction-block-pause-reason {
   display: block;
-  overflow: hidden;
-  margin-top: 5rpx;
+  margin-top: 8rpx;
   color: #c9483f;
   font-size: 20rpx;
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.5;
+  white-space: normal;
+  word-break: break-all;
 }
 .preproduction-block-sub {
   display: flex;
@@ -752,13 +752,13 @@ onPullDownRefresh(async () => {
 .kanban-card-no { font-size: 24rpx; font-weight: 700; color: #172327; }
 .kanban-paused-reason {
   display: block;
-  overflow: hidden;
-  margin-top: 5rpx;
+  margin-top: 8rpx;
   color: #c9483f;
   font-size: 20rpx;
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.5;
+  white-space: normal;
+  word-break: break-all;
 }
 .kanban-card-model {
   display: block;
