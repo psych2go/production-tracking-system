@@ -14,7 +14,11 @@
       </view>
 
       <!-- 属性行：客户代码 · 封装形式 · 数量 -->
-      <text class="meta-line">{{ [batch.customerCode, batch.packageType, batch.quantity + '只'].map((v) => v || '—').join(' · ') }}</text>
+      <view class="meta-line">
+        <text v-if="batch.customerCode" class="meta-item">{{ batch.customerCode }}</text>
+        <text v-if="batch.packageType" class="meta-item">{{ batch.packageType }}</text>
+        <text class="meta-item">{{ batch.quantity }}只</text>
+      </view>
 
       <!-- 交期行 -->
       <view class="batch-footer">
@@ -142,12 +146,16 @@ onMounted(() => {
 
 /* 属性行 */
 .meta-line {
-  display: block;
+  display: flex;
+  gap: 30rpx;
   overflow: hidden;
   margin-top: 26rpx;
+  white-space: nowrap;
+}
+.meta-item {
+  flex-shrink: 0;
   color: #7d898b;
   font-size: 20rpx;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
