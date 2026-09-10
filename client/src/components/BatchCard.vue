@@ -2,17 +2,15 @@
   <view class="batch-card card" @click="$emit('click')">
     <view v-if="hasAnomaly" class="batch-accent" :class="accentClass"></view>
     <view class="batch-card-main">
-      <!-- 主行：批号 型号 + 状态 -->
+      <!-- 主行：批号 型号 + 风险徽标 + 状态 -->
       <view class="batch-heading">
         <text class="batch-title">{{ displayTitle }}</text>
+        <view v-if="hasAnomaly" class="risk-row">
+          <text v-if="urgent" class="risk-tag risk-urgent">紧急</text>
+          <text v-if="isOverdue" class="risk-tag risk-overdue">逾期 {{ overdueDays }} 天</text>
+          <text v-if="isPaused" class="risk-tag risk-paused">暂停中</text>
+        </view>
         <view class="status-badge" :class="`status-${batch.status}`">{{ statusLabel }}</view>
-      </view>
-
-      <!-- 风险徽标行（仅异常时出现） -->
-      <view v-if="hasAnomaly" class="risk-row">
-        <text v-if="urgent" class="risk-tag risk-urgent">紧急</text>
-        <text v-if="isOverdue" class="risk-tag risk-overdue">逾期 {{ overdueDays }} 天</text>
-        <text v-if="isPaused" class="risk-tag risk-paused">暂停中</text>
       </view>
 
       <!-- 属性行：客户代码 · 封装形式 · 数量 -->
@@ -27,8 +25,8 @@
       <!-- 底行：交期 + 操作 -->
       <view class="batch-footer">
         <view class="delivery-inline">
-          <text class="delivery-item" :class="{ 'delivery-overdue': isOverdue }">客 {{ customerDelivery || '—' }}</text>
-          <text class="delivery-item">预 {{ productionDelivery || '—' }}</text>
+          <text class="delivery-item" :class="{ 'delivery-overdue': isOverdue }">客户要求交期：{{ customerDelivery }}</text>
+          <text class="delivery-item">生产预计交期：{{ productionDelivery }}</text>
         </view>
         <view class="card-action" @click.stop="$emit('action')">
           <text>{{ actionLabel }}</text>
@@ -110,7 +108,7 @@ onMounted(() => {
 .batch-card-main { width: 100%; min-width: 0; padding: 22rpx; }
 
 /* 主行 */
-.batch-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 14rpx; }
+.batch-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16rpx; }
 .batch-title {
   overflow: hidden;
   min-width: 0;
@@ -122,6 +120,7 @@ onMounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.risk-row { display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 8rpx; }
 .status-badge {
   flex-shrink: 0;
   padding: 4rpx 12rpx;
@@ -137,23 +136,11 @@ onMounted(() => {
 .status-completed { background: #e6f3ec; color: #27865f; }
 .status-cancelled { background: #f1f2f2; color: #7d898b; }
 
-/* 风险徽标行 */
-.risk-row { display: flex; flex-wrap: wrap; gap: 8rpx; margin-top: 10rpx; }
-.risk-tag {
-  padding: 2rpx 10rpx;
-  border-radius: 4rpx;
-  font-size: 19rpx;
-  font-weight: 600;
-}
-.risk-urgent { background: #fff3df; color: #9a5a00; }
-.risk-overdue { background: #fcecea; color: #c9483f; }
-.risk-paused { background: #fcecea; color: #c9483f; }
-
 /* 属性行 */
 .meta-line {
   display: block;
   overflow: hidden;
-  margin-top: 12rpx;
+  margin-top: 18rpx;
   color: #7d898b;
   font-size: 20rpx;
   text-overflow: ellipsis;
@@ -161,7 +148,7 @@ onMounted(() => {
 }
 
 /* 当前工序行 */
-.stage-line { display: flex; align-items: center; gap: 10rpx; margin-top: 12rpx; }
+.stage-line { display: flex; align-items: center; gap: 10rpx; margin-top: 18rpx; }
 .stage-label {
   padding: 2rpx 10rpx;
   border-radius: 4rpx;
@@ -172,8 +159,8 @@ onMounted(() => {
 .stage-value { color: #087f8c; font-size: 22rpx; font-weight: 600; }
 
 /* 底行：交期 + 操作 */
-.batch-footer { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 14rpx; }
-.delivery-inline { display: flex; min-width: 0; gap: 18rpx; overflow: hidden; }
+.batch-footer { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 20rpx; }
+.delivery-inline { display: flex; min-width: 0; gap: 22rpx; overflow: hidden; }
 .delivery-item { color: #7d898b; font-size: 20rpx; white-space: nowrap; }
 .delivery-overdue { color: #c9483f; font-weight: 600; }
 .card-action {
@@ -189,9 +176,20 @@ onMounted(() => {
 }
 .action-arrow { margin-left: 5rpx; font-size: 30rpx; line-height: 1; }
 
+/* 风险徽标 */
+.risk-tag {
+  padding: 2rpx 10rpx;
+  border-radius: 4rpx;
+  font-size: 19rpx;
+  font-weight: 600;
+}
+.risk-urgent { background: #fff3df; color: #9a5a00; }
+.risk-overdue { background: #fcecea; color: #c9483f; }
+.risk-paused { background: #fcecea; color: #c9483f; }
+
 /* 暂停横幅 */
 .paused-line {
-  margin-top: 12rpx;
+  margin-top: 16rpx;
   padding: 10rpx 14rpx;
   border-left: 5rpx solid #c9483f;
   border-radius: 6rpx;

@@ -101,8 +101,8 @@
         <view class="info-item"><text class="info-label">加工数量</text><text class="info-value">{{ batch.quantity }}只</text></view>
         <view class="info-item"><text class="info-label">客户代码</text><text class="info-value">{{ batch.customerCode || '' }}</text></view>
         <view class="info-item"><text class="info-label">封装形式</text><text class="info-value">{{ batch.packageType || '' }}</text></view>
-        <view class="info-item"><text class="info-label">客户交期</text><text class="info-value" :class="isOverdue ? 'text-danger' : ''">{{ customerDeliveryText }}<text v-if="isOverdue" class="overdue-text">已逾期</text></text></view>
-        <view class="info-item"><text class="info-label">预计交期</text><text class="info-value">{{ productionDeliveryText }}</text></view>
+        <view class="info-item"><text class="info-label">客户要求交期</text><text class="info-value" :class="isOverdue ? 'text-danger' : ''">{{ customerDeliveryText }}<text v-if="isOverdue" class="overdue-text">已逾期</text></text></view>
+        <view class="info-item"><text class="info-label">生产预计交期</text><text class="info-value">{{ productionDeliveryText }}</text></view>
         <view class="info-item" :class="{ 'info-item-wide': !showStartedAt }"><text class="info-label">优先级</text><text class="info-value">{{ priorityLabel(batch.priority) }}</text></view>
         <view v-if="showStartedAt" class="info-item"><text class="info-label">投产时间</text><text class="info-value">{{ batch.startedAt ? formatDate(batch.startedAt) : '' }}</text></view>
         <view class="info-item info-item-wide"><text class="info-label">备注</text><text class="info-value info-notes">{{ batch.notes || '' }}</text></view>
