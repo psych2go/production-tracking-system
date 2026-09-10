@@ -239,8 +239,8 @@ const yieldRate = computed(() => {
 const yieldClass = computed(() => {
   const rate = Number(yieldRate.value);
   if (Number.isNaN(rate)) return "";
-  if (rate >= 98) return "yield-good";
-  if (rate < 95) return "yield-bad";
+  if (rate >= 95) return "yield-good";
+  if (rate < 92) return "yield-bad";
   return "yield-mid";
 });
 
