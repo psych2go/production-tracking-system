@@ -13,17 +13,17 @@
         <view class="status-badge" :class="`status-${batch.status}`">{{ statusLabel }}</view>
       </view>
 
-      <!-- 属性行：客户代码 · 封装形式 · 数量 -->
+      <!-- 属性行：客户代码 · 封装形式 · 数量（加工中时右侧带当前工序） -->
       <view class="meta-line">
-        <text v-if="batch.customerCode" class="meta-item">{{ batch.customerCode }}</text>
-        <text v-if="batch.packageType" class="meta-item">{{ batch.packageType }}</text>
-        <text class="meta-item">{{ batch.quantity }}只</text>
-      </view>
-
-      <!-- 当前工序（仅加工中） -->
-      <view v-if="batch.status === 'active'" class="stage-line">
-        <text class="stage-label">当前工序</text>
-        <text class="stage-value">{{ currentStageName }}</text>
+        <view class="meta-left">
+          <text v-if="batch.customerCode" class="meta-item">{{ batch.customerCode }}</text>
+          <text v-if="batch.packageType" class="meta-item">{{ batch.packageType }}</text>
+          <text class="meta-item">{{ batch.quantity }}只</text>
+        </view>
+        <view v-if="batch.status === 'active'" class="stage-inline">
+          <text class="stage-label">当前工序</text>
+          <text class="stage-value">{{ currentStageName }}</text>
+        </view>
       </view>
 
       <!-- 最后一行：交期 + 操作（右端） -->
@@ -140,12 +140,19 @@ onMounted(() => {
 .status-completed { background: #e6f3ec; color: #27865f; }
 .status-cancelled { background: #f1f2f2; color: #7d898b; }
 
-/* 属性行 */
+/* 属性行：左侧属性 + 右侧当前工序 */
 .meta-line {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 30rpx;
-  overflow: hidden;
   margin-top: 26rpx;
+}
+.meta-left {
+  display: flex;
+  gap: 30rpx;
+  min-width: 0;
+  overflow: hidden;
   white-space: nowrap;
 }
 .meta-item {
@@ -154,9 +161,7 @@ onMounted(() => {
   font-size: 20rpx;
   white-space: nowrap;
 }
-
-/* 当前工序行 */
-.stage-line { display: flex; align-items: center; gap: 30rpx; margin-top: 26rpx; }
+.stage-inline { display: flex; align-items: center; gap: 30rpx; flex-shrink: 0; }
 .stage-label {
   padding: 2rpx 10rpx;
   border-radius: 4rpx;
@@ -168,7 +173,7 @@ onMounted(() => {
 
 /* 最后一行：交期 + 操作 */
 .batch-footer { display: flex; align-items: center; justify-content: space-between; gap: 48rpx; margin-top: 30rpx; }
-.delivery-inline { display: flex; min-width: 0; gap: 66rpx; overflow: hidden; }
+.delivery-inline { display: flex; min-width: 0; gap: 198rpx; overflow: hidden; }
 .delivery-item { color: #7d898b; font-size: 20rpx; white-space: nowrap; }
 .delivery-overdue { color: #c9483f; font-weight: 600; }
 .card-action {
