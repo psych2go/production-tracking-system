@@ -10,7 +10,7 @@
           <input v-model="daysInput" type="number" class="form-input" placeholder="请输入天数" />
           <text class="unit">天</text>
         </view>
-        <text class="form-hint">支持 1 - 365 天，默认 5 天</text>
+        <text class="form-hint">支持 1 - 10 天，默认 5 天</text>
       </view>
 
       <button class="btn btn-primary btn-block mt-lg" :loading="saving" @click="save">保存</button>
@@ -36,8 +36,8 @@ onMounted(async () => {
 
 async function save() {
   const days = Number(daysInput.value);
-  if (!Number.isInteger(days) || days < 1 || days > 365) {
-    uni.showToast({ title: "请输入 1 - 365 的整数", icon: "none" });
+  if (!Number.isInteger(days) || days < 1 || days > 10) {
+    uni.showToast({ title: "请输入 1 - 10 的整数", icon: "none" });
     return;
   }
 

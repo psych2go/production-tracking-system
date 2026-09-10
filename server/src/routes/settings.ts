@@ -235,7 +235,7 @@ settingsRoutes.delete(
 );
 
 const anomalyThresholdSchema = z.object({
-  days: z.number().int("阈值必须为整数").min(1, "阈值至少为1天").max(365, "阈值不能超过365天"),
+  days: z.number().int("阈值必须为整数").min(1, "阈值至少为1天").max(10, "阈值不能超过10天"),
 });
 
 // Get anomaly threshold
