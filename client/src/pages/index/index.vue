@@ -576,6 +576,16 @@ onPullDownRefresh(async () => {
 }
 
 /* Pre-production */
+.paused-tag {
+  flex-shrink: 0;
+  padding: 3rpx 10rpx;
+  border-radius: 6rpx;
+  background: #c9483f;
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .section-count {
   min-width: 34rpx;
   margin-left: 10rpx;
