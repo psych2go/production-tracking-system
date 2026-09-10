@@ -65,7 +65,7 @@ export async function importArchiveData(fileBuffer: Buffer): Promise<ArchiveImpo
   const worksheet = workbook.worksheets[0];
   if (!worksheet || worksheet.rowCount < 2) throw new Error("Excel 文件为空或没有数据行");
 
-  // 按表头文字定位列，兼容列顺序调整
+  // 按表头文字定位列：先匹配更具体的「发货日期」「发货数」，避免「发货数（不大于上芯数）」误匹配到上芯数列
   const headerRow = worksheet.getRow(1);
   let batchNoCol = 0;
   let modelCol = 0;
@@ -74,11 +74,11 @@ export async function importArchiveData(fileBuffer: Buffer): Promise<ArchiveImpo
   let dateCol = 0;
   headerRow.eachCell((cell, colNumber) => {
     const text = String(cell.value ?? "").trim();
-    if (text.includes("批号")) batchNoCol = colNumber;
-    else if (text.includes("型号")) modelCol = colNumber;
-    else if (text.includes("上芯数")) dieCol = colNumber;
+    if (text.includes("发货日期")) dateCol = colNumber;
     else if (text.includes("发货数")) shippedCol = colNumber;
-    else if (text.includes("发货日期")) dateCol = colNumber;
+    else if (text.includes("上芯数")) dieCol = colNumber;
+    else if (text.includes("型号")) modelCol = colNumber;
+    else if (text.includes("批号")) batchNoCol = colNumber;
   });
   if (!batchNoCol || !dieCol || !shippedCol || !dateCol) {
     throw new Error("模板格式不正确，请下载最新模板填写（需包含批号、上芯数、发货数、发货日期列）");
