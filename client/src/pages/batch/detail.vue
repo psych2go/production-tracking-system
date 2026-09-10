@@ -128,7 +128,7 @@
     <view v-if="!editing && hasActions" class="card action-card">
       <button v-if="batch.status === 'pending_card' && isAdmin && !batch.pausedAt" class="btn btn-primary btn-block" @click="goCard">去制卡 ›</button>
       <button v-if="batch.status === 'pending' && isAdmin && !batch.pausedAt" class="btn btn-primary btn-block" @click="startProduction">投入加工 ›</button>
-      <button v-if="batch.status === 'active' && !batch.pausedAt" class="btn btn-primary btn-block" @click="goRecordProgress">工序流转 ›</button>
+      <button v-if="batch.status === 'active' && !batch.pausedAt" class="btn btn-primary btn-block" @click="goRecordProgress">工序流转</button>
       <button v-if="batch.status === 'completed' && isAdmin" class="btn btn-primary btn-block" @click="archiveBatch">归档</button>
       <button v-if="isPaused" class="btn btn-primary btn-block" @click="resumeBatch">解除暂停</button>
       <view v-if="canPause || canCancel" class="action-row">
