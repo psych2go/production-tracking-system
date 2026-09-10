@@ -19,10 +19,6 @@
         </view>
       </view>
 
-      <!-- #ifdef H5 -->
-      <input ref="fileInputRef" type="file" accept=".xlsx" style="display: none" @change="onFileChange" />
-      <!-- #endif -->
-
       <button class="btn btn-outline btn-block mt-md" :loading="downloading" @click="downloadTemplate">下载导入模板</button>
       <button class="btn btn-primary btn-block mt-md" :loading="uploading" @click="chooseFile">选择文件并导入</button>
 
@@ -52,7 +48,6 @@ interface ImportResult {
 
 const userStore = useUserStore();
 const BASE_URL = api.getBaseUrl();
-const fileInputRef = ref<HTMLInputElement | null>(null);
 const downloading = ref(false);
 const uploading = ref(false);
 const result = ref<ImportResult | null>(null);
@@ -102,7 +97,24 @@ async function downloadTemplate() {
 
 function chooseFile() {
   // #ifdef H5
-  fileInputRef.value?.click();
+  // uni-app H5 会把模板里的 <input> 编译成 uni-input 组件，ref.click() 无法触发文件选择，
+  // 因此点击时动态创建原生 input（每次新建也保证选同一个文件能重复触发 change）
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".xlsx";
+  input.style.display = "none";
+  document.body.appendChild(input);
+  input.addEventListener("change", () => {
+    const file = input.files?.[0];
+    input.remove();
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".xlsx")) {
+      uni.showToast({ title: "请上传 .xlsx 格式的 Excel 文件", icon: "none" });
+      return;
+    }
+    uploadH5(file);
+  });
+  input.click();
   // #endif
   // #ifdef MP-WEIXIN
   const wxAny = (globalThis as any).wx;
@@ -123,18 +135,6 @@ function chooseFile() {
 }
 
 // #ifdef H5
-function onFileChange(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  input.value = "";
-  if (!file) return;
-  if (!file.name.toLowerCase().endsWith(".xlsx")) {
-    uni.showToast({ title: "请上传 .xlsx 格式的 Excel 文件", icon: "none" });
-    return;
-  }
-  uploadH5(file);
-}
-
 async function uploadH5(file: File) {
   uploading.value = true;
   result.value = null;
