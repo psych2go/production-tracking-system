@@ -612,27 +612,20 @@ onPullDownRefresh(async () => {
 .preproduction-block-no {
   overflow: hidden;
   min-width: 0;
-  color: #172327;
+  color: #657174;
   font-size: 22rpx;
-  font-weight: 700;
+  font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .preproduction-block-model {
   display: block;
   overflow: hidden;
-  color: #657174;
+  color: #172327;
   font-size: 22rpx;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.pending-production-block .preproduction-block-no {
-  color: #657174;
-  font-weight: 400;
-}
-.pending-production-block .preproduction-block-model {
-  color: #172327;
-  font-weight: 600;
 }
 .preproduction-block-pause-reason {
   display: block;
