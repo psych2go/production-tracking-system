@@ -26,8 +26,12 @@
         </view>
       </view>
 
-      <!-- 操作行 -->
+      <!-- 最后一行：交期 + 操作（右端） -->
       <view class="batch-footer">
+        <view class="delivery-inline">
+          <text class="delivery-item" :class="{ 'delivery-overdue': isOverdue }">客户要求交期：{{ customerDelivery }}</text>
+          <text class="delivery-item">生产预计交期：{{ productionDelivery }}</text>
+        </view>
         <view class="card-action" @click.stop="$emit('action')">
           <text>{{ actionLabel }}</text>
           <text class="action-arrow">›</text>
@@ -47,7 +51,7 @@ import { computed, onMounted } from "vue";
 import type { Batch } from "../types";
 import { STATUS_LABELS } from "../utils/constants";
 import { useAppStore } from "../store/app";
-import { getCurrentStage, isOverdue as checkOverdue, getOverdueDays } from "../utils/format";
+import { formatDateShort, getCurrentStage, isOverdue as checkOverdue, getOverdueDays } from "../utils/format";
 
 const props = defineProps<{ batch: Batch; isAdmin?: boolean }>();
 defineEmits<{ click: []; action: [] }>();
@@ -70,6 +74,12 @@ const accentClass = computed(() => ({
 }));
 const currentStageName = computed(
   () => getCurrentStage(props.batch)?.name || appStore.stages.find((s) => s.code !== "completed")?.name || "—"
+);
+const customerDelivery = computed(() =>
+  props.batch.customerDelivery ? formatDateShort(props.batch.customerDelivery) : ""
+);
+const productionDelivery = computed(() =>
+  props.batch.productionDelivery ? formatDateShort(props.batch.productionDelivery) : ""
 );
 const actionLabel = computed(() => {
   if (props.isAdmin && props.batch.status === "pending_card") return "去制卡";
@@ -161,8 +171,11 @@ onMounted(() => {
 }
 .stage-value { color: #087f8c; font-size: 22rpx; font-weight: 600; }
 
-/* 操作行 */
-.batch-footer { display: flex; align-items: center; justify-content: flex-end; margin-top: 30rpx; }
+/* 最后一行：交期 + 操作 */
+.batch-footer { display: flex; align-items: center; justify-content: space-between; gap: 24rpx; margin-top: 30rpx; }
+.delivery-inline { display: flex; min-width: 0; flex-wrap: wrap; gap: 10rpx 60rpx; overflow: hidden; }
+.delivery-item { color: #7d898b; font-size: 20rpx; white-space: nowrap; }
+.delivery-overdue { color: #c9483f; font-weight: 600; }
 .card-action {
   display: flex;
   align-items: center;
@@ -211,6 +224,8 @@ onMounted(() => {
   .stage-inline { gap: 20rpx; }
   .stage-label { font-size: 22rpx; }
   .stage-value { font-size: 24rpx; }
+  .delivery-inline { gap: 10rpx 24rpx; }
+  .delivery-item { font-size: 22rpx; }
   .card-action { font-size: 22rpx; }
   .paused-line-text { font-size: 22rpx; }
 }
