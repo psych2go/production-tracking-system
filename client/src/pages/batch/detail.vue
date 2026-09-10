@@ -160,16 +160,16 @@
         <text class="archive-desc">填写归档数据后，任务将变为已归档</text>
         <view class="archive-field">
           <text class="archive-label">上芯数</text>
-          <input v-model="archiveForm.dieQuantity" type="number" class="archive-input" placeholder="请输入上芯数" />
+          <input v-model="archiveForm.dieQuantity" type="number" class="form-input" placeholder="请输入上芯数" />
         </view>
         <view class="archive-field">
           <text class="archive-label">发货数</text>
-          <input v-model="archiveForm.shippedQuantity" type="number" class="archive-input" placeholder="请输入发货数" />
+          <input v-model="archiveForm.shippedQuantity" type="number" class="form-input" placeholder="请输入发货数" />
         </view>
         <view class="archive-field">
           <text class="archive-label">发货日期</text>
           <picker mode="date" :value="archiveForm.shippedDate" :end="todayStr" @change="onShippedDateChange">
-            <view class="archive-input picker-value" :class="{ 'picker-placeholder': !archiveForm.shippedDate }">{{ archiveForm.shippedDate || '请选择日期（可选今天及之前）' }}</view>
+            <view class="form-input picker-value" :class="{ 'picker-placeholder': !archiveForm.shippedDate }">{{ archiveForm.shippedDate || '请选择日期（今天及之前）' }}</view>
           </picker>
         </view>
         <view v-if="yieldRate !== null" class="yield-row">
@@ -245,7 +245,7 @@ const yieldClass = computed(() => {
 });
 
 function openArchiveSheet() {
-  archiveForm.value = { dieQuantity: "", shippedQuantity: "", shippedDate: todayStr };
+  archiveForm.value = { dieQuantity: "", shippedQuantity: "", shippedDate: "" };
   showArchiveSheet.value = true;
 }
 
@@ -580,15 +580,6 @@ onBeforeUnmount(() => {
   margin-bottom: 20rpx;
 }
 .archive-label { color: #485458; font-size: 24rpx; font-weight: 600; }
-.archive-input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 18rpx 20rpx;
-  border: 2rpx solid #dfe4e4;
-  border-radius: 8rpx;
-  background: #f5f7f7;
-  font-size: 26rpx;
-}
 .picker-placeholder { color: #aab4b5; }
 .yield-row {
   display: flex;
