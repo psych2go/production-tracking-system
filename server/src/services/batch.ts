@@ -176,11 +176,7 @@ export async function listBatches(filters: {
           orderBy: { stage: { stageOrder: "asc" } },
         },
       },
-      orderBy: [
-        { priority: "desc" },
-        { customerDelivery: { sort: "asc", nulls: "last" } },
-        { createdAt: "asc" },
-      ],
+      orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
