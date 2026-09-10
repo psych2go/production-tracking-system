@@ -246,7 +246,5 @@ onShow(() => {
   font-size: 22rpx;
   &.active { border-color: #087f8c; background: #e6f4f3; color: #075e68; font-weight: 600; }
 }
-/* 卡片间距：全局 24rpx 的四倍 */
-.batch-card { margin-bottom: 96rpx; }
 .load-more-tip { padding: 24rpx; text-align: center; }
 </style>
