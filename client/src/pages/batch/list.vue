@@ -272,9 +272,4 @@ onShow(() => {
   background: #087f8c;
   box-shadow: 0 10rpx 26rpx rgba(8, 127, 140, 0.32);
 }
-@media screen and (min-width: 560px) {
-  .fab {
-    right: calc(50% - 256px);
-  }
-}
 </style>
