@@ -904,4 +904,41 @@ onPullDownRefresh(async () => {
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* 手机端优化：仅窄屏生效，电脑显示不变 */
+@media screen and (max-width: 560px) {
+  /* 统计卡 2×2 网格 + 字号提级 */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16rpx;
+  }
+  .stat-value { font-size: 44rpx; }
+  .stat-label { font-size: 22rpx; }
+
+  /* 辅助小字提级至可读下限 */
+  .section-count,
+  .alert-card-title,
+  .alert-card-days-unit,
+  .preproduction-block-customer,
+  .preproduction-block-pkg,
+  .preproduction-block-pause-reason,
+  .kanban-customer-code,
+  .kanban-pkg,
+  .kanban-stage,
+  .kanban-action,
+  .paused-tag {
+    font-size: 22rpx;
+  }
+
+  /* 看板列加宽、内边距增大 */
+  .kanban-column { width: 320rpx; }
+  .kanban-card { padding: 20rpx; }
+
+  /* 待制卡/待投产卡片内边距一致 */
+  .preproduction-block { padding: 20rpx; }
+
+  /* 区块呼吸感 */
+  .section-block { margin-top: 32rpx; }
+}
 </style>
