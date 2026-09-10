@@ -390,14 +390,22 @@ onBeforeUnmount(() => {
 .action-bar-spacer { height: calc(150rpx + env(safe-area-inset-bottom)); }
 .action-bar {
   position: fixed;
-  left: 24rpx;
-  right: 24rpx;
   bottom: calc(20rpx + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 100;
+  width: calc(100% - 48rpx);
+  max-width: 1072rpx;
   padding: 16rpx;
   border-radius: 18rpx;
   background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 12rpx 32rpx rgba(23, 35, 39, 0.16);
+}
+@media screen and (min-width: 900px) {
+  .action-bar {
+    width: calc(100% - 64px);
+    max-width: 896px;
+  }
 }
 .action-bar-inner { display: flex; gap: 14rpx; }
 .action-bar-secondary {
