@@ -648,6 +648,7 @@ onPullDownRefresh(async () => {
 }
 .preproduction-block-pkg {
   flex-shrink: 0;
+  margin-left: auto;
   overflow: hidden;
   max-width: 150rpx;
   padding: 2rpx 10rpx;
