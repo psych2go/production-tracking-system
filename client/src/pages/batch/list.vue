@@ -48,11 +48,6 @@
     <view v-if="!filteredBatches.length && !loading" class="card text-center mt-lg">
       <text class="text-secondary">{{ keyword || smartFilter ? '无匹配生产任务' : '暂无生产任务' }}</text>
     </view>
-
-    <view class="fab-spacer"></view>
-    <view v-if="userStore.isAdmin()" class="fab" @click="goCreate">
-      <UIcon name="plus" :size="52" color="#ffffff" />
-    </view>
   </view>
 </template>
 
@@ -63,7 +58,6 @@ import { useUserStore } from "../../store/user";
 import { batchApi } from "../../api/modules";
 import type { Batch } from "../../types";
 import BatchCard from "../../components/BatchCard.vue";
-import UIcon from "../../components/UIcon.vue";
 import { isOverdue as checkOverdue } from "../../utils/format";
 
 const userStore = useUserStore();
@@ -150,10 +144,6 @@ async function loadMore() {
 
 function goDetail(id: number) {
   uni.navigateTo({ url: `/pages/batch/detail?id=${id}` });
-}
-
-function goCreate() {
-  uni.navigateTo({ url: "/pages/batch/create" });
 }
 
 function goCard(id: number) {
@@ -257,19 +247,4 @@ onShow(() => {
   &.active { border-color: #087f8c; background: #e6f4f3; color: #075e68; font-weight: 600; }
 }
 .load-more-tip { padding: 24rpx; text-align: center; }
-.fab-spacer { height: 120rpx; }
-.fab {
-  position: fixed;
-  z-index: 50;
-  right: 36rpx;
-  bottom: calc(120rpx + env(safe-area-inset-bottom));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 92rpx;
-  height: 92rpx;
-  border-radius: 50%;
-  background: #087f8c;
-  box-shadow: 0 10rpx 26rpx rgba(8, 127, 140, 0.32);
-}
 </style>
