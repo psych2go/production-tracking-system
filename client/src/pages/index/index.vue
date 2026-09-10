@@ -561,7 +561,6 @@ onPullDownRefresh(async () => {
 .alert-row { display: inline-flex; gap: 14rpx; padding: 2rpx 2rpx 10rpx; }
 .alert-card {
   display: inline-block;
-  width: 264rpx;
   padding: 16rpx;
   vertical-align: top;
   background: #fff;
@@ -573,10 +572,8 @@ onPullDownRefresh(async () => {
 }
 .alert-card-title {
   display: block;
-  overflow: hidden;
   color: #657174;
   font-size: 20rpx;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .alert-card-days {
