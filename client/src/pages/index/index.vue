@@ -197,11 +197,14 @@
                     </view>
                     <text class="kanban-card-model">{{ batch.product?.model || '-' }}</text>
                     <text v-if="batch.pausedAt" class="kanban-paused-reason">暂停：{{ batch.pauseReason }}</text>
-                    <text class="kanban-customer-code">{{ batch.customerCode || '-' }}</text>
-                    <view class="kanban-card-meta">
-                      <text class="kanban-card-qty">{{ batch.quantity }}只</text>
+                    <view class="kanban-card-sub">
+                      <text class="kanban-customer-code">{{ batch.customerCode || '-' }}</text>
                       <text v-if="kanbanGroupMode === 'stage' && batch.packageType" class="kanban-pkg">{{ getPrimaryPackageType(batch) }}</text>
                       <text v-else-if="kanbanGroupMode === 'package'" class="kanban-stage">{{ getCurrentStage(batch)?.name || firstStageName }}</text>
+                    </view>
+                    <view class="kanban-card-meta">
+                      <text class="kanban-card-qty">{{ batch.quantity }}只</text>
+                      <view v-if="!batch.pausedAt" class="kanban-action" @click.stop="goRecordProgress(batch.id)">流转 ›</view>
                     </view>
                   </view>
                   <view v-if="!col.batches.length" class="kanban-empty">暂无</view>
@@ -330,6 +333,10 @@ async function loadData() {
 
 function goBatchDetail(id: number) {
   uni.navigateTo({ url: `/pages/batch/detail?id=${id}&from=home` });
+}
+
+function goRecordProgress(id: number) {
+  uni.navigateTo({ url: `/pages/progress/entry?batchId=${id}&returnTo=home` });
 }
 
 function goCard(id: number) {
@@ -766,10 +773,18 @@ onPullDownRefresh(async () => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.kanban-card-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4rpx 8rpx;
+  margin-top: 5rpx;
+  min-width: 0;
+}
 .kanban-customer-code {
   display: block;
   overflow: hidden;
-  margin-top: 5rpx;
+  min-width: 0;
   color: #7d898b;
   font-size: 20rpx;
   font-weight: 400;
@@ -783,8 +798,18 @@ onPullDownRefresh(async () => {
   margin-top: 10rpx;
 }
 .kanban-card-qty { font-size: 22rpx; color: #087f8c; font-weight: 700; }
+.kanban-action {
+  flex-shrink: 0;
+  padding: 8rpx 13rpx;
+  border-radius: 6rpx;
+  background: #e6f4f3;
+  color: #075e68;
+  font-size: 21rpx;
+  font-weight: 600;
+}
 .kanban-pkg,
 .kanban-stage {
+  flex-shrink: 0;
   overflow: hidden;
   max-width: 128rpx;
   border-radius: 4rpx;

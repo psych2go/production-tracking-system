@@ -125,19 +125,27 @@
       </view>
     </view>
 
-    <view v-if="!editing && hasActions" class="card action-card">
-      <button v-if="batch.status === 'pending_card' && isAdmin && !batch.pausedAt" class="btn btn-primary btn-block" @click="goCard">去制卡 ›</button>
-      <button v-if="batch.status === 'pending' && isAdmin && !batch.pausedAt" class="btn btn-primary btn-block" @click="startProduction">投入加工 ›</button>
-      <button v-if="batch.status === 'active' && !batch.pausedAt" class="btn btn-primary btn-block" @click="goRecordProgress">工序流转</button>
-      <button v-if="batch.status === 'completed' && isAdmin" class="btn btn-primary btn-block" @click="archiveBatch">归档</button>
-      <button v-if="isPaused" class="btn btn-primary btn-block" @click="resumeBatch">解除暂停</button>
-      <view v-if="canPause || canCancel" class="action-row">
-        <button v-if="canPause" class="btn btn-pause-ghost" @click="showPauseForm = !showPauseForm">标记暂停</button>
-        <button v-if="canCancel" class="btn btn-cancel-ghost" @click="cancelOrder">取消订单</button>
+    <view v-if="!editing && hasActions" class="action-bar-spacer"></view>
+
+    <view v-if="!editing && hasActions" class="action-bar">
+      <view class="action-bar-inner">
+        <view v-if="canPause || canCancel" class="action-bar-secondary">
+          <button v-if="canPause" class="btn btn-pause-ghost" @click="showPauseForm = !showPauseForm">标记暂停</button>
+          <button v-if="canCancel" class="btn btn-cancel-ghost" @click="cancelOrder">取消订单</button>
+        </view>
+        <button v-if="batch.status === 'pending_card' && isAdmin && !batch.pausedAt" class="btn btn-primary action-bar-primary" @click="goCard">去制卡 ›</button>
+        <button v-if="batch.status === 'pending' && isAdmin && !batch.pausedAt" class="btn btn-primary action-bar-primary" @click="startProduction">投入加工 ›</button>
+        <button v-if="batch.status === 'active' && !batch.pausedAt" class="btn btn-primary action-bar-primary" @click="goRecordProgress">工序流转</button>
+        <button v-if="batch.status === 'completed' && isAdmin" class="btn btn-primary action-bar-primary action-bar-primary-solo" @click="archiveBatch">归档</button>
+        <button v-if="isPaused" class="btn btn-primary action-bar-primary" @click="resumeBatch">解除暂停</button>
       </view>
-      <view v-if="showPauseForm" class="pause-form mt-sm">
-        <textarea v-model="pauseReason" class="form-textarea" maxlength="2000" placeholder="请填写暂停原因（必填），如：订单型号有误 / 原材料未到 / 设备故障" />
-        <button class="btn btn-danger btn-block mt-sm" :loading="pausing" @click="confirmPause">确认暂停</button>
+    </view>
+
+    <view v-if="!editing && showPauseForm" class="sheet-mask" @click="showPauseForm = false">
+      <view class="pause-sheet" @click.stop>
+        <text class="pause-sheet-title">标记暂停</text>
+        <textarea v-model="pauseReason" class="form-textarea pause-sheet-textarea" maxlength="2000" placeholder="请填写暂停原因（必填），如：订单型号有误 / 原材料未到 / 设备故障" />
+        <button class="btn btn-danger btn-block" :loading="pausing" @click="confirmPause">确认暂停</button>
       </view>
     </view>
   </view>
@@ -379,15 +387,75 @@ onBeforeUnmount(() => {
 .info-notes { overflow: visible; font-weight: 400; white-space: normal; }
 .overdue-text { margin-left: 6rpx; font-size: 18rpx; }
 .progress-card { border-left: 6rpx solid #16343a; }
-.action-card { display: flex; flex-direction: column; }
-.action-row {
-  display: flex;
-  gap: 16rpx;
-  margin-top: 16rpx;
-  .btn { flex: 1; min-width: 0; margin: 0; }
+.action-bar-spacer { height: calc(130rpx + env(safe-area-inset-bottom)); }
+.action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.97);
+  border-top: 2rpx solid #edf0f0;
+  box-shadow: 0 -6rpx 20rpx rgba(23, 35, 39, 0.06);
 }
+.action-bar-inner { display: flex; gap: 14rpx; }
+.action-bar-secondary {
+  display: flex;
+  flex: 1;
+  gap: 14rpx;
+  min-width: 0;
+}
+.action-bar-secondary .btn {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  min-height: 76rpx;
+  font-size: 25rpx;
+}
+.action-bar-primary {
+  flex: 1.4;
+  min-width: 0;
+  margin: 0;
+  min-height: 76rpx;
+  font-size: 26rpx;
+}
+.action-bar-primary-solo { flex: 1; }
 .btn-pause-ghost { background: #fff3df; color: #9a5a00; }
 .btn-cancel-ghost { background: #fcecea; color: #c9483f; }
+.sheet-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(23, 35, 39, 0.45);
+}
+.pause-sheet {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 30rpx 28rpx calc(30rpx + env(safe-area-inset-bottom));
+  border-radius: 20rpx 20rpx 0 0;
+  background: #fff;
+}
+.pause-sheet-title {
+  display: block;
+  margin-bottom: 18rpx;
+  color: #172327;
+  font-size: 30rpx;
+  font-weight: 700;
+  text-align: center;
+}
+.pause-sheet-textarea {
+  width: 100%;
+  min-height: 140rpx;
+  padding: 18rpx;
+  box-sizing: border-box;
+  border: 2rpx solid #dfe4e4;
+  border-radius: 10rpx;
+  background: #f5f7f7;
+  font-size: 25rpx;
+}
 .overdue-warning { padding: 14rpx 20rpx; border-left: 6rpx solid #c9483f; border-radius: 6rpx; background: #fcecea; color: #c9483f; }
 .pause-banner { padding: 18rpx 20rpx; border-left: 6rpx solid #c9483f; border-radius: 8rpx; background: #fcecea; }
 .pause-banner-head { display: flex; align-items: center; justify-content: space-between; }
@@ -403,7 +471,6 @@ onBeforeUnmount(() => {
 .pause-history-reason { min-width: 0; flex: 1; color: #172327; font-size: 24rpx; font-weight: 600; }
 .pause-history-duration { flex-shrink: 0; color: #657174; font-size: 21rpx; }
 .pause-history-meta { display: block; margin-top: 5rpx; color: #7d898b; font-size: 20rpx; }
-.pause-form textarea { width: 100%; min-height: 140rpx; padding: 18rpx; box-sizing: border-box; border: 2rpx solid #dfe4e4; border-radius: 10rpx; background: #f5f7f7; font-size: 25rpx; }
 .form-label-row { display: flex; align-items: center; justify-content: space-between; }
 .clear-value { color: #087f8c; font-size: 21rpx; }
 .product-model-field { position: relative; }
