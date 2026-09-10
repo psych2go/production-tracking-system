@@ -52,8 +52,8 @@
       <view class="section-block" v-if="dashboard?.anomalies?.length">
         <view class="section-header">
           <view class="flex-center">
-            <view class="badge alert-count">{{ dashboard.anomalies.length }}</view>
             <text class="section-title">异常预警</text>
+            <text class="section-count">{{ dashboard.anomalies.length }}</text>
           </view>
           <text class="collapse-btn" @click="collapsed.alerts = !collapsed.alerts">{{ collapsed.alerts ? '展开' : '收起' }}</text>
         </view>
@@ -159,7 +159,10 @@
       <!-- Active batches kanban -->
       <view class="section-block">
         <view class="section-header">
-          <text class="section-title">正在加工</text>
+          <view class="flex-center">
+            <text class="section-title">正在加工</text>
+            <text class="section-count">{{ visibleActiveBatches.length }}</text>
+          </view>
           <view class="section-header-actions">
             <text class="collapse-btn" @click="collapsed.batches = !collapsed.batches">{{ collapsed.batches ? '展开' : '收起' }}</text>
           </view>
@@ -556,7 +559,6 @@ onPullDownRefresh(async () => {
 }
 
 /* Alerts */
-.alert-count { margin-right: 12rpx; background: #c9483f; }
 .alert-scroll { white-space: nowrap; }
 .alert-row { display: inline-flex; gap: 14rpx; padding: 2rpx 2rpx 10rpx; }
 .alert-card {
