@@ -75,36 +75,30 @@ export async function exportExcel() {
     progressRecords: { include: { stage: true } },
   } as const;
 
-  const [activeBatches, shippedBatches] = await Promise.all([
+  const [onlineBatches] = await Promise.all([
     prisma.batch.findMany({
-      where: { status: "active" },
+      where: { status: { in: ["pending_card", "pending", "active"] } },
       include: batchInclude,
       orderBy: [
         { customerDelivery: { sort: "asc", nulls: "last" } },
         { createdAt: "asc" },
       ],
     }),
-    prisma.batch.findMany({
-      where: { status: { in: ["completed", "archived"] } },
-      include: batchInclude,
-      orderBy: { updatedAt: "desc" },
-    }),
   ]);
 
   const customerCodes = [...new Set(
-    [...activeBatches, ...shippedBatches].map((b) => b.customerCode).filter((code): code is string => !!code),
+    onlineBatches.map((b) => b.customerCode).filter((code): code is string => !!code),
   )];
   const customers = customerCodes.length
     ? await prisma.customerCode.findMany({ where: { code: { in: customerCodes } } })
     : [];
   const customerMap = new Map(customers.map((customer) => [customer.code, customer]));
 
-  const toRow = (b: (typeof activeBatches)[number], shipped: boolean) => {
+  const toRow = (b: (typeof onlineBatches)[number]) => {
     const mirrorRecord = getLatestStageRecord(b.progressRecords, "in_process_inspection");
-    const completedRecord = getLatestStageRecord(b.progressRecords, "completed");
     const customer = b.customerCode ? customerMap.get(b.customerCode) : undefined;
-    // 已发货日期：无专门字段，用流转到「已完成」工序的时间近似。
-    const shipDate = shipped ? formatDateCell(completedRecord?.createdAt ?? b.updatedAt) : "";
+    // 当前站点：待制卡/待投产无工序记录，直接显示业务状态
+    const stage = b.status === "pending_card" ? "待制卡" : b.status === "pending" ? "待投产" : getCurrentStageFromRecords(b.progressRecords);
     return [
       b.customerCode || "",
       customer?.name || "",
@@ -116,19 +110,16 @@ export async function exportExcel() {
       formatDateCell(b.startedAt),
       formatDateCell(mirrorRecord?.createdAt),
       formatDateCell(b.customerDelivery),
-      shipped ? shipDate : formatDateCell(b.productionDelivery),
-      shipped ? "已发货" : getCurrentStageFromRecords(b.progressRecords),
+      formatDateCell(b.productionDelivery),
+      stage,
       customer?.type === "internal" ? "所内" : customer?.type === "external" ? "所外" : "",
-      shipped ? "/" : 0,
-      shipped ? "/" : b.quantity,
+      0,
+      b.quantity,
       b.notes || "",
     ];
   };
 
-  const rows = [
-    ...activeBatches.map((b) => toRow(b, false)),
-    ...shippedBatches.map((b) => toRow(b, true)),
-  ];
+  const rows = onlineBatches.map((b) => toRow(b));
 
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "生产进度追踪系统";
@@ -146,7 +137,7 @@ export async function exportExcel() {
     { header: "投产时间", width: 12 },
     { header: "加工开始时间\n（镜检）", width: 14 },
     { header: "客户要求交期", width: 13 },
-    { header: "生产预计交期\n/已发货日期", width: 16 },
+    { header: "生产预计交期", width: 16 },
     { header: "当前站点", width: 12 },
     { header: "客户类型", width: 10 },
     { header: "已交付数量", width: 11 },

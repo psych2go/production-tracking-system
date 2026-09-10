@@ -9,20 +9,6 @@
       <button class="btn-export" @click="onExport">导出 Excel</button>
     </view>
 
-    <!-- Scope toggle -->
-    <view class="scope-switch card">
-      <view
-        v-for="tab in scopeTabs"
-        :key="tab.value"
-        class="scope-option"
-        :class="{ active: scope === tab.value }"
-        @click="scope = tab.value"
-      >
-        <text>{{ tab.label }}</text>
-        <text class="scope-count">{{ tab.value === 'active' ? activeCount : shippedCount }}</text>
-      </view>
-    </view>
-
     <!-- Statistics table -->
     <view class="card">
       <scroll-view scroll-x class="mt-sm" v-if="displayRows.length">
@@ -38,7 +24,7 @@
             <text class="online-col col-date">投产时间</text>
             <text class="online-col col-date">加工开始时间（镜检）</text>
             <text class="online-col col-date">客户要求交期</text>
-            <text class="online-col col-date">{{ scope === 'active' ? '生产预计交期' : '已发货日期' }}</text>
+            <text class="online-col col-date">生产预计交期</text>
             <text class="online-col col-stage">当前站点</text>
             <text class="online-col col-type">客户类型</text>
             <text class="online-col col-qty">已交付数量</text>
@@ -56,17 +42,17 @@
             <text class="online-col col-date">{{ formatDateCell(batch.startedAt) }}</text>
             <text class="online-col col-date">{{ formatDateCell(mirrorTime(batch)) }}</text>
             <text class="online-col col-date" :class="{ 'text-danger': isOverdueBatch(batch) }">{{ formatDateCell(batch.customerDelivery) }}</text>
-            <text class="online-col col-date">{{ scope === 'active' ? formatDateCell(batch.productionDelivery) : formatDateCell(shipDate(batch)) }}</text>
-            <text class="online-col col-stage">{{ scope === 'active' ? currentStageName(batch) : '已发货' }}</text>
+            <text class="online-col col-date">{{ formatDateCell(batch.productionDelivery) }}</text>
+            <text class="online-col col-stage">{{ currentStageName(batch) }}</text>
             <text class="online-col col-type">{{ customerTypeLabel(batch.customerType) }}</text>
-            <text class="online-col col-qty">{{ scope === 'active' ? 0 : '/' }}</text>
-            <text class="online-col col-qty">{{ scope === 'active' ? batch.quantity : '/' }}</text>
+            <text class="online-col col-qty">0</text>
+            <text class="online-col col-qty">{{ batch.quantity }}</text>
             <text class="online-col col-notes">{{ batch.notes || '' }}</text>
           </view>
         </view>
       </scroll-view>
       <view v-else class="empty-chart">
-        <text class="text-secondary">{{ scope === 'active' ? '暂无正在加工批次' : '暂无已发货批次' }}</text>
+        <text class="text-secondary">暂无在线批次</text>
       </view>
     </view>
   </view>
@@ -86,15 +72,8 @@ import type { Batch, ProgressRecord, ProcessStage } from "../../types";
 const appStore = useAppStore();
 const userStore = useUserStore();
 
-const scopeTabs: Array<{ label: string; value: "active" | "shipped" }> = [
-  { label: "正在加工", value: "active" },
-  { label: "已发货", value: "shipped" },
-];
-const scope = ref<"active" | "shipped">("active");
-const activeBatches = ref<Batch[]>([]);
-const shippedBatches = ref<Batch[]>([]);
-const activeCount = computed(() => activeBatches.value.length);
-const shippedCount = computed(() => shippedBatches.value.length);
+const onlineBatches = ref<Batch[]>([]);
+const onlineCount = computed(() => onlineBatches.value.length);
 
 const stageOrderMap = computed(() => new Map(appStore.stages.map((stage) => [stage.code, stage.stageOrder])));
 
@@ -108,11 +87,10 @@ function mirrorTime(batch: Batch): string {
   return latestStageRecord(batch, "in_process_inspection")?.createdAt || "";
 }
 
-function shipDate(batch: Batch): string {
-  return latestStageRecord(batch, "completed")?.createdAt || "";
-}
-
 function currentStageName(batch: Batch): string {
+  // 待制卡/待投产无工序记录，直接显示业务状态
+  if (batch.status === "pending_card") return "待制卡";
+  if (batch.status === "pending") return "待投产";
   return getCurrentStage(batch)?.name || "未开始";
 }
 
@@ -128,9 +106,9 @@ function isOverdueBatch(batch: Batch): boolean {
   return checkOverdue(batch.customerDelivery, batch.status);
 }
 
-// 在途：越接近完成的排前面（当前工序靠后优先），同工序按客户交期、创建时间
+// 在途：越接近完成的排前面（当前工序靠后优先），同工序按客户交期、创建时间；未开始的排在最后
 const sortedActive = computed(() => {
-  const list = [...activeBatches.value];
+  const list = [...onlineBatches.value];
   list.sort((a, b) => {
     const orderA = currentStageOrder(a);
     const orderB = currentStageOrder(b);
@@ -148,28 +126,17 @@ function currentStageOrder(batch: Batch): number {
   return stage ? stageOrderMap.value.get(stage.code) ?? -1 : -1;
 }
 
-// 已发货：最近发货的排前面
-const sortedShipped = computed(() => {
-  const list = [...shippedBatches.value];
-  list.sort((a, b) => {
-    const shipA = shipDate(a) || a.updatedAt;
-    const shipB = shipDate(b) || b.updatedAt;
-    return shipB.localeCompare(shipA);
-  });
-  return list;
-});
-
-const displayRows = computed(() => (scope.value === "active" ? sortedActive.value : sortedShipped.value));
+const displayRows = computed(() => sortedActive.value);
 
 async function loadData() {
   try {
-    const [activeRes, completedRes, archivedRes] = await Promise.all([
+    // 在线产品加工统计：已发货（已完成/已归档）之前的所有状态
+    const [activeRes, pendingRes, pendingCardRes] = await Promise.all([
       batchApi.list({ status: "active", pageSize: 500 }),
-      batchApi.list({ status: "completed", pageSize: 500 }),
-      batchApi.list({ status: "archived", pageSize: 500 }),
+      batchApi.list({ status: "pending", pageSize: 500 }),
+      batchApi.list({ status: "pending_card", pageSize: 500 }),
     ]);
-    activeBatches.value = activeRes.items;
-    shippedBatches.value = [...completedRes.items, ...archivedRes.items];
+    onlineBatches.value = [...activeRes.items, ...pendingRes.items, ...pendingCardRes.items];
   } catch (e: unknown) {
     uni.showToast({ title: (e as Error).message, icon: "none" });
   }
@@ -266,33 +233,6 @@ onShow(() => {
   border-radius: 7rpx;
   &::after { border: none; }
 }
-
-.scope-switch {
-  display: flex;
-  padding: 8rpx;
-  gap: 8rpx;
-}
-.scope-option {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  gap: 10rpx;
-  min-height: 68rpx;
-  border-radius: 8rpx;
-  color: #657174;
-  font-size: 26rpx;
-  &.active { background: #087f8c; color: #fff; font-weight: 600; }
-}
-.scope-count {
-  min-width: 36rpx;
-  padding: 0 8rpx;
-  border-radius: 5rpx;
-  background: rgba(23, 35, 39, 0.08);
-  font-size: 20rpx;
-  text-align: center;
-}
-.scope-option.active .scope-count { background: rgba(255, 255, 255, 0.22); }
 
 .empty-chart { text-align: center; padding: 60rpx 0; }
 
