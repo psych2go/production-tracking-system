@@ -126,19 +126,19 @@
     </view>
 
     <view v-if="!editing && hasActions" class="card action-card">
-      <button v-if="batch.status === 'pending_card' && isAdmin && !batch.pausedAt" class="btn btn-primary btn-block" @click="goCard">去制卡</button>
-      <button v-if="batch.status === 'pending' && isAdmin && !batch.pausedAt" class="btn btn-primary btn-block" @click="startProduction">投入加工</button>
-      <button v-if="batch.status === 'active' && !batch.pausedAt" class="btn btn-primary btn-block" @click="goRecordProgress">工序流转</button>
+      <button v-if="batch.status === 'pending_card' && isAdmin && !batch.pausedAt" class="btn btn-primary btn-block" @click="goCard">去制卡 ›</button>
+      <button v-if="batch.status === 'pending' && isAdmin && !batch.pausedAt" class="btn btn-primary btn-block" @click="startProduction">投入加工 ›</button>
+      <button v-if="batch.status === 'active' && !batch.pausedAt" class="btn btn-primary btn-block" @click="goRecordProgress">工序流转 ›</button>
       <button v-if="batch.status === 'completed' && isAdmin" class="btn btn-primary btn-block" @click="archiveBatch">归档</button>
-      <template v-if="canPause">
-        <button class="btn btn-outline btn-block mt-sm" @click="showPauseForm = !showPauseForm">标记暂停</button>
-        <view v-if="showPauseForm" class="pause-form mt-sm">
-          <textarea v-model="pauseReason" class="form-textarea" maxlength="2000" placeholder="请填写暂停原因（必填），如：订单型号有误 / 原材料未到 / 设备故障" />
-          <button class="btn btn-danger btn-block mt-sm" :loading="pausing" @click="confirmPause">确认暂停</button>
-        </view>
-      </template>
-      <button v-if="isPaused" class="btn btn-primary btn-block mt-sm" @click="resumeBatch">解除暂停</button>
-      <button v-if="canCancel" class="btn btn-outline btn-block mt-sm" @click="cancelOrder">取消订单</button>
+      <button v-if="isPaused" class="btn btn-primary btn-block" @click="resumeBatch">解除暂停</button>
+      <view v-if="canPause || canCancel" class="action-row">
+        <button v-if="canPause" class="btn btn-pause-ghost" @click="showPauseForm = !showPauseForm">标记暂停</button>
+        <button v-if="canCancel" class="btn btn-cancel-ghost" @click="cancelOrder">取消订单</button>
+      </view>
+      <view v-if="showPauseForm" class="pause-form mt-sm">
+        <textarea v-model="pauseReason" class="form-textarea" maxlength="2000" placeholder="请填写暂停原因（必填），如：订单型号有误 / 原材料未到 / 设备故障" />
+        <button class="btn btn-danger btn-block mt-sm" :loading="pausing" @click="confirmPause">确认暂停</button>
+      </view>
     </view>
   </view>
 </template>
@@ -380,6 +380,14 @@ onBeforeUnmount(() => {
 .overdue-text { margin-left: 6rpx; font-size: 18rpx; }
 .progress-card { border-left: 6rpx solid #16343a; }
 .action-card { display: flex; flex-direction: column; }
+.action-row {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 16rpx;
+  .btn { flex: 1; min-width: 0; margin: 0; }
+}
+.btn-pause-ghost { background: #fff3df; color: #9a5a00; }
+.btn-cancel-ghost { background: #fcecea; color: #c9483f; }
 .overdue-warning { padding: 14rpx 20rpx; border-left: 6rpx solid #c9483f; border-radius: 6rpx; background: #fcecea; color: #c9483f; }
 .pause-banner { padding: 18rpx 20rpx; border-left: 6rpx solid #c9483f; border-radius: 8rpx; background: #fcecea; }
 .pause-banner-head { display: flex; align-items: center; justify-content: space-between; }
