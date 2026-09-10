@@ -19,6 +19,7 @@
         { "path": "settings/index", "style": { "navigationBarTitleText": "工序管理" } },
         { "path": "customer-codes/index", "style": { "navigationBarTitleText": "客户代码管理" } },
         { "path": "anomaly-threshold/index", "style": { "navigationBarTitleText": "异常预警阈值" } },
+        { "path": "archive-import/index", "style": { "navigationBarTitleText": "归档数据导入" } },
         { "path": "audit/index", "style": { "navigationBarTitleText": "审计日志" } }
       ]
     }

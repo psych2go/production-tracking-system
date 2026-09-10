@@ -1,4 +1,5 @@
 import { Router } from "express";
+import multer from "multer";
 import { z } from "zod";
 import {
   BATCH_STATUSES,
@@ -16,6 +17,7 @@ import {
   updateBatch,
   updatePauseReason,
 } from "../services/batch.js";
+import { exportArchiveTemplate, importArchiveData } from "../services/archive-import.js";
 import { authGuard, roleGuard, AuthRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
@@ -101,6 +103,40 @@ router.get("/", authGuard, async (req: AuthRequest, res, next) => {
       ...parsePagination(req.query, { pageDefault: 1, pageSizeDefault: 50 }),
     });
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+const archiveUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.originalname.toLowerCase().endsWith(".xlsx")) cb(null, true);
+    else cb(new Error("请上传 .xlsx 格式的 Excel 文件"));
+  },
+});
+
+// 归档数据导入模板下载（仅管理员）
+router.get("/archive-template", authGuard, roleGuard("admin"), async (_req, res, next) => {
+  try {
+    const buffer = await exportArchiveTemplate();
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=${encodeURIComponent("archive_template")}.xlsx`);
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 批量导入归档数据（仅管理员，逐行校验，有效行补数据并归档）
+router.post("/archive-import", authGuard, roleGuard("admin"), auditLog("import_archive", "production"), archiveUpload.single("file"), async (req: AuthRequest, res, next) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: "请上传 .xlsx 格式的 Excel 文件" });
+      return;
+    }
+    res.json(await importArchiveData(req.file.buffer));
   } catch (err) {
     next(err);
   }
