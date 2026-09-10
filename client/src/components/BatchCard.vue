@@ -105,7 +105,7 @@ onMounted(() => {
   &.overdue { background: #c9483f; }
   &.paused { background: #c9483f; }
 }
-.batch-card-main { width: 100%; min-width: 0; padding: 22rpx; }
+.batch-card-main { width: 100%; min-width: 0; padding: 26rpx; }
 
 /* 主行 */
 .batch-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16rpx; }
@@ -140,7 +140,7 @@ onMounted(() => {
 .meta-line {
   display: block;
   overflow: hidden;
-  margin-top: 18rpx;
+  margin-top: 26rpx;
   color: #7d898b;
   font-size: 20rpx;
   text-overflow: ellipsis;
@@ -148,7 +148,7 @@ onMounted(() => {
 }
 
 /* 当前工序行 */
-.stage-line { display: flex; align-items: center; gap: 10rpx; margin-top: 18rpx; }
+.stage-line { display: flex; align-items: center; gap: 10rpx; margin-top: 26rpx; }
 .stage-label {
   padding: 2rpx 10rpx;
   border-radius: 4rpx;
@@ -159,7 +159,7 @@ onMounted(() => {
 .stage-value { color: #087f8c; font-size: 22rpx; font-weight: 600; }
 
 /* 底行：交期 + 操作 */
-.batch-footer { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 20rpx; }
+.batch-footer { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 30rpx; }
 .delivery-inline { display: flex; min-width: 0; gap: 22rpx; overflow: hidden; }
 .delivery-item { color: #7d898b; font-size: 20rpx; white-space: nowrap; }
 .delivery-overdue { color: #c9483f; font-weight: 600; }
@@ -189,7 +189,7 @@ onMounted(() => {
 
 /* 暂停横幅 */
 .paused-line {
-  margin-top: 16rpx;
+  margin-top: 24rpx;
   padding: 10rpx 14rpx;
   border-left: 5rpx solid #c9483f;
   border-radius: 6rpx;
