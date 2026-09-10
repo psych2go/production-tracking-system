@@ -11,7 +11,7 @@
         </view>
         <view class="step-item">
           <text class="step-num">2</text>
-          <text class="step-text">在 Excel 中填写三列数据：上芯数（正整数）、发货数（不大于上芯数）、发货日期（格式 2026-09-10，不晚于今天）</text>
+          <text class="step-text">在 Excel 中填写三列数据：上芯数（正整数）、发货数（不大于上芯数）、发货日期（格式 YYYYMMDD 或 YYYY-MM-DD，不晚于上传当天）</text>
         </view>
         <view class="step-item">
           <text class="step-num">3</text>

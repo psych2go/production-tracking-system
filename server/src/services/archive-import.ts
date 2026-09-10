@@ -14,7 +14,8 @@ export interface ArchiveImportResult {
   failures: ArchiveImportRowFailure[];
 }
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const COMPACT_DATE_RE = /^\d{8}$/;
+const DASHED_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** 导出「已完成待归档」批次模板：批号/型号/数量预填，仅三列归档数据待填 */
 export async function exportArchiveTemplate() {
@@ -33,7 +34,7 @@ export async function exportArchiveTemplate() {
     { header: "订单数量", key: "quantity", width: 12 },
     { header: "上芯数（必填，正整数）", key: "dieQuantity", width: 20 },
     { header: "发货数（必填，不大于上芯数）", key: "shippedQuantity", width: 26 },
-    { header: "发货日期（必填，格式：2026-09-10，不晚于今天）", key: "shippedDate", width: 34 },
+    { header: "发货日期（必填，格式：YYYYMMDD 或 YYYY-MM-DD，不晚于上传当天）", key: "shippedDate", width: 38 },
   ];
   worksheet.getRow(1).font = { bold: true };
   for (const b of batches) {
@@ -123,10 +124,18 @@ export async function importArchiveData(fileBuffer: Buffer): Promise<ArchiveImpo
     const shipped = Number(shippedText);
     if (!Number.isInteger(shipped) || shipped < 0) { fail("发货数必须为不小于0的整数"); continue; }
     if (shipped > die) { fail("发货数不能大于上芯数"); continue; }
-    if (!DATE_RE.test(dateText)) { fail("发货日期格式应为 2026-09-10"); continue; }
-    const shippedDate = new Date(`${dateText}T00:00:00`);
+    // 兼容 YYYYMMDD 与 YYYY-MM-DD 两种写法，也兼容 2026/9/1 等分隔符变体
+    let normalizedDate = dateText.replace(/[\/.]/g, "-");
+    if (/^\d{8}$/.test(normalizedDate)) {
+      normalizedDate = `${normalizedDate.slice(0, 4)}-${normalizedDate.slice(4, 6)}-${normalizedDate.slice(6, 8)}`;
+    }
+    const md = normalizedDate.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (!md) { fail("发货日期格式应为 YYYYMMDD 或 YYYY-MM-DD"); continue; }
+    const dashedDate = `${md[1]}-${md[2].padStart(2, "0")}-${md[3].padStart(2, "0")}`;
+    if (!DASHED_DATE_RE.test(dashedDate)) { fail("发货日期无效"); continue; }
+    const shippedDate = new Date(`${dashedDate}T00:00:00`);
     if (Number.isNaN(shippedDate.getTime())) { fail("发货日期无效"); continue; }
-    if (shippedDate > endOfToday) { fail("发货日期不能晚于今天"); continue; }
+    if (shippedDate > endOfToday) { fail("发货日期不能晚于上传当天"); continue; }
 
     valid.push({ id: batch.id, dieQuantity: die, shippedQuantity: shipped, shippedDate });
   }
