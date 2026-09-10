@@ -117,6 +117,7 @@ export interface AnomalyItem {
   severity: string;
   batchId: number;
   batchNo: string;
+  productModel: string;
   description: string;
   value: number;
   threshold: number;

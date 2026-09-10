@@ -55,20 +55,25 @@
             <view class="badge alert-count">{{ dashboard.anomalies.length }}</view>
             <text class="section-title">异常预警</text>
           </view>
-          <text class="collapse-btn" @click="collapsed.alerts = !collapsed.alerts">{{ collapsed.alerts ? '展开' : '收起' }}</text>
+          <text class="collapse-btn" @click="toggleAlerts">{{ collapsed.alerts ? '展开' : '收起' }}</text>
         </view>
-        <view v-if="!collapsed.alerts" class="card alert-card">
-          <view
-            v-for="(a, i) in dashboard.anomalies.slice(0, 5)"
-            :key="i"
-            class="alert-item"
-            @click="a.batchId && goBatchDetail(a.batchId)"
-          >
-            <view class="dot" :class="{ 'dot-danger': a.severity === 'critical', 'dot-warning': a.severity === 'major' }"></view>
-            <text class="alert-content text-sm">{{ a.description }}</text>
-            <UIcon v-if="a.batchId" name="chevron-right" :size="28" color="#c0c4cc" />
+        <scroll-view v-if="!collapsed.alerts" scroll-x class="alert-scroll">
+          <view class="alert-row">
+            <view
+              v-for="a in dashboard.anomalies"
+              :key="a.batchId"
+              class="alert-card"
+              @click="a.batchId && goBatchDetail(a.batchId)"
+            >
+              <text class="alert-card-title">{{ [a.batchNo, a.productModel].filter(Boolean).join(' ') || '未知批次' }}</text>
+              <view class="alert-card-days">
+                <text class="alert-card-days-num">{{ a.value }}</text>
+                <text class="alert-card-days-unit">天未更新</text>
+              </view>
+              <text class="alert-card-threshold">阈值 {{ a.threshold }} 天</text>
+            </view>
           </view>
-        </view>
+        </scroll-view>
       </view>
 
       <!-- Pre-production tasks (admin only) -->
@@ -246,6 +251,7 @@ const dashboard = ref<DashboardData | null>(null);
 const loading = ref(false);
 const loginPassword = ref("");
 const collapsed = ref({ alerts: false, pendingCard: false, pendingProduction: false, batches: false });
+const alertsUserToggled = ref(false);
 const kanbanGroupMode = ref<"stage" | "package">("stage");
 
 const pendingCardBatches = computed(() => dashboard.value?.pendingCardList ?? []);
@@ -325,9 +331,18 @@ async function handleLogin() {
   }
 }
 
+function toggleAlerts() {
+  collapsed.value.alerts = !collapsed.value.alerts;
+  alertsUserToggled.value = true;
+}
+
 async function loadData() {
   try {
     dashboard.value = await progressApi.dashboard();
+    // 预警超过 3 条时默认折叠，用户手动展开/收起后不再自动改
+    if (!alertsUserToggled.value) {
+      collapsed.value.alerts = (dashboard.value?.anomalies?.length ?? 0) > 3;
+    }
   } catch { /* dashboard is non-critical */ }
 }
 
@@ -553,16 +568,51 @@ onPullDownRefresh(async () => {
 
 /* Alerts */
 .alert-count { margin-right: 12rpx; background: #c9483f; }
-.alert-card { padding: 8rpx 24rpx; border-left: 6rpx solid #c9483f; }
-.alert-item {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  padding: 20rpx 0;
-  border-bottom: 2rpx solid #edf0f0;
-  &:last-child { border-bottom: none; }
+.alert-scroll { white-space: nowrap; }
+.alert-row { display: inline-flex; gap: 14rpx; padding: 2rpx 2rpx 10rpx; }
+.alert-card {
+  display: inline-block;
+  width: 264rpx;
+  padding: 16rpx;
+  vertical-align: top;
+  background: #fff;
+  border: 2rpx solid #dfe4e4;
+  border-top: 6rpx solid #c9483f;
+  border-radius: 10rpx;
+  box-shadow: 0 2rpx 8rpx rgba(23, 35, 39, 0.04);
+  &:active { border-color: #c9483f; }
 }
-.alert-content { flex: 1; }
+.alert-card-title {
+  display: block;
+  overflow: hidden;
+  color: #657174;
+  font-size: 20rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.alert-card-days {
+  display: flex;
+  align-items: baseline;
+  gap: 6rpx;
+  margin-top: 8rpx;
+}
+.alert-card-days-num {
+  color: #c9483f;
+  font-size: 40rpx;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.alert-card-days-unit {
+  color: #c9483f;
+  font-size: 20rpx;
+  font-weight: 600;
+}
+.alert-card-threshold {
+  display: block;
+  margin-top: 6rpx;
+  color: #a0a8a9;
+  font-size: 18rpx;
+}
 
 .section-header-actions {
   display: flex;

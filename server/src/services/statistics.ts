@@ -7,6 +7,7 @@ export async function getAnomalies() {
     severity: string;
     batchId: number;
     batchNo: string;
+    productModel: string;
     description: string;
     value: number;
     threshold: number;
@@ -15,7 +16,7 @@ export async function getAnomalies() {
   // Delayed batches (no progress update in 5+ days)
   const activeBatches = await prisma.batch.findMany({
     where: { status: "active" },
-    include: { progressRecords: { orderBy: { createdAt: "desc" }, take: 1 } },
+    include: { progressRecords: { orderBy: { createdAt: "desc" }, take: 1 }, product: true },
   });
   const fiveDaysMs = 5 * 24 * 60 * 60 * 1000;
   for (const b of activeBatches) {
@@ -27,6 +28,7 @@ export async function getAnomalies() {
         severity: "major",
         batchId: b.id,
         batchNo: b.batchNo || "",
+        productModel: b.product?.model || "",
         description: `超过5天无进度更新`,
         value: Math.round((Date.now() - new Date(lastUpdate).getTime()) / (24 * 60 * 60 * 1000)),
         threshold: 5,
