@@ -46,6 +46,8 @@ export const batchApi = {
     api.post<Batch>(`/api/batches/${id}/confirm-card`, data),
   startProduction: (id: number) =>
     api.post<Batch>(`/api/batches/${id}/start-production`, {}),
+  archive: (id: number, data: { dieQuantity: number; shippedQuantity: number; shippedDate: string }) =>
+    api.post<Batch>(`/api/batches/${id}/archive`, data),
   cancel: (id: number) =>
     api.post<Batch>(`/api/batches/${id}/cancel`, {}),
   pause: (id: number, reason: string) =>

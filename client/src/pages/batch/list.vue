@@ -165,26 +165,13 @@ async function startProduction(batch: Batch) {
   }
 }
 
-async function archiveBatch(batch: Batch) {
-  const result = await uni.showModal({ title: "确认归档", content: `确定归档 ${batch.batchNo || ''} ${batch.product?.model || ''} 吗？` });
-  if (result.cancel) return;
-  try {
-    await batchApi.update(batch.id, { status: "archived" });
-    uni.showToast({ title: "已归档", icon: "success" });
-    await Promise.all([loadData(), loadCounts()]);
-  } catch (e: unknown) {
-    uni.showModal({ title: "归档失败", content: (e as Error).message, showCancel: false });
-  }
-}
-
 function handleCardAction(batch: Batch) {
   if (userStore.isAdmin() && batch.status === "pending_card") {
     goCard(batch.id);
   } else if (userStore.isAdmin() && batch.status === "pending") {
     startProduction(batch);
-  } else if (userStore.isAdmin() && batch.status === "completed") {
-    archiveBatch(batch);
   } else {
+    // 归档需填写上芯数/发货数/发货日期，已完成任务也跳转详情页操作
     goDetail(batch.id);
   }
 }

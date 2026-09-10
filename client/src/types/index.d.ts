@@ -26,6 +26,9 @@ export interface Batch {
   packageType: string | null;
   customerDelivery: string | null;
   productionDelivery: string | null;
+  dieQuantity: number | null;
+  shippedQuantity: number | null;
+  shippedDate: string | null;
   status: "pending_card" | "pending" | "active" | "completed" | "archived" | "cancelled";
   priority: "normal" | "urgent";
   notes: string | null;

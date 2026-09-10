@@ -103,6 +103,12 @@
         <view class="info-item"><text class="info-label">封装形式</text><text class="info-value">{{ batch.packageType || '' }}</text></view>
         <view class="info-item"><text class="info-label">客户要求交期</text><text class="info-value" :class="isOverdue ? 'text-danger' : ''">{{ customerDeliveryText }}<text v-if="isOverdue" class="overdue-text">已逾期</text></text></view>
         <view class="info-item"><text class="info-label">生产预计交期</text><text class="info-value">{{ productionDeliveryText }}</text></view>
+        <template v-if="showArchiveData">
+          <view class="info-item"><text class="info-label">上芯数</text><text class="info-value">{{ batch.dieQuantity }}</text></view>
+          <view class="info-item"><text class="info-label">发货数</text><text class="info-value">{{ batch.shippedQuantity }}</text></view>
+          <view class="info-item"><text class="info-label">发货日期</text><text class="info-value">{{ shippedDateText }}</text></view>
+          <view class="info-item"><text class="info-label">良率</text><text class="info-value">{{ yieldDisplay }}</text></view>
+        </template>
         <view class="info-item" :class="{ 'info-item-wide': !showStartedAt }"><text class="info-label">优先级</text><text class="info-value">{{ priorityLabel(batch.priority) }}</text></view>
         <view v-if="showStartedAt" class="info-item"><text class="info-label">投产时间</text><text class="info-value">{{ batch.startedAt ? formatDate(batch.startedAt) : '' }}</text></view>
         <view class="info-item info-item-wide"><text class="info-label">备注</text><text class="info-value info-notes">{{ batch.notes || '' }}</text></view>
@@ -132,7 +138,7 @@
         <button v-if="batch.status === 'pending_card' && isAdmin && !batch.pausedAt" class="btn btn-primary action-bar-primary" @click="goCard">去制卡 ›</button>
         <button v-if="batch.status === 'pending' && isAdmin && !batch.pausedAt" class="btn btn-primary action-bar-primary" @click="startProduction">投入加工 ›</button>
         <button v-if="batch.status === 'active' && !batch.pausedAt" class="btn btn-primary action-bar-primary" @click="goRecordProgress">工序流转</button>
-        <button v-if="batch.status === 'completed' && isAdmin" class="btn btn-primary action-bar-primary action-bar-primary-solo" @click="archiveBatch">归档</button>
+        <button v-if="batch.status === 'completed' && isAdmin" class="btn btn-primary action-bar-primary action-bar-primary-solo" @click="openArchiveSheet">归档</button>
         <button v-if="isPaused" class="btn btn-primary action-bar-primary" @click="resumeBatch">解除暂停</button>
         <view v-if="canPause || canCancel" class="action-bar-secondary">
           <button v-if="canPause" class="btn btn-pause-ghost" @click="showPauseForm = !showPauseForm">标记暂停</button>
@@ -146,6 +152,31 @@
         <text class="pause-sheet-title">标记暂停</text>
         <textarea v-model="pauseReason" class="form-textarea pause-sheet-textarea" maxlength="2000" placeholder="请填写暂停原因（必填），如：订单型号有误 / 原材料未到 / 设备故障" />
         <button class="btn btn-danger btn-block" :loading="pausing" @click="confirmPause">确认暂停</button>
+      </view>
+    </view>
+    <view v-if="!editing && showArchiveSheet" class="sheet-mask" @click="showArchiveSheet = false">
+      <view class="pause-sheet" @click.stop>
+        <text class="pause-sheet-title">归档信息</text>
+        <text class="archive-desc">填写归档数据后，任务将变为已归档</text>
+        <view class="archive-field">
+          <text class="archive-label">上芯数</text>
+          <input v-model="archiveForm.dieQuantity" type="number" class="archive-input" placeholder="请输入上芯数" />
+        </view>
+        <view class="archive-field">
+          <text class="archive-label">发货数</text>
+          <input v-model="archiveForm.shippedQuantity" type="number" class="archive-input" placeholder="请输入发货数" />
+        </view>
+        <view class="archive-field">
+          <text class="archive-label">发货日期</text>
+          <picker mode="date" :value="archiveForm.shippedDate" :end="todayStr" @change="onShippedDateChange">
+            <view class="archive-input picker-value" :class="{ 'picker-placeholder': !archiveForm.shippedDate }">{{ archiveForm.shippedDate || '请选择日期（可选今天及之前）' }}</view>
+          </picker>
+        </view>
+        <view v-if="yieldRate !== null" class="yield-row">
+          <text class="yield-label">良率（发货数 ÷ 上芯数）</text>
+          <text class="yield-value" :class="yieldClass">{{ yieldRate }}%</text>
+        </view>
+        <button class="btn btn-primary btn-block" :loading="archiving" @click="confirmArchive">确认归档</button>
       </view>
     </view>
   </view>
@@ -193,6 +224,67 @@ const hasActions = computed(() => {
 const showPauseForm = ref(false);
 const pauseReason = ref("");
 const pausing = ref(false);
+const showArchiveSheet = ref(false);
+const archiving = ref(false);
+const archiveForm = ref({ dieQuantity: "", shippedQuantity: "", shippedDate: "" });
+const now = new Date();
+const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+const yieldRate = computed(() => {
+  const die = Number(archiveForm.value.dieQuantity);
+  const shipped = Number(archiveForm.value.shippedQuantity);
+  if (!Number.isInteger(die) || die <= 0 || archiveForm.value.shippedQuantity === "" || !Number.isInteger(shipped) || shipped < 0) return null;
+  return ((shipped / die) * 100).toFixed(1);
+});
+const yieldClass = computed(() => {
+  const rate = Number(yieldRate.value);
+  if (Number.isNaN(rate)) return "";
+  if (rate >= 98) return "yield-good";
+  if (rate < 95) return "yield-bad";
+  return "yield-mid";
+});
+
+function openArchiveSheet() {
+  archiveForm.value = { dieQuantity: "", shippedQuantity: "", shippedDate: todayStr };
+  showArchiveSheet.value = true;
+}
+
+function onShippedDateChange(event: any) {
+  archiveForm.value.shippedDate = event.detail.value ?? "";
+}
+
+async function confirmArchive() {
+  if (!batch.value || archiving.value) return;
+  const die = Number(archiveForm.value.dieQuantity);
+  const shipped = Number(archiveForm.value.shippedQuantity);
+  if (!Number.isInteger(die) || die <= 0) {
+    uni.showToast({ title: "请输入正确的上芯数", icon: "none" });
+    return;
+  }
+  if (!Number.isInteger(shipped) || shipped < 0) {
+    uni.showToast({ title: "请输入正确的发货数", icon: "none" });
+    return;
+  }
+  if (shipped > die) {
+    uni.showToast({ title: "发货数不能大于上芯数", icon: "none" });
+    return;
+  }
+  if (!archiveForm.value.shippedDate) {
+    uni.showToast({ title: "请选择发货日期", icon: "none" });
+    return;
+  }
+  archiving.value = true;
+  try {
+    await batchApi.archive(batch.value.id, { dieQuantity: die, shippedQuantity: shipped, shippedDate: archiveForm.value.shippedDate });
+    showArchiveSheet.value = false;
+    uni.showToast({ title: "已归档", icon: "success" });
+    await loadBatch(batch.value.id);
+  } catch (e: unknown) {
+    uni.showModal({ title: "归档失败", content: (e as Error).message, showCancel: false });
+  } finally {
+    archiving.value = false;
+  }
+}
 const nowTick = ref(Date.now());
 let tickTimer: ReturnType<typeof setInterval> | null = null;
 const pauseStarterName = computed(() => {
@@ -205,6 +297,16 @@ const pauseDuration = computed(() =>
 const displayTitle = computed(() => [batch.value?.batchNo, batch.value?.product?.model].filter(Boolean).join(" "));
 const customerDeliveryText = computed(() => batch.value?.customerDelivery ? formatDateShort(batch.value.customerDelivery) : "");
 const productionDeliveryText = computed(() => batch.value?.productionDelivery ? formatDateShort(batch.value.productionDelivery) : "");
+const showArchiveData = computed(() =>
+  ["completed", "archived"].includes(batch.value?.status || "") && batch.value?.dieQuantity != null
+);
+const shippedDateText = computed(() => (batch.value?.shippedDate ? formatDateShort(batch.value.shippedDate) : ""));
+const yieldDisplay = computed(() => {
+  const die = batch.value?.dieQuantity;
+  const shipped = batch.value?.shippedQuantity;
+  if (!die || shipped == null) return "";
+  return `${((shipped / die) * 100).toFixed(1)}%`;
+});
 const isOverdue = computed(() => checkOverdue(batch.value?.customerDelivery, batch.value?.status));
 const overdueDays = computed(() => getOverdueDays(batch.value?.customerDelivery));
 const packageTypeNames = computed(() => packageTypes.value.map((item) => item.name));
@@ -339,14 +441,6 @@ async function resumeBatch() {
   try { await batchApi.resume(batch.value.id); uni.showToast({ title: "已解除暂停", icon: "success" }); await loadBatch(batch.value.id); }
   catch (e: unknown) { uni.showModal({ title: "操作失败", content: (e as Error).message, showCancel: false }); }
 }
-async function archiveBatch() {
-  if (!batch.value) return;
-  const result = await uni.showModal({ title: "确认归档", content: `确定归档 ${displayTitle.value} 吗？` });
-  if (result.cancel) return;
-  try { await batchApi.update(batch.value.id, { status: "archived" }); uni.showToast({ title: "已归档", icon: "success" }); await loadBatch(batch.value.id); }
-  catch (e: unknown) { uni.showModal({ title: "归档失败", content: (e as Error).message, showCancel: false }); }
-}
-
 async function loadBatch(id: number) {
   try { batch.value = await batchApi.get(id); }
   catch { uni.showToast({ title: "加载失败", icon: "none" }); return; }
@@ -472,6 +566,43 @@ onBeforeUnmount(() => {
   background: #f5f7f7;
   font-size: 25rpx;
 }
+.archive-desc {
+  display: block;
+  margin-bottom: 22rpx;
+  color: #7d898b;
+  font-size: 21rpx;
+  text-align: center;
+}
+.archive-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  margin-bottom: 20rpx;
+}
+.archive-label { color: #485458; font-size: 24rpx; font-weight: 600; }
+.archive-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 18rpx 20rpx;
+  border: 2rpx solid #dfe4e4;
+  border-radius: 8rpx;
+  background: #f5f7f7;
+  font-size: 26rpx;
+}
+.picker-placeholder { color: #aab4b5; }
+.yield-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 22rpx;
+  padding-top: 20rpx;
+  border-top: 2rpx solid #edf0f0;
+}
+.yield-label { color: #657174; font-size: 22rpx; }
+.yield-value { font-size: 34rpx; font-weight: 700; }
+.yield-good { color: #27865f; }
+.yield-mid { color: #172327; }
+.yield-bad { color: #c9483f; }
 .overdue-warning { padding: 14rpx 20rpx; border-left: 6rpx solid #c9483f; border-radius: 6rpx; background: #fcecea; color: #c9483f; }
 .pause-banner { padding: 18rpx 20rpx; border-left: 6rpx solid #c9483f; border-radius: 8rpx; background: #fcecea; }
 .pause-banner-head { display: flex; align-items: center; justify-content: space-between; }

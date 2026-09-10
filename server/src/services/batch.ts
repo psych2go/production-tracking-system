@@ -481,12 +481,8 @@ export async function updateBatch(id: number, data: {
         updateData.productModelNormalized = normalizeText(finalProductModel);
       }
 
-      if (data.status !== undefined) {
-        if (data.status === "archived" && batch.status === "completed") {
-          updateData.status = "archived";
-        } else if (data.status !== batch.status) {
-          throw new Error("生产任务状态变更请通过对应操作完成");
-        }
+      if (data.status !== undefined && data.status !== batch.status) {
+        throw new Error("归档请通过归档操作填写归档信息完成，其他状态变更请通过对应操作完成");
       }
 
       return tx.batch.update({
@@ -501,6 +497,35 @@ export async function updateBatch(id: number, data: {
       : "该客户下已存在相同订单编号";
     translateUniqueError(error, message);
   }
+}
+
+export async function archiveBatch(id: number, data: {
+  dieQuantity: number;
+  shippedQuantity: number;
+  shippedDate: string;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const batch = await tx.batch.findUnique({ where: { id } });
+    if (!batch) throw new Error("生产任务不存在");
+    if (batch.status !== "completed") throw new Error("只有已完成的生产任务可以归档");
+    if (data.shippedQuantity > data.dieQuantity) throw new Error("发货数不能大于上芯数");
+
+    const shippedDate = new Date(data.shippedDate);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    if (shippedDate > endOfToday) throw new Error("发货日期不能晚于今天");
+
+    return tx.batch.update({
+      where: { id },
+      data: {
+        status: "archived",
+        dieQuantity: data.dieQuantity,
+        shippedQuantity: data.shippedQuantity,
+        shippedDate,
+      },
+      include: { product: true },
+    });
+  });
 }
 
 export async function getProductSuggestions(keyword: string) {

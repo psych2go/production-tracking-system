@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import {
   BATCH_STATUSES,
+  archiveBatch,
   cancelOrder,
   confirmBatchCard,
   createOrder,
@@ -130,6 +131,20 @@ router.post("/:id/confirm-card", authGuard, roleGuard("admin"), auditLog("confir
   try {
     const batch = await confirmBatchCard(parseId(req.params.id), { ...req.body, operatorId: req.user!.id });
     res.json(batch);
+  } catch (err) {
+    next(err);
+  }
+});
+
+const archiveSchema = z.object({
+  dieQuantity: z.number().int("上芯数必须为整数").positive("上芯数必须大于0"),
+  shippedQuantity: z.number().int("发货数必须为整数").min(0, "发货数不能为负数"),
+  shippedDate: isoDate("发货日期"),
+});
+
+router.post("/:id/archive", authGuard, roleGuard("admin"), auditLog("archive", "production"), validate(archiveSchema), async (req: AuthRequest, res, next) => {
+  try {
+    res.json(await archiveBatch(parseId(req.params.id), req.body));
   } catch (err) {
     next(err);
   }

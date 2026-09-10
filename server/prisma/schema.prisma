@@ -61,6 +61,9 @@ model Batch {
   packageType            String?   @map("package_type")
   customerDelivery       DateTime? @map("customer_delivery")
   productionDelivery     DateTime? @map("production_delivery")
+  dieQuantity            Int?      @map("die_quantity")
+  shippedQuantity        Int?      @map("shipped_quantity")
+  shippedDate            DateTime? @map("shipped_date")
   notes                  String?
   createdBy              Int?      @map("created_by")
   cardCreatedBy          Int?      @map("card_created_by")
