@@ -66,6 +66,154 @@ function formatDateCell(value: Date | null | undefined): string {
   return value ? new Date(value).toISOString().slice(0, 10) : "";
 }
 
+// --- 良率统计（按月，所内：上月16日-本月15日；所外：上月26日-本月25日） ---
+export const BATCH_YIELD_TARGET = 0.9;
+export const MONTH_YIELD_TARGET = 0.92;
+
+const utcDate = (year: number, month: number, day: number) =>
+  new Date(`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}T00:00:00Z`);
+
+export interface YieldStats {
+  month: string;
+  title: string;
+  rows: Array<{
+    shippedDate: string;
+    batchNo: string;
+    customerCode: string;
+    model: string;
+    packageType: string;
+    dieQuantity: number;
+    shippedQuantity: number;
+    batchYield: number;
+    batchTarget: number;
+  }>;
+  monthYield: number | null;
+  monthTarget: number;
+  unclassified: Array<{ batchNo: string; model: string; reason: string }>;
+}
+
+function parseYieldMonth(month: string) {
+  const m = /^(\d{4})-(\d{1,2})$/.exec(month.trim());
+  if (!m) throw new Error("月份格式应为 YYYY-MM");
+  const year = Number(m[1]);
+  const monthNum = Number(m[2]);
+  if (monthNum < 1 || monthNum > 12) throw new Error("月份无效");
+  const prevYear = monthNum === 1 ? year - 1 : year;
+  const prevMonthNum = monthNum === 1 ? 12 : monthNum - 1;
+  return { year, monthNum, prevYear, prevMonthNum };
+}
+
+export async function getYieldStats(month: string): Promise<YieldStats> {
+  const { year, monthNum, prevYear, prevMonthNum } = parseYieldMonth(month);
+  const internalStart = utcDate(prevYear, prevMonthNum, 16);
+  const internalEnd = utcDate(year, monthNum, 15);
+  const externalStart = utcDate(prevYear, prevMonthNum, 26);
+  const externalEnd = utcDate(year, monthNum, 25);
+
+  const batches = await prisma.batch.findMany({
+    where: {
+      status: "archived",
+      shippedDate: { gte: internalStart, lte: externalEnd },
+    },
+    include: { product: true },
+    orderBy: { shippedDate: "asc" },
+  });
+
+  const customerCodes = [...new Set(batches.map((b) => b.customerCode).filter((code): code is string => !!code))];
+  const customers = customerCodes.length
+    ? await prisma.customerCode.findMany({ where: { code: { in: customerCodes } } })
+    : [];
+  const customerMap = new Map(customers.map((c) => [c.code, c]));
+
+  const rows: YieldStats["rows"] = [];
+  const unclassified: YieldStats["unclassified"] = [];
+  for (const b of batches) {
+    if (!b.shippedDate || b.dieQuantity == null || b.shippedQuantity == null) {
+      unclassified.push({ batchNo: b.batchNo || "", model: b.product?.model || "", reason: "归档数据不完整" });
+      continue;
+    }
+    const type = b.customerCode ? customerMap.get(b.customerCode)?.type : undefined;
+    const shipped = b.shippedDate;
+    const inInternal = type === "internal" && shipped >= internalStart && shipped <= internalEnd;
+    const inExternal = type === "external" && shipped >= externalStart && shipped <= externalEnd;
+    if (!inInternal && !inExternal) {
+      unclassified.push({
+        batchNo: b.batchNo || "",
+        model: b.product?.model || "",
+        reason: type === "internal" || type === "external" ? "发货日期不在对应统计窗口内" : "客户代码未维护类型",
+      });
+      continue;
+    }
+    rows.push({
+      shippedDate: shipped.toISOString().slice(0, 10).replace(/-/g, ""),
+      batchNo: b.batchNo || "",
+      customerCode: b.customerCode || "",
+      model: b.product?.model || "",
+      packageType: b.packageType || "",
+      dieQuantity: b.dieQuantity,
+      shippedQuantity: b.shippedQuantity,
+      batchYield: b.shippedQuantity / b.dieQuantity,
+      batchTarget: BATCH_YIELD_TARGET,
+    });
+  }
+
+  const monthYield = rows.length ? rows.reduce((sum, r) => sum + r.batchYield, 0) / rows.length : null;
+  return {
+    month,
+    title: `${monthNum}月（所内${prevMonthNum}.16-${monthNum}.15/所外${prevMonthNum}.26-${monthNum}.25）`,
+    rows,
+    monthYield,
+    monthTarget: MONTH_YIELD_TARGET,
+    unclassified,
+  };
+}
+
+export async function exportYieldExcel(month: string) {
+  const ExcelJS = (await import("exceljs")).default;
+  const stats = await getYieldStats(month);
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "生产进度追踪系统";
+  const worksheet = workbook.addWorksheet("Sheet1");
+  worksheet.mergeCells(1, 1, 1, 11);
+  worksheet.getCell(1, 1).value = stats.title;
+  worksheet.getRow(2).values = [
+    "发货时间", "生产批号", "客户代码", "型号", "封装类型", "上芯数", "发货数",
+    "批次良率", "单批次目标良率（达成）", "月良率", "目标月良率（达成）",
+  ];
+  worksheet.getRow(2).font = { bold: true };
+
+  stats.rows.forEach((r, index) => {
+    const row = worksheet.getRow(3 + index);
+    row.values = [
+      r.shippedDate, r.batchNo, r.customerCode, r.model, r.packageType,
+      r.dieQuantity, r.shippedQuantity, r.batchYield, r.batchTarget,
+      stats.monthYield, stats.monthTarget,
+    ];
+    row.getCell(8).numFmt = "0.00%";
+    row.getCell(9).numFmt = "0%";
+    row.getCell(10).numFmt = "0.00%";
+    row.getCell(11).numFmt = "0%";
+  });
+
+  const lastRow = 2 + Math.max(stats.rows.length, 1);
+  worksheet.mergeCells(3, 10, lastRow, 10);
+  worksheet.mergeCells(3, 11, lastRow, 11);
+  if (stats.monthYield !== null) {
+    worksheet.getCell(3, 10).value = stats.monthYield;
+    worksheet.getCell(3, 10).numFmt = "0.00%";
+    worksheet.getCell(3, 11).value = stats.monthTarget;
+    worksheet.getCell(3, 11).numFmt = "0%";
+  }
+
+  worksheet.columns = [
+    { width: 12 }, { width: 12 }, { width: 12 }, { width: 22 }, { width: 16 },
+    { width: 10 }, { width: 10 }, { width: 12 }, { width: 20 }, { width: 12 }, { width: 18 },
+  ];
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+}
+
 // --- Excel Export (online product batches, 高可靠在线产品在线加工统计表格式) ---
 export async function exportExcel() {
   const ExcelJS = (await import("exceljs")).default;

@@ -55,6 +55,55 @@
         <text class="text-secondary">暂无在线批次</text>
       </view>
     </view>
+
+    <!-- 良率统计 -->
+    <view class="card">
+      <view class="yield-bar">
+        <view class="export-left">
+          <text class="export-title">良率统计</text>
+          <text class="export-hint">所内：上月16日-本月15日；所外：上月26日-本月25日</text>
+        </view>
+        <picker mode="month" :value="yieldMonth" @change="onYieldMonthChange">
+          <view class="month-picker">{{ yieldMonth }} ▾</view>
+        </picker>
+        <button class="btn-export" @click="onExportYield">导出</button>
+      </view>
+      <text v-if="yieldSummary" class="yield-summary">共 {{ yieldRows.length }} 个批次，月良率 {{ yieldSummary.monthYield }}（目标 {{ yieldSummary.monthTarget }}）</text>
+      <text v-if="unclassifiedCount" class="yield-unclassified">另有 {{ unclassifiedCount }} 条批次未纳入统计（{{ unclassifiedReason }}）</text>
+      <scroll-view scroll-x class="mt-sm" v-if="yieldRows.length">
+        <view class="online-table">
+          <view class="online-header">
+            <text class="online-col col-date">发货时间</text>
+            <text class="online-col col-batch">生产批号</text>
+            <text class="online-col col-customer">客户代码</text>
+            <text class="online-col col-model">产品型号</text>
+            <text class="online-col col-pkg">封装类型</text>
+            <text class="online-col col-qty">上芯数</text>
+            <text class="online-col col-qty">发货数</text>
+            <text class="online-col col-qty">批次良率</text>
+            <text class="online-col col-qty">单批次目标良率</text>
+            <text class="online-col col-qty">月良率</text>
+            <text class="online-col col-qty">目标月良率</text>
+          </view>
+          <view v-for="(row, i) in yieldRows" :key="`${row.batchNo}-${row.model}-${i}`" class="online-row">
+            <text class="online-col col-date">{{ row.shippedDate }}</text>
+            <text class="online-col col-batch">{{ row.batchNo }}</text>
+            <text class="online-col col-customer">{{ row.customerCode }}</text>
+            <text class="online-col col-model">{{ row.model }}</text>
+            <text class="online-col col-pkg">{{ row.packageType }}</text>
+            <text class="online-col col-qty">{{ row.dieQuantity }}</text>
+            <text class="online-col col-qty">{{ row.shippedQuantity }}</text>
+            <text class="online-col col-qty" :class="row.batchYield >= row.batchTarget ? 'yield-good' : 'yield-bad'">{{ pct(row.batchYield) }}</text>
+            <text class="online-col col-qty">{{ pct(row.batchTarget) }}</text>
+            <text class="online-col col-qty">{{ pct(yieldData?.monthYield) }}</text>
+            <text class="online-col col-qty">{{ pct(yieldData?.monthTarget) }}</text>
+          </view>
+        </view>
+      </scroll-view>
+      <view v-else class="empty-chart">
+        <text class="text-secondary">该月暂无发货数据</text>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -128,6 +177,99 @@ function currentStageOrder(batch: Batch): number {
 
 const displayRows = computed(() => sortedActive.value);
 
+interface YieldRow {
+  shippedDate: string;
+  batchNo: string;
+  customerCode: string;
+  model: string;
+  packageType: string;
+  dieQuantity: number;
+  shippedQuantity: number;
+  batchYield: number;
+  batchTarget: number;
+}
+interface YieldStats {
+  month: string;
+  title: string;
+  rows: YieldRow[];
+  monthYield: number | null;
+  monthTarget: number;
+  unclassified: Array<{ batchNo: string; model: string; reason: string }>;
+}
+
+function defaultYieldMonth(): string {
+  const d = new Date();
+  const target = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}`;
+}
+const yieldMonth = ref(defaultYieldMonth());
+const yieldData = ref<YieldStats | null>(null);
+const yieldLoading = ref(false);
+const yieldRows = computed(() => yieldData.value?.rows ?? []);
+const yieldSummary = computed(() => {
+  if (!yieldData.value?.monthYield) return null;
+  return { monthYield: pct(yieldData.value.monthYield), monthTarget: pct(yieldData.value.monthTarget) };
+});
+const unclassifiedCount = computed(() => yieldData.value?.unclassified.length ?? 0);
+const unclassifiedReason = computed(() => yieldData.value?.unclassified[0]?.reason ?? "");
+
+function pct(value: number | null | undefined): string {
+  return value == null ? "—" : `${(value * 100).toFixed(2)}%`;
+}
+
+async function loadYield() {
+  yieldLoading.value = true;
+  try {
+    yieldData.value = await api.get<YieldStats>(`/api/statistics/yield?month=${yieldMonth.value}`);
+  } catch (e: unknown) {
+    uni.showToast({ title: (e as Error).message, icon: "none" });
+  } finally {
+    yieldLoading.value = false;
+  }
+}
+
+function onYieldMonthChange(event: any) {
+  yieldMonth.value = event.detail.value ?? yieldMonth.value;
+  loadYield();
+}
+
+function onExportYield() {
+  const token = userStore.token;
+  const url = `/api/statistics/yield/export?month=${yieldMonth.value}`;
+  // #ifdef H5
+  fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    .then((res) => {
+      if (!res.ok) throw new Error("导出失败");
+      return res.blob();
+    })
+    .then((blob) => {
+      const blobUrl = URL.createObjectURL(blob);
+      try {
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `高可靠项目良率统计${yieldMonth.value}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } finally {
+        URL.revokeObjectURL(blobUrl);
+      }
+    })
+    .catch(() => uni.showToast({ title: "导出失败", icon: "none" }));
+  // #endif
+  // #ifndef H5
+  uni.downloadFile({
+    url: `${api.getBaseUrl()}${url}`,
+    header: { Authorization: `Bearer ${token}` },
+    success: (res) => {
+      if (res.statusCode !== 200) { uni.showToast({ title: "导出失败", icon: "none" }); return; }
+      uni.openDocument({ filePath: res.tempFilePath, showMenu: true });
+    },
+    fail: () => uni.showToast({ title: "导出失败", icon: "none" }),
+  });
+  // #endif
+}
+
 async function loadData() {
   try {
     // 在线产品加工统计：已发货（已完成/已归档）之前的所有状态
@@ -197,6 +339,7 @@ onMounted(async () => {
 
 onShow(() => {
   loadData();
+  loadYield();
 });
 </script>
 
@@ -233,6 +376,39 @@ onShow(() => {
   border-radius: 7rpx;
   &::after { border: none; }
 }
+
+.yield-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 22rpx 24rpx;
+  border-left: 6rpx solid #d97706;
+}
+.month-picker {
+  padding: 10rpx 20rpx;
+  border: 2rpx solid #dfe4e4;
+  border-radius: 8rpx;
+  background: #f5f7f7;
+  color: #172327;
+  font-size: 24rpx;
+  white-space: nowrap;
+}
+.yield-summary {
+  display: block;
+  margin-top: 16rpx;
+  color: #172327;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+.yield-unclassified {
+  display: block;
+  margin-top: 8rpx;
+  color: #d97706;
+  font-size: 20rpx;
+}
+.yield-good { color: #27865f; }
+.yield-bad { color: #c9483f; }
 
 .empty-chart { text-align: center; padding: 60rpx 0; }
 

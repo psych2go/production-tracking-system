@@ -1,8 +1,28 @@
 import { Router } from "express";
-import { exportExcel } from "../services/statistics.js";
-import { authGuard } from "../middleware/auth.js";
+import { exportExcel, exportYieldExcel, getYieldStats } from "../services/statistics.js";
+import { authGuard, AuthRequest } from "../middleware/auth.js";
 
 const router = Router();
+
+router.get("/yield", authGuard, async (req: AuthRequest, res, next) => {
+  try {
+    res.json(await getYieldStats(String(req.query.month || "")));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/yield/export", authGuard, async (req: AuthRequest, res, next) => {
+  try {
+    const month = String(req.query.month || "");
+    const buffer = await exportYieldExcel(month);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=${encodeURIComponent(`yield_${month}`)}.xlsx`);
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.get("/export/excel", authGuard, async (_req, res, next) => {
   try {
