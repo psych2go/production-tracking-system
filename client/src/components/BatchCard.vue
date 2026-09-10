@@ -1,41 +1,34 @@
 <template>
   <view class="batch-card card" @click="$emit('click')">
-    <view class="batch-accent" :class="accentClass"></view>
+    <view v-if="hasAnomaly" class="batch-accent" :class="accentClass"></view>
     <view class="batch-card-main">
+      <!-- 主行：批号 型号 + 状态 -->
       <view class="batch-heading">
-        <view class="batch-identity">
-          <text v-if="batch.orderNo" class="order-no">订单 {{ batch.orderNo }}</text>
-          <text class="batch-title">{{ displayTitle }}</text>
-        </view>
-        <view class="batch-statuses">
-          <view v-if="batch.priority === 'urgent'" class="urgent-tag">紧急</view>
-          <view v-if="isPaused" class="paused-tag">暂停中</view>
-          <view v-if="isOverdue" class="overdue-badge">逾期</view>
-          <view class="status-badge" :class="`status-${batch.status}`">{{ statusLabel }}</view>
-        </view>
+        <text class="batch-title">{{ displayTitle }}</text>
+        <view class="status-badge" :class="`status-${batch.status}`">{{ statusLabel }}</view>
       </view>
 
-      <text class="customer-code">{{ batch.customerCode || '' }}</text>
-
-      <view class="batch-metrics" :class="{ 'two-columns': batch.status !== 'active' }">
-        <view class="metric">
-          <text class="metric-label">数量</text>
-          <text class="metric-value">{{ batch.quantity }}只</text>
-        </view>
-        <view class="metric metric-border">
-          <text class="metric-label">封装形式</text>
-          <text class="metric-value">{{ batch.packageType || '' }}</text>
-        </view>
-        <view v-if="batch.status === 'active'" class="metric metric-border">
-          <text class="metric-label">当前工序</text>
-          <text class="metric-value stage-value">{{ currentStage || '未开始' }}</text>
-        </view>
+      <!-- 风险徽标行（仅异常时出现） -->
+      <view v-if="hasAnomaly" class="risk-row">
+        <text v-if="urgent" class="risk-tag risk-urgent">紧急</text>
+        <text v-if="isOverdue" class="risk-tag risk-overdue">逾期 {{ overdueDays }} 天</text>
+        <text v-if="isPaused" class="risk-tag risk-paused">暂停中</text>
       </view>
 
+      <!-- 属性行：客户代码 · 封装形式 · 数量 -->
+      <text class="meta-line">{{ [batch.customerCode, batch.packageType, batch.quantity + '只'].map((v) => v || '—').join(' · ') }}</text>
+
+      <!-- 当前工序（仅加工中） -->
+      <view v-if="batch.status === 'active'" class="stage-line">
+        <text class="stage-label">当前工序</text>
+        <text class="stage-value">{{ currentStageName }}</text>
+      </view>
+
+      <!-- 底行：交期 + 操作 -->
       <view class="batch-footer">
-        <view class="delivery-lines">
-          <text class="delivery-line">客户交期：{{ customerDelivery }}</text>
-          <text class="delivery-line">预计交期：{{ productionDelivery }}</text>
+        <view class="delivery-inline">
+          <text class="delivery-item" :class="{ 'delivery-overdue': isOverdue }">客 {{ customerDelivery || '—' }}</text>
+          <text class="delivery-item">预 {{ productionDelivery || '—' }}</text>
         </view>
         <view class="card-action" @click.stop="$emit('action')">
           <text>{{ actionLabel }}</text>
@@ -43,6 +36,7 @@
         </view>
       </view>
 
+      <!-- 暂停原因（仅暂停时，完整显示） -->
       <view v-if="isPaused" class="paused-line">
         <text class="paused-line-text">暂停：{{ batch.pauseReason }}</text>
       </view>
@@ -51,20 +45,33 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import type { Batch } from "../types";
 import { STATUS_LABELS } from "../utils/constants";
-import { formatDateShort, getCurrentStage, isOverdue as checkOverdue } from "../utils/format";
+import { useAppStore } from "../store/app";
+import { formatDateShort, getCurrentStage, isOverdue as checkOverdue, getOverdueDays } from "../utils/format";
 
 const props = defineProps<{ batch: Batch; isAdmin?: boolean }>();
 defineEmits<{ click: []; action: [] }>();
 
+const appStore = useAppStore();
+
 const statusLabel = computed(() => STATUS_LABELS[props.batch.status] || props.batch.status);
-const currentStage = computed(() => getCurrentStage(props.batch)?.name ?? null);
-const isOverdue = computed(() => checkOverdue(props.batch.customerDelivery, props.batch.status));
-const isPaused = computed(() => !!props.batch.pausedAt);
 const displayTitle = computed(() =>
   [props.batch.batchNo, props.batch.product?.model].filter(Boolean).join(" ") || "未填写产品型号"
+);
+const urgent = computed(() => props.batch.priority === "urgent");
+const isOverdue = computed(() => checkOverdue(props.batch.customerDelivery, props.batch.status));
+const overdueDays = computed(() => getOverdueDays(props.batch.customerDelivery));
+const isPaused = computed(() => !!props.batch.pausedAt);
+const hasAnomaly = computed(() => props.batch.status !== "cancelled" && (urgent.value || isOverdue.value || isPaused.value));
+const accentClass = computed(() => ({
+  urgent: urgent.value,
+  overdue: isOverdue.value,
+  paused: isPaused.value,
+}));
+const currentStageName = computed(
+  () => getCurrentStage(props.batch)?.name || appStore.stages.find((s) => s.code !== "completed")?.name || "—"
 );
 const customerDelivery = computed(() =>
   props.batch.customerDelivery ? formatDateShort(props.batch.customerDelivery) : ""
@@ -78,12 +85,10 @@ const actionLabel = computed(() => {
   if (props.isAdmin && props.batch.status === "completed") return "归档";
   return "查看详情";
 });
-const accentClass = computed(() => ({
-  urgent: props.batch.priority === "urgent",
-  overdue: isOverdue.value,
-  paused: isPaused.value,
-  cancelled: props.batch.status === "cancelled",
-}));
+
+onMounted(() => {
+  if (!appStore.stages.length) appStore.loadStages().catch(() => {});
+});
 </script>
 
 <style scoped lang="scss">
@@ -94,32 +99,32 @@ const accentClass = computed(() => ({
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   &:active { transform: translateY(2rpx); }
 }
+/* 左侧色条仅异常批次显示：紧急=琥珀，逾期/暂停=红 */
 .batch-accent {
-  width: 8rpx;
+  width: 6rpx;
   flex-shrink: 0;
-  background: #087f8c;
-  &.urgent { background: #d97706; }
+  background: #d97706;
   &.overdue { background: #c9483f; }
   &.paused { background: #c9483f; }
-  &.cancelled { background: #aab4b5; }
 }
 .batch-card-main { width: 100%; min-width: 0; padding: 22rpx; }
+
+/* 主行 */
 .batch-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 14rpx; }
-.batch-identity { display: flex; min-width: 0; flex: 1; flex-direction: column; }
-.order-no { color: #7d898b; font-size: 20rpx; }
 .batch-title {
   overflow: hidden;
-  margin-top: 3rpx;
+  min-width: 0;
+  flex: 1;
   color: #172327;
-  font-size: 30rpx;
+  font-size: 29rpx;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.batch-statuses { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6rpx; }
 .status-badge {
-  padding: 4rpx 10rpx;
+  flex-shrink: 0;
+  padding: 4rpx 12rpx;
   border-radius: 5rpx;
   background: #edf0f0;
   color: #657174;
@@ -131,33 +136,46 @@ const accentClass = computed(() => ({
 .status-active { background: #e8f2ff; color: #0067c7; }
 .status-completed { background: #e6f3ec; color: #27865f; }
 .status-cancelled { background: #f1f2f2; color: #7d898b; }
-.customer-code { display: block; margin-top: 9rpx; color: #657174; font-size: 22rpx; }
-.batch-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 16rpx;
-  padding: 14rpx 0;
-  border-top: 2rpx solid #edf0f0;
-  border-bottom: 2rpx solid #edf0f0;
-  &.two-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-.metric { display: flex; min-width: 0; padding: 0 12rpx; flex-direction: column; }
-.metric:first-child { padding-left: 0; }
-.metric-border { border-left: 2rpx solid #edf0f0; }
-.metric-label { color: #7d898b; font-size: 19rpx; }
-.metric-value {
-  overflow: hidden;
-  margin-top: 2rpx;
-  color: #2c383c;
-  font-size: 23rpx;
+
+/* 风险徽标行 */
+.risk-row { display: flex; flex-wrap: wrap; gap: 8rpx; margin-top: 10rpx; }
+.risk-tag {
+  padding: 2rpx 10rpx;
+  border-radius: 4rpx;
+  font-size: 19rpx;
   font-weight: 600;
+}
+.risk-urgent { background: #fff3df; color: #9a5a00; }
+.risk-overdue { background: #fcecea; color: #c9483f; }
+.risk-paused { background: #fcecea; color: #c9483f; }
+
+/* 属性行 */
+.meta-line {
+  display: block;
+  overflow: hidden;
+  margin-top: 12rpx;
+  color: #7d898b;
+  font-size: 20rpx;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.stage-value { color: #087f8c; }
-.batch-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 16rpx; margin-top: 14rpx; }
-.delivery-lines { display: flex; min-width: 0; flex: 1; flex-direction: column; }
-.delivery-line { min-height: 30rpx; color: #7d898b; font-size: 20rpx; }
+
+/* 当前工序行 */
+.stage-line { display: flex; align-items: center; gap: 10rpx; margin-top: 12rpx; }
+.stage-label {
+  padding: 2rpx 10rpx;
+  border-radius: 4rpx;
+  background: #edf0f0;
+  color: #7d898b;
+  font-size: 18rpx;
+}
+.stage-value { color: #087f8c; font-size: 22rpx; font-weight: 600; }
+
+/* 底行：交期 + 操作 */
+.batch-footer { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 14rpx; }
+.delivery-inline { display: flex; min-width: 0; gap: 18rpx; overflow: hidden; }
+.delivery-item { color: #7d898b; font-size: 20rpx; white-space: nowrap; }
+.delivery-overdue { color: #c9483f; font-weight: 600; }
 .card-action {
   display: flex;
   align-items: center;
@@ -170,24 +188,10 @@ const accentClass = computed(() => ({
   font-weight: 600;
 }
 .action-arrow { margin-left: 5rpx; font-size: 30rpx; line-height: 1; }
-.overdue-badge {
-  padding: 4rpx 9rpx;
-  border-radius: 5rpx;
-  background: #fcecea;
-  color: #c9483f;
-  font-size: 19rpx;
-  font-weight: 700;
-}
-.paused-tag {
-  padding: 4rpx 9rpx;
-  border-radius: 5rpx;
-  background: #c9483f;
-  color: #fff;
-  font-size: 19rpx;
-  font-weight: 700;
-}
+
+/* 暂停横幅 */
 .paused-line {
-  margin-top: 10rpx;
+  margin-top: 12rpx;
   padding: 10rpx 14rpx;
   border-left: 5rpx solid #c9483f;
   border-radius: 6rpx;
