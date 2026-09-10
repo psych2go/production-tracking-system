@@ -55,7 +55,7 @@
             <view class="badge alert-count">{{ dashboard.anomalies.length }}</view>
             <text class="section-title">异常预警</text>
           </view>
-          <text class="collapse-btn" @click="toggleAlerts">{{ collapsed.alerts ? '展开' : '收起' }}</text>
+          <text class="collapse-btn" @click="collapsed.alerts = !collapsed.alerts">{{ collapsed.alerts ? '展开' : '收起' }}</text>
         </view>
         <scroll-view v-if="!collapsed.alerts" scroll-x class="alert-scroll">
           <view class="alert-row">
@@ -70,7 +70,6 @@
                 <text class="alert-card-days-num">{{ a.value }}</text>
                 <text class="alert-card-days-unit">天未更新</text>
               </view>
-              <text class="alert-card-threshold">阈值 {{ a.threshold }} 天</text>
             </view>
           </view>
         </scroll-view>
@@ -251,7 +250,6 @@ const dashboard = ref<DashboardData | null>(null);
 const loading = ref(false);
 const loginPassword = ref("");
 const collapsed = ref({ alerts: false, pendingCard: false, pendingProduction: false, batches: false });
-const alertsUserToggled = ref(false);
 const kanbanGroupMode = ref<"stage" | "package">("stage");
 
 const pendingCardBatches = computed(() => dashboard.value?.pendingCardList ?? []);
@@ -331,18 +329,9 @@ async function handleLogin() {
   }
 }
 
-function toggleAlerts() {
-  collapsed.value.alerts = !collapsed.value.alerts;
-  alertsUserToggled.value = true;
-}
-
 async function loadData() {
   try {
     dashboard.value = await progressApi.dashboard();
-    // 预警超过 3 条时默认折叠，用户手动展开/收起后不再自动改
-    if (!alertsUserToggled.value) {
-      collapsed.value.alerts = (dashboard.value?.anomalies?.length ?? 0) > 3;
-    }
   } catch { /* dashboard is non-critical */ }
 }
 
@@ -607,12 +596,6 @@ onPullDownRefresh(async () => {
   font-size: 20rpx;
   font-weight: 600;
 }
-.alert-card-threshold {
-  display: block;
-  margin-top: 6rpx;
-  color: #a0a8a9;
-  font-size: 18rpx;
-}
 
 .section-header-actions {
   display: flex;
@@ -650,7 +633,7 @@ onPullDownRefresh(async () => {
 .preproduction-row { display: inline-flex; gap: 14rpx; padding: 2rpx 2rpx 10rpx; }
 .preproduction-block {
   display: inline-block;
-  width: 260rpx;
+  width: 282rpx;
   padding: 16rpx;
   vertical-align: top;
   background: #fff;
