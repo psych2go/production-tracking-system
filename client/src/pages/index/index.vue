@@ -658,13 +658,8 @@ onPullDownRefresh(async () => {
   margin-left: auto;
   overflow: hidden;
   max-width: 150rpx;
-  padding: 2rpx 10rpx;
-  border-radius: 4rpx;
-  background: #e6f4f3;
-  color: #075e68;
-  font-size: 18rpx;
-  font-weight: 600;
-  line-height: 1.5;
+  color: #657174;
+  font-size: 20rpx;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -807,24 +802,25 @@ onPullDownRefresh(async () => {
   font-size: 21rpx;
   font-weight: 600;
 }
-.kanban-pkg,
+.kanban-pkg {
+  margin-left: auto;
+  overflow: hidden;
+  max-width: 140rpx;
+  color: #657174;
+  font-size: 20rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .kanban-stage {
-  flex-shrink: 0;
   overflow: hidden;
   max-width: 128rpx;
   border-radius: 4rpx;
   padding: 2rpx 8rpx;
+  background: #fff1dc;
+  color: #9a5a00;
   font-size: 18rpx;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.kanban-pkg {
-  background: #e6f4f3;
-  color: #075e68;
-}
-.kanban-stage {
-  background: #fff1dc;
-  color: #9a5a00;
 }
 .kanban-empty {
   font-size: 22rpx;
