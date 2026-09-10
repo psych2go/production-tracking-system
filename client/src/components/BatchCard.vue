@@ -112,7 +112,7 @@ onMounted(() => {
 .batch-card-main { width: 100%; min-width: 0; padding: 26rpx; }
 
 /* 主行 */
-.batch-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16rpx; }
+.batch-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 48rpx; }
 .batch-title {
   overflow: hidden;
   min-width: 0;
@@ -124,7 +124,7 @@ onMounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.risk-row { display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 8rpx; }
+.risk-row { display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 24rpx; }
 .status-badge {
   flex-shrink: 0;
   padding: 4rpx 12rpx;
@@ -152,7 +152,7 @@ onMounted(() => {
 }
 
 /* 当前工序行 */
-.stage-line { display: flex; align-items: center; gap: 10rpx; margin-top: 26rpx; }
+.stage-line { display: flex; align-items: center; gap: 30rpx; margin-top: 26rpx; }
 .stage-label {
   padding: 2rpx 10rpx;
   border-radius: 4rpx;
@@ -164,7 +164,7 @@ onMounted(() => {
 
 /* 底行：交期 */
 .batch-footer { display: flex; align-items: center; justify-content: flex-start; gap: 16rpx; margin-top: 30rpx; }
-.delivery-inline { display: flex; min-width: 0; gap: 22rpx; overflow: hidden; }
+.delivery-inline { display: flex; min-width: 0; gap: 66rpx; overflow: hidden; }
 .delivery-item { color: #7d898b; font-size: 20rpx; white-space: nowrap; }
 .delivery-overdue { color: #c9483f; font-weight: 600; }
 .card-action {
