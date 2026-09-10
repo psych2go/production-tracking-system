@@ -626,6 +626,14 @@ onPullDownRefresh(async () => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.pending-production-block .preproduction-block-no {
+  color: #657174;
+  font-weight: 400;
+}
+.pending-production-block .preproduction-block-model {
+  color: #172327;
+  font-weight: 600;
+}
 .preproduction-block-pause-reason {
   display: block;
   margin-top: 8rpx;
@@ -749,7 +757,7 @@ onPullDownRefresh(async () => {
   align-items: center;
   margin-bottom: 6rpx;
 }
-.kanban-card-no { font-size: 24rpx; font-weight: 700; color: #172327; }
+.kanban-card-no { font-size: 24rpx; font-weight: 400; color: #657174; }
 .kanban-paused-reason {
   display: block;
   margin-top: 8rpx;
@@ -763,8 +771,9 @@ onPullDownRefresh(async () => {
 .kanban-card-model {
   display: block;
   overflow: hidden;
-  color: #657174;
+  color: #172327;
   font-size: 22rpx;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
