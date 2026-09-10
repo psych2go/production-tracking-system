@@ -129,15 +129,15 @@
 
     <view v-if="!editing && hasActions" class="action-bar">
       <view class="action-bar-inner">
-        <view v-if="canPause || canCancel" class="action-bar-secondary">
-          <button v-if="canPause" class="btn btn-pause-ghost" @click="showPauseForm = !showPauseForm">标记暂停</button>
-          <button v-if="canCancel" class="btn btn-cancel-ghost" @click="cancelOrder">取消订单</button>
-        </view>
         <button v-if="batch.status === 'pending_card' && isAdmin && !batch.pausedAt" class="btn btn-primary action-bar-primary" @click="goCard">去制卡 ›</button>
         <button v-if="batch.status === 'pending' && isAdmin && !batch.pausedAt" class="btn btn-primary action-bar-primary" @click="startProduction">投入加工 ›</button>
         <button v-if="batch.status === 'active' && !batch.pausedAt" class="btn btn-primary action-bar-primary" @click="goRecordProgress">工序流转</button>
         <button v-if="batch.status === 'completed' && isAdmin" class="btn btn-primary action-bar-primary action-bar-primary-solo" @click="archiveBatch">归档</button>
         <button v-if="isPaused" class="btn btn-primary action-bar-primary" @click="resumeBatch">解除暂停</button>
+        <view v-if="canPause || canCancel" class="action-bar-secondary">
+          <button v-if="canPause" class="btn btn-pause-ghost" @click="showPauseForm = !showPauseForm">标记暂停</button>
+          <button v-if="canCancel" class="btn btn-cancel-ghost" @click="cancelOrder">取消订单</button>
+        </view>
       </view>
     </view>
 
@@ -387,17 +387,17 @@ onBeforeUnmount(() => {
 .info-notes { overflow: visible; font-weight: 400; white-space: normal; }
 .overdue-text { margin-left: 6rpx; font-size: 18rpx; }
 .progress-card { border-left: 6rpx solid #16343a; }
-.action-bar-spacer { height: calc(130rpx + env(safe-area-inset-bottom)); }
+.action-bar-spacer { height: calc(150rpx + env(safe-area-inset-bottom)); }
 .action-bar {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: calc(20rpx + env(safe-area-inset-bottom));
   z-index: 100;
-  padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
+  padding: 16rpx;
+  border-radius: 18rpx;
   background: rgba(255, 255, 255, 0.97);
-  border-top: 2rpx solid #edf0f0;
-  box-shadow: 0 -6rpx 20rpx rgba(23, 35, 39, 0.06);
+  box-shadow: 0 12rpx 32rpx rgba(23, 35, 39, 0.16);
 }
 .action-bar-inner { display: flex; gap: 14rpx; }
 .action-bar-secondary {
