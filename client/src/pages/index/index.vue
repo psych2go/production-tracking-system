@@ -838,6 +838,11 @@ onPullDownRefresh(async () => {
   align-items: center;
   gap: 8rpx;
 }
+@media screen and (min-width: 560px) {
+  .fab-create {
+    right: calc(50% - 256px);
+  }
+}
 .fab-circle {
   display: flex;
   align-items: center;

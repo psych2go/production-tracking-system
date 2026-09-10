@@ -437,14 +437,22 @@ onBeforeUnmount(() => {
   z-index: 200;
   display: flex;
   align-items: flex-end;
+  justify-content: center;
   background: rgba(23, 35, 39, 0.45);
 }
 .pause-sheet {
-  width: 100%;
+  width: calc(100% - 48rpx);
+  max-width: 1072rpx;
   box-sizing: border-box;
   padding: 30rpx 28rpx calc(30rpx + env(safe-area-inset-bottom));
   border-radius: 20rpx 20rpx 0 0;
   background: #fff;
+}
+@media screen and (min-width: 900px) {
+  .pause-sheet {
+    width: calc(100% - 64px);
+    max-width: 896px;
+  }
 }
 .pause-sheet-title {
   display: block;
