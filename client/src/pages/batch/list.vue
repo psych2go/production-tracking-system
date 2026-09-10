@@ -234,4 +234,12 @@ onShow(() => {
   &.active { border-color: #087f8c; background: #e6f4f3; color: #075e68; font-weight: 600; }
 }
 .load-more-tip { padding: 24rpx; text-align: center; }
+
+/* 手机端优化：仅窄屏生效 */
+@media screen and (max-width: 560px) {
+  .search-input { font-size: 28rpx; }
+  .filter-tab { font-size: 26rpx; min-height: 64rpx; }
+  .tab-count { font-size: 22rpx; }
+  .smart-filter-tag { font-size: 24rpx; }
+}
 </style>

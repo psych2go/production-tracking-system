@@ -213,4 +213,21 @@ onMounted(() => {
   font-size: 21rpx;
   font-weight: 600;
 }
+
+/* 手机端优化：仅窄屏生效，行间距保持不变 */
+@media screen and (max-width: 560px) {
+  .batch-heading { gap: 16rpx; }
+  .status-badge { font-size: 22rpx; }
+  .risk-tag { font-size: 22rpx; }
+  .meta-line { gap: 20rpx; }
+  .meta-item { font-size: 22rpx; }
+  .stage-inline { gap: 20rpx; }
+  .stage-label { font-size: 22rpx; }
+  .stage-value { font-size: 24rpx; }
+  /* 交期完整显示，放不下时自动换行，间距收敛 */
+  .delivery-inline { flex-wrap: wrap; gap: 10rpx 24rpx; }
+  .delivery-item { font-size: 22rpx; }
+  .card-action { font-size: 22rpx; }
+  .paused-line-text { font-size: 22rpx; }
+}
 </style>
