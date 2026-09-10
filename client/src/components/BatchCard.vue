@@ -16,12 +16,6 @@
       <!-- 属性行：客户代码 · 封装形式 · 数量 -->
       <text class="meta-line">{{ [batch.customerCode, batch.packageType, batch.quantity + '只'].map((v) => v || '—').join(' · ') }}</text>
 
-      <!-- 当前工序（仅加工中） -->
-      <view v-if="batch.status === 'active'" class="stage-line">
-        <text class="stage-label">当前工序</text>
-        <text class="stage-value">{{ currentStageName }}</text>
-      </view>
-
       <!-- 底行：交期 + 操作 -->
       <view class="batch-footer">
         <view class="delivery-inline">
@@ -32,6 +26,12 @@
           <text>{{ actionLabel }}</text>
           <text class="action-arrow">›</text>
         </view>
+      </view>
+
+      <!-- 当前工序（仅加工中） -->
+      <view v-if="batch.status === 'active'" class="stage-line">
+        <text class="stage-label">当前工序</text>
+        <text class="stage-value">{{ currentStageName }}</text>
       </view>
 
       <!-- 暂停原因（仅暂停时，完整显示） -->
