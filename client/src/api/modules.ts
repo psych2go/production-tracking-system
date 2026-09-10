@@ -52,6 +52,8 @@ export const batchApi = {
     api.post<Batch>(`/api/batches/${id}/cancel`, {}),
   pause: (id: number, reason: string) =>
     api.post<Batch>(`/api/batches/${id}/pause`, { reason }),
+  updatePauseReason: (id: number, reason: string) =>
+    api.put<Batch>(`/api/batches/${id}/pause-reason`, { reason }),
   resume: (id: number) =>
     api.post<Batch>(`/api/batches/${id}/resume`, {}),
   update: (id: number, data: Record<string, unknown>) =>

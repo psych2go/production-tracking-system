@@ -408,6 +408,27 @@ export async function resumeBatch(id: number, operatorId: number) {
   });
 }
 
+/** 暂停期间修改暂停原因：同步更新批次与进行中的暂停记录，历史记录不受影响 */
+export async function updatePauseReason(id: number, reason: string) {
+  const normalizedReason = reason.trim();
+  return prisma.$transaction(async (tx) => {
+    const batch = await tx.batch.findUnique({ where: { id } });
+    if (!batch) throw new Error("生产任务不存在");
+    if (!batch.pausedAt) throw new Error("该任务不在暂停中，无法修改暂停原因");
+    const openRecord = await tx.batchPauseRecord.findFirst({
+      where: { batchId: id, endedAt: null },
+      orderBy: { startedAt: "desc" },
+    });
+    if (!openRecord) throw new Error("未找到进行中的暂停记录");
+    await tx.batchPauseRecord.update({ where: { id: openRecord.id }, data: { reason: normalizedReason } });
+    return tx.batch.update({
+      where: { id },
+      data: { pauseReason: normalizedReason },
+      include: { product: true },
+    });
+  });
+}
+
 export async function updateBatch(id: number, data: {
   status?: string;
   priority?: string;

@@ -140,8 +140,9 @@
         <button v-if="batch.status === 'active' && !batch.pausedAt" class="btn btn-primary action-bar-primary" @click="goRecordProgress">工序流转</button>
         <button v-if="batch.status === 'completed' && isAdmin" class="btn btn-primary action-bar-primary action-bar-primary-solo" @click="openArchiveSheet">归档</button>
         <button v-if="isPaused" class="btn btn-primary action-bar-primary" @click="resumeBatch">解除暂停</button>
-        <view v-if="canPause || canCancel" class="action-bar-secondary">
-          <button v-if="canPause" class="btn btn-pause-ghost" @click="showPauseForm = !showPauseForm">标记暂停</button>
+        <view v-if="canPause || canCancel || isPaused" class="action-bar-secondary">
+          <button v-if="canPause" class="btn btn-pause-ghost" @click="openPauseSheet(false)">标记暂停</button>
+          <button v-if="isPaused" class="btn btn-pause-ghost" @click="openPauseSheet(true)">修改暂停原因</button>
           <button v-if="canCancel" class="btn btn-cancel-ghost" @click="cancelOrder">取消订单</button>
         </view>
       </view>
@@ -149,9 +150,9 @@
 
     <view v-if="!editing && showPauseForm" class="sheet-mask" @click="showPauseForm = false">
       <view class="pause-sheet" @click.stop>
-        <text class="pause-sheet-title">标记暂停</text>
+        <text class="pause-sheet-title">{{ pauseEditMode ? '修改暂停原因' : '标记暂停' }}</text>
         <textarea v-model="pauseReason" class="form-textarea pause-sheet-textarea" maxlength="2000" placeholder="请填写暂停原因（必填），如：订单型号有误 / 原材料未到 / 设备故障" />
-        <button class="btn btn-danger btn-block" :loading="pausing" @click="confirmPause">确认暂停</button>
+        <button class="btn btn-danger btn-block" :loading="pausing" @click="submitPause">{{ pauseEditMode ? '保存修改' : '确认暂停' }}</button>
       </view>
     </view>
     <view v-if="!editing && showArchiveSheet" class="sheet-mask" @click="showArchiveSheet = false">
@@ -222,6 +223,7 @@ const hasActions = computed(() => {
   return isAdmin.value && ["pending_card", "pending", "completed"].includes(batch.value.status);
 });
 const showPauseForm = ref(false);
+const pauseEditMode = ref(false);
 const pauseReason = ref("");
 const pausing = ref(false);
 const showArchiveSheet = ref(false);
@@ -416,7 +418,7 @@ async function cancelOrder() {
   try { await batchApi.cancel(batch.value.id); uni.showToast({ title: "订单已取消", icon: "success" }); await loadBatch(batch.value.id); }
   catch (e: unknown) { uni.showModal({ title: "取消失败", content: (e as Error).message, showCancel: false }); }
 }
-async function confirmPause() {
+async function submitPause() {
   if (!batch.value || pausing.value) return;
   const reason = pauseReason.value.trim();
   if (!reason) {
@@ -425,14 +427,27 @@ async function confirmPause() {
   }
   pausing.value = true;
   try {
-    await batchApi.pause(batch.value.id, reason);
-    showPauseForm.value = false;
-    pauseReason.value = "";
-    uni.showToast({ title: "已标记暂停", icon: "success" });
+    if (pauseEditMode.value) {
+      await batchApi.updatePauseReason(batch.value.id, reason);
+      showPauseForm.value = false;
+      uni.showToast({ title: "暂停原因已更新", icon: "success" });
+    } else {
+      await batchApi.pause(batch.value.id, reason);
+      showPauseForm.value = false;
+      pauseReason.value = "";
+      uni.showToast({ title: "已标记暂停", icon: "success" });
+    }
     await loadBatch(batch.value.id);
   } catch (e: unknown) {
-    uni.showModal({ title: "暂停失败", content: (e as Error).message, showCancel: false });
+    const title = pauseEditMode.value ? "保存失败" : "暂停失败";
+    uni.showModal({ title, content: (e as Error).message, showCancel: false });
   } finally { pausing.value = false; }
+}
+function openPauseSheet(edit: boolean) {
+  pauseEditMode.value = edit;
+  // 编辑模式预填当前暂停原因，新建模式清空
+  pauseReason.value = edit ? batch.value?.pauseReason || "" : "";
+  showPauseForm.value = true;
 }
 async function resumeBatch() {
   if (!batch.value) return;

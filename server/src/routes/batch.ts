@@ -14,6 +14,7 @@ import {
   resumeBatch,
   startBatchProduction,
   updateBatch,
+  updatePauseReason,
 } from "../services/batch.js";
 import { authGuard, roleGuard, AuthRequest } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
@@ -178,6 +179,15 @@ router.post("/:id/pause", authGuard, auditLog("pause", "production"), validate(p
 router.post("/:id/resume", authGuard, auditLog("resume", "production"), async (req: AuthRequest, res, next) => {
   try {
     res.json(await resumeBatch(parseId(req.params.id), req.user!.id));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 暂停期间修改暂停原因：与管理员/工人皆可，留审计
+router.put("/:id/pause-reason", authGuard, auditLog("update", "batch_pause"), validate(pauseSchema), async (req: AuthRequest, res, next) => {
+  try {
+    res.json(await updatePauseReason(parseId(req.params.id), req.body.reason));
   } catch (err) {
     next(err);
   }
