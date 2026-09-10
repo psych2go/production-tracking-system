@@ -54,7 +54,7 @@
 
         <view class="stage-list mt-md">
           <view
-            v-for="stage in regularStages"
+            v-for="stage in allStages"
             :key="stage.id"
             class="stage-option"
             :class="{
@@ -79,29 +79,6 @@
             <text v-if="isCurrentStage(stage.id)" class="current-tag">当前</text>
             <text v-if="isSuggestedStage(stage.id)" class="suggest-tag">下一步</text>
           </view>
-
-          <view
-            v-if="completedStage"
-            class="stage-option stage-completed-blink"
-            :class="{
-              done: isStageCompleted(completedStage.id),
-              suggested: isSuggestedStage(completedStage.id),
-            }"
-            @click="confirmStage(completedStage)"
-          >
-            <view
-              class="stage-order"
-              :class="{
-                'order-done': isStageCompleted(completedStage.id),
-                'order-suggested': isSuggestedStage(completedStage.id),
-              }"
-            >
-              <text v-if="isStageCompleted(completedStage.id)" class="check-mark">&#10003;</text>
-              <text v-else>{{ completedStage.stageOrder }}</text>
-            </view>
-            <text class="stage-name">{{ completedStage.name }}</text>
-            <text v-if="isSuggestedStage(completedStage.id)" class="suggest-tag">下一步</text>
-          </view>
         </view>
       </view>
     </template>
@@ -125,22 +102,13 @@ const loading = ref(true);
 const loadError = ref("");
 const returnToHome = ref(false);
 
-const completedStage = computed(() =>
-  appStore.stages.find((stage) => stage.code === "completed") ?? null
-);
-
-const regularStages = computed(() =>
-  appStore.stages.filter((stage) => stage.code !== "completed")
-);
+const allStages = computed(() => appStore.stages);
 
 const suggestedStage = computed(() => {
   if (!selectedBatch.value) return null;
   const current = getCurrentStage(selectedBatch.value);
-  if (!current) return regularStages.value[0] ?? null;
-  const nextStage = regularStages.value
-    .filter((stage) => stage.stageOrder > current.stageOrder)
-    .sort((a, b) => a.stageOrder - b.stageOrder)[0];
-  return nextStage ?? completedStage.value;
+  if (!current) return allStages.value[0] ?? null;
+  return allStages.value.find((stage) => stage.stageOrder > current.stageOrder) ?? null;
 });
 
 function isCurrentStage(stageId: number): boolean {
@@ -382,15 +350,5 @@ onLoad(async (query) => {
   color: #fff;
   font-size: 20rpx;
   white-space: nowrap;
-}
-.stage-completed-blink {
-  border-color: #27865f;
-  background: #e6f3ec;
-  animation: blink-border 1.5s ease-in-out infinite;
-}
-.stage-completed-blink.done { animation: none; opacity: 0.5; }
-@keyframes blink-border {
-  0%, 100% { border-color: #27865f; box-shadow: 0 0 0 transparent; }
-  50% { border-color: #27865f; box-shadow: 0 0 12rpx rgba(39, 134, 95, 0.32); }
 }
 </style>
