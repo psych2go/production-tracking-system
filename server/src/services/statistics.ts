@@ -1,4 +1,5 @@
 import { prisma } from "../config/database.js";
+import { getAnomalyThreshold } from "./settings.js";
 
 // --- Anomaly Detection (used by dashboard) ---
 export async function getAnomalies() {
@@ -18,20 +19,22 @@ export async function getAnomalies() {
     where: { status: "active" },
     include: { progressRecords: { orderBy: { createdAt: "desc" }, take: 1 }, product: true },
   });
-  const fiveDaysMs = 5 * 24 * 60 * 60 * 1000;
+  // 异常预警阈值（个人中心-系统管理可配置，默认5天）
+  const thresholdDays = await getAnomalyThreshold();
+  const thresholdMs = thresholdDays * 24 * 60 * 60 * 1000;
   for (const b of activeBatches) {
     // 无进度记录时回退到批次创建时间，确保"创建了却从未开工"的批次也能被延迟预警
     const lastUpdate = b.progressRecords[0]?.createdAt ?? b.createdAt;
-    if (Date.now() - new Date(lastUpdate).getTime() > fiveDaysMs) {
+    if (Date.now() - new Date(lastUpdate).getTime() > thresholdMs) {
       anomalies.push({
         type: "batch_delay",
         severity: "major",
         batchId: b.id,
         batchNo: b.batchNo || "",
         productModel: b.product?.model || "",
-        description: `超过5天无进度更新`,
+        description: `超过${thresholdDays}天无进度更新`,
         value: Math.round((Date.now() - new Date(lastUpdate).getTime()) / (24 * 60 * 60 * 1000)),
-        threshold: 5,
+        threshold: thresholdDays,
       });
     }
   }

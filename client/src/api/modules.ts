@@ -111,6 +111,10 @@ export const settingsApi = {
   updateCustomerCode: (id: number, data: { name?: string; type?: string | null }) =>
     api.put<CustomerCode>(`/api/settings/customer-codes/${id}`, data),
   deleteCustomerCode: (id: number) => api.delete(`/api/settings/customer-codes/${id}`),
+
+  // System settings
+  getAnomalyThreshold: () => api.get<{ days: number }>("/api/settings/anomaly-threshold"),
+  updateAnomalyThreshold: (days: number) => api.put<{ days: number }>("/api/settings/anomaly-threshold", { days }),
 };
 
 // Audit

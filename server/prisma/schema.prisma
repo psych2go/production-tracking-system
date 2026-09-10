@@ -173,3 +173,12 @@ model AuditLog {
 
   @@map("audit_logs")
 }
+
+model SystemSetting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}

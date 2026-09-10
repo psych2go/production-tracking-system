@@ -128,3 +128,24 @@ export async function deleteCustomerCode(id: number) {
 
   return prisma.customerCode.delete({ where: { id } });
 }
+
+// --- System settings ---
+
+const ANOMALY_THRESHOLD_KEY = "anomaly_delay_days";
+const ANOMALY_THRESHOLD_DEFAULT = 5;
+
+/** 异常预警阈值：加工中批次超过该天数无进度更新则预警 */
+export async function getAnomalyThreshold(): Promise<number> {
+  const setting = await prisma.systemSetting.findUnique({ where: { key: ANOMALY_THRESHOLD_KEY } });
+  const parsed = Number(setting?.value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : ANOMALY_THRESHOLD_DEFAULT;
+}
+
+export async function setAnomalyThreshold(days: number): Promise<number> {
+  await prisma.systemSetting.upsert({
+    where: { key: ANOMALY_THRESHOLD_KEY },
+    update: { value: String(days) },
+    create: { key: ANOMALY_THRESHOLD_KEY, value: String(days) },
+  });
+  return days;
+}

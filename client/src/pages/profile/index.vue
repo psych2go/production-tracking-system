@@ -37,6 +37,10 @@
         <text>客户代码管理</text>
         <UIcon name="chevron-right" :size="28" color="#c0c4cc" />
       </view>
+      <view class="list-item" @click="go('/pages-admin/anomaly-threshold/index')">
+        <text>异常预警阈值</text>
+        <UIcon name="chevron-right" :size="28" color="#c0c4cc" />
+      </view>
       <view class="list-item" @click="go('/pages-admin/users/index')">
         <text>用户管理</text>
         <UIcon name="chevron-right" :size="28" color="#c0c4cc" />

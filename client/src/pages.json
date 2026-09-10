@@ -18,6 +18,7 @@
         { "path": "package-types/index", "style": { "navigationBarTitleText": "封装形式管理" } },
         { "path": "settings/index", "style": { "navigationBarTitleText": "工序管理" } },
         { "path": "customer-codes/index", "style": { "navigationBarTitleText": "客户代码管理" } },
+        { "path": "anomaly-threshold/index", "style": { "navigationBarTitleText": "异常预警阈值" } },
         { "path": "audit/index", "style": { "navigationBarTitleText": "审计日志" } }
       ]
     }

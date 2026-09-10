@@ -4,7 +4,7 @@ import { authGuard, roleGuard } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 import { parseId } from "../utils/parseId.js";
-import { createStage, updateStage, deleteStage, listPackageTypes, createPackageType, updatePackageType, deletePackageType, listCustomerCodes, createCustomerCode, updateCustomerCode, deleteCustomerCode } from "../services/settings.js";
+import { createStage, updateStage, deleteStage, listPackageTypes, createPackageType, updatePackageType, deletePackageType, listCustomerCodes, createCustomerCode, updateCustomerCode, deleteCustomerCode, getAnomalyThreshold, setAnomalyThreshold } from "../services/settings.js";
 import {
   nullableText,
   optionalText,
@@ -228,6 +228,40 @@ settingsRoutes.delete(
     try {
       const cc = await deleteCustomerCode(parseId(req.params.id));
       res.json(cc);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+const anomalyThresholdSchema = z.object({
+  days: z.number().int("阈值必须为整数").min(1, "阈值至少为1天").max(365, "阈值不能超过365天"),
+});
+
+// Get anomaly threshold
+settingsRoutes.get(
+  "/anomaly-threshold",
+  authGuard,
+  roleGuard("admin"),
+  async (_req, res, next) => {
+    try {
+      res.json({ days: await getAnomalyThreshold() });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Update anomaly threshold
+settingsRoutes.put(
+  "/anomaly-threshold",
+  authGuard,
+  roleGuard("admin"),
+  auditLog("update", "system_setting"),
+  validate(anomalyThresholdSchema),
+  async (req, res, next) => {
+    try {
+      res.json({ days: await setAnomalyThreshold(req.body.days) });
     } catch (err) {
       next(err);
     }
