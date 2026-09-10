@@ -812,13 +812,11 @@ onPullDownRefresh(async () => {
   white-space: nowrap;
 }
 .kanban-stage {
+  margin-left: auto;
   overflow: hidden;
-  max-width: 128rpx;
-  border-radius: 4rpx;
-  padding: 2rpx 8rpx;
-  background: #fff1dc;
-  color: #9a5a00;
-  font-size: 18rpx;
+  max-width: 140rpx;
+  color: #657174;
+  font-size: 20rpx;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
