@@ -1,16 +1,26 @@
 <template>
   <view class="container">
-    <!-- Export button -->
-    <view class="card export-bar">
-      <view class="export-left">
-        <text class="export-title">在线产品加工统计</text>
-        <text class="export-hint">按《高可靠在线产品在线加工统计表》格式展示，可导出 Excel</text>
+    <!-- 区块切换 -->
+    <view class="section-switch">
+      <view class="switch-option" :class="{ active: activeSection === 'online' }" @click="activeSection = 'online'">
+        <text class="switch-label">在线产品加工统计</text>
+        <text class="switch-count">{{ onlineCount }}</text>
       </view>
-      <button class="btn-export" @click="onExport">导出 Excel</button>
+      <view class="switch-option" :class="{ active: activeSection === 'yield' }" @click="activeSection = 'yield'">
+        <text class="switch-label">良率统计</text>
+        <text class="switch-count">{{ yieldRows.length }}</text>
+      </view>
     </view>
 
-    <!-- Statistics table -->
-    <view class="card">
+    <!-- 在线产品加工统计 -->
+    <view class="card" v-if="activeSection === 'online'">
+      <view class="export-bar">
+        <view class="export-left">
+          <text class="export-title">在线产品加工统计</text>
+          <text class="export-hint">按《高可靠在线产品在线加工统计表》格式展示，可导出 Excel</text>
+        </view>
+        <button class="btn-export" @click="onExport">导出 Excel</button>
+      </view>
       <scroll-view scroll-x class="mt-sm" v-if="displayRows.length">
         <view class="online-table">
           <view class="online-header">
@@ -57,7 +67,7 @@
     </view>
 
     <!-- 良率统计 -->
-    <view class="card">
+    <view class="card" v-else>
       <view class="yield-bar">
         <view class="export-left">
           <text class="export-title">良率统计</text>
@@ -348,9 +358,49 @@ onShow(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16rpx;
   padding: 22rpx 24rpx;
   border-left: 6rpx solid #087f8c;
+  border-bottom: 2rpx solid #edf0f0;
 }
+
+/* 区块切换 */
+.section-switch {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+}
+.switch-option {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  min-height: 92rpx;
+  border-radius: 12rpx;
+  background: #fff;
+  border: 2rpx solid #dfe4e4;
+  color: #657174;
+  font-size: 26rpx;
+  transition: all 0.15s ease;
+  &.active {
+    background: #087f8c;
+    border-color: #087f8c;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 6rpx 16rpx rgba(8, 127, 140, 0.25);
+  }
+}
+.switch-label { white-space: nowrap; }
+.switch-count {
+  min-width: 34rpx;
+  padding: 0 10rpx;
+  border-radius: 999rpx;
+  background: rgba(23, 35, 39, 0.08);
+  font-size: 20rpx;
+  text-align: center;
+}
+.switch-option.active .switch-count { background: rgba(255, 255, 255, 0.25); }
 .export-left { flex: 1; margin-right: 20rpx; }
 .export-title {
   display: block;
@@ -384,6 +434,7 @@ onShow(() => {
   gap: 16rpx;
   padding: 22rpx 24rpx;
   border-left: 6rpx solid #d97706;
+  border-bottom: 2rpx solid #edf0f0;
 }
 .month-picker {
   padding: 10rpx 20rpx;
