@@ -214,6 +214,81 @@ export async function exportYieldExcel(month: string) {
   return Buffer.from(buffer);
 }
 
+// --- 加工交付周期（按发货日期筛选时间段） ---
+export async function getDeliveryCycleStats(startDate: string, endDate: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    throw new Error("日期格式应为 YYYY-MM-DD");
+  }
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new Error("日期无效");
+  if (end < start) throw new Error("结束日期不能早于开始日期");
+
+  const batches = await prisma.batch.findMany({
+    where: { status: "archived", shippedDate: { gte: start, lte: end } },
+    include: { product: true, progressRecords: { include: { stage: true } } },
+    orderBy: { shippedDate: "asc" },
+  });
+
+  const customerCodes = [...new Set(batches.map((b) => b.customerCode).filter((code): code is string => !!code))];
+  const customers = customerCodes.length
+    ? await prisma.customerCode.findMany({ where: { code: { in: customerCodes } } })
+    : [];
+  const customerMap = new Map(customers.map((c) => [c.code, c]));
+  const DAY = 24 * 60 * 60 * 1000;
+
+  const rows = batches.map((b) => {
+    const mirrorRecord = getLatestStageRecord(b.progressRecords, "in_process_inspection");
+    const customer = b.customerCode ? customerMap.get(b.customerCode) : undefined;
+    const shipMs = b.shippedDate ? b.shippedDate.getTime() : 0;
+    return {
+      customerCode: b.customerCode || "",
+      customerName: customer?.name || "",
+      model: b.product?.model || "",
+      batchNo: b.batchNo || "",
+      packageType: b.packageType || "",
+      quantity: b.quantity,
+      startedAt: formatDateCell(b.startedAt),
+      mirrorTime: formatDateCell(mirrorRecord?.createdAt),
+      shippedDate: formatDateCell(b.shippedDate),
+      // 发货与镜检/投产都可能存在几小时的时区偏移，四舍五入到整天
+      mirrorCycle: mirrorRecord?.createdAt ? Math.round((shipMs - mirrorRecord.createdAt.getTime()) / DAY) : null,
+      totalCycle: b.startedAt ? Math.round((shipMs - new Date(b.startedAt).getTime()) / DAY) : null,
+      customerType: customer?.type === "internal" ? "所内" : customer?.type === "external" ? "所外" : "",
+      notes: b.notes || "",
+    };
+  });
+
+  return { startDate, endDate, rows };
+}
+
+export async function exportDeliveryCycleExcel(startDate: string, endDate: string) {
+  const ExcelJS = (await import("exceljs")).default;
+  const { rows } = await getDeliveryCycleStats(startDate, endDate);
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "生产进度追踪系统";
+  const worksheet = workbook.addWorksheet("Sheet1");
+  worksheet.getRow(1).values = [
+    "客户代码", "客户名称", "产品型号", "生产批号", "封装形式", "下单数量",
+    "投产时间", "开始加工时间", "发货日期", "加工周期（从镜检开始）", "投产后经过时间周期", "客户类型", "备注",
+  ];
+  worksheet.getRow(1).font = { bold: true };
+  for (const r of rows) {
+    worksheet.addRow([
+      r.customerCode, r.customerName, r.model, r.batchNo, r.packageType, r.quantity,
+      r.startedAt, r.mirrorTime, r.shippedDate,
+      r.mirrorCycle ?? "", r.totalCycle ?? "", r.customerType, r.notes,
+    ]);
+  }
+  worksheet.columns = [
+    { width: 12 }, { width: 14 }, { width: 22 }, { width: 12 }, { width: 16 }, { width: 10 },
+    { width: 13 }, { width: 14 }, { width: 13 }, { width: 22 }, { width: 20 }, { width: 10 }, { width: 24 },
+  ];
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+}
+
 // --- Excel Export (online product batches, 高可靠在线产品在线加工统计表格式) ---
 export async function exportExcel() {
   const ExcelJS = (await import("exceljs")).default;

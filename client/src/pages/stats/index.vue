@@ -10,6 +10,10 @@
         <text class="switch-label">良率统计</text>
         <text class="switch-count">{{ yieldRows.length }}</text>
       </view>
+      <view class="switch-option" :class="{ active: activeSection === 'cycle' }" @click="switchToCycle">
+        <text class="switch-label">加工交付周期</text>
+        <text class="switch-count">{{ cycleRows.length }}</text>
+      </view>
     </view>
 
     <!-- 在线产品加工统计 -->
@@ -114,6 +118,61 @@
         <text class="text-secondary">该月暂无发货数据</text>
       </view>
     </view>
+
+    <!-- 加工交付周期 -->
+    <view class="card" v-else-if="activeSection === 'cycle'">
+      <view class="yield-bar">
+        <view class="export-left">
+          <text class="export-title">加工交付周期</text>
+          <text class="export-hint">筛选时间段内发货的批次，统计从投产/镜检到发货的周期（天）</text>
+        </view>
+        <picker mode="date" :value="cycleStart" @change="onCycleStartChange">
+          <view class="month-picker">{{ cycleStart }}</view>
+        </picker>
+        <text class="cycle-sep">至</text>
+        <picker mode="date" :value="cycleEnd" @change="onCycleEndChange">
+          <view class="month-picker">{{ cycleEnd }}</view>
+        </picker>
+        <button class="btn-export" @click="onExportCycle">导出</button>
+      </view>
+      <scroll-view scroll-x class="mt-sm" v-if="cycleRows.length">
+        <view class="online-table">
+          <view class="online-header">
+            <text class="online-col col-customer">客户代码</text>
+            <text class="online-col col-customer-name">客户名称</text>
+            <text class="online-col col-model">产品型号</text>
+            <text class="online-col col-batch">生产批号</text>
+            <text class="online-col col-pkg">封装形式</text>
+            <text class="online-col col-qty">下单数量</text>
+            <text class="online-col col-date">投产时间</text>
+            <text class="online-col col-date">开始加工时间</text>
+            <text class="online-col col-date">发货日期</text>
+            <text class="online-col col-qty">加工周期（从镜检开始）</text>
+            <text class="online-col col-qty">投产后经过时间周期</text>
+            <text class="online-col col-type">客户类型</text>
+            <text class="online-col col-notes">备注</text>
+          </view>
+          <view v-for="row in cycleRows" :key="`${row.batchNo}-${row.model}-${row.shippedDate}`" class="online-row">
+            <text class="online-col col-customer">{{ row.customerCode }}</text>
+            <text class="online-col col-customer-name">{{ row.customerName }}</text>
+            <text class="online-col col-model">{{ row.model }}</text>
+            <text class="online-col col-batch">{{ row.batchNo }}</text>
+            <text class="online-col col-pkg">{{ row.packageType }}</text>
+            <text class="online-col col-qty">{{ row.quantity }}</text>
+            <text class="online-col col-date">{{ row.startedAt }}</text>
+            <text class="online-col col-date">{{ row.mirrorTime }}</text>
+            <text class="online-col col-date">{{ row.shippedDate }}</text>
+            <text class="online-col col-qty">{{ row.mirrorCycle ?? '' }}</text>
+            <text class="online-col col-qty">{{ row.totalCycle ?? '' }}</text>
+            <text class="online-col col-type">{{ row.customerType }}</text>
+            <text class="online-col col-notes">{{ row.notes }}</text>
+          </view>
+        </view>
+      </scroll-view>
+      <view v-else class="empty-chart">
+        <text class="text-secondary">该时间段内暂无发货批次</text>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -133,7 +192,7 @@ const userStore = useUserStore();
 
 const onlineBatches = ref<Batch[]>([]);
 const onlineCount = computed(() => onlineBatches.value.length);
-const activeSection = ref<"online" | "yield">("online");
+const activeSection = ref<"online" | "yield" | "cycle">("online");
 
 const stageOrderMap = computed(() => new Map(appStore.stages.map((stage) => [stage.code, stage.stageOrder])));
 
@@ -244,6 +303,97 @@ function onYieldMonthChange(event: any) {
   loadYield();
 }
 
+interface DeliveryCycleRow {
+  customerCode: string;
+  customerName: string;
+  model: string;
+  batchNo: string;
+  packageType: string;
+  quantity: number;
+  startedAt: string;
+  mirrorTime: string;
+  shippedDate: string;
+  mirrorCycle: number | null;
+  totalCycle: number | null;
+  customerType: string;
+  notes: string;
+}
+
+function localYMD(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function defaultCycleStart(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 13);
+  return localYMD(d);
+}
+const cycleStart = ref(defaultCycleStart());
+const cycleEnd = ref(localYMD(new Date()));
+const cycleRows = ref<DeliveryCycleRow[]>([]);
+const cycleCount = computed(() => cycleRows.value.length);
+
+async function loadCycle() {
+  try {
+    cycleRows.value = await api.get<DeliveryCycleRow[]>(
+      `/api/statistics/delivery-cycle?start=${cycleStart.value}&end=${cycleEnd.value}`,
+    );
+  } catch (e: unknown) {
+    uni.showToast({ title: (e as Error).message, icon: "none" });
+  }
+}
+
+function switchToCycle() {
+  activeSection.value = "cycle";
+  loadCycle();
+}
+
+function onCycleStartChange(event: any) {
+  cycleStart.value = event.detail.value ?? cycleStart.value;
+  loadCycle();
+}
+
+function onCycleEndChange(event: any) {
+  cycleEnd.value = event.detail.value ?? cycleEnd.value;
+  loadCycle();
+}
+
+function onExportCycle() {
+  const token = userStore.token;
+  const url = `/api/statistics/delivery-cycle/export?start=${cycleStart.value}&end=${cycleEnd.value}`;
+  // #ifdef H5
+  fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    .then((res) => {
+      if (!res.ok) throw new Error("导出失败");
+      return res.blob();
+    })
+    .then((blob) => {
+      const blobUrl = URL.createObjectURL(blob);
+      try {
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `高可靠加工交付周期${cycleStart.value}至${cycleEnd.value}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } finally {
+        URL.revokeObjectURL(blobUrl);
+      }
+    })
+    .catch(() => uni.showToast({ title: "导出失败", icon: "none" }));
+  // #endif
+  // #ifndef H5
+  uni.downloadFile({
+    url: `${api.getBaseUrl()}${url}`,
+    header: { Authorization: `Bearer ${token}` },
+    success: (res) => {
+      if (res.statusCode !== 200) { uni.showToast({ title: "导出失败", icon: "none" }); return; }
+      uni.openDocument({ filePath: res.tempFilePath, showMenu: true });
+    },
+    fail: () => uni.showToast({ title: "导出失败", icon: "none" }),
+  });
+  // #endif
+}
+
 function onExportYield() {
   const token = userStore.token;
   const url = `/api/statistics/yield/export?month=${yieldMonth.value}`;
@@ -351,6 +501,7 @@ onMounted(async () => {
 onShow(() => {
   loadData();
   loadYield();
+  loadCycle();
 });
 </script>
 
@@ -363,6 +514,12 @@ onShow(() => {
   padding: 22rpx 24rpx;
   border-left: 6rpx solid #087f8c;
   border-bottom: 2rpx solid #edf0f0;
+}
+
+/* 手机端优化 */
+@media screen and (max-width: 560px) {
+  .switch-label { font-size: 22rpx; }
+  .switch-option { gap: 8rpx; min-height: 80rpx; }
 }
 
 /* 区块切换 */
@@ -428,6 +585,7 @@ onShow(() => {
   &::after { border: none; }
 }
 
+.cycle-sep { color: #7d898b; font-size: 24rpx; }
 .yield-bar {
   display: flex;
   align-items: center;
