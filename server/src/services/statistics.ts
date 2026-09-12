@@ -375,31 +375,21 @@ export async function getDeliveryCycleStats(startDate: string, endDate: string) 
   if (end < start) throw new Error("结束日期不能早于开始日期");
 
   const batchInclude = { product: true, progressRecords: { include: { stage: true } } } as const;
-  // 已归档：用归档时填写的发货日期；已完成未归档：用流转到「已完成」工序的时间近似发货时间
-  const [archivedBatches, completedBatches] = await Promise.all([
-    prisma.batch.findMany({
-      where: { status: "archived", shippedDate: { gte: start, lte: end } },
-      include: batchInclude,
-      orderBy: { shippedDate: "asc" },
-    }),
-    prisma.batch.findMany({ where: { status: "completed" }, include: batchInclude }),
-  ]);
-  const completedInRange = completedBatches
-    .map((b) => ({ b, completedAt: getLatestStageRecord(b.progressRecords, "completed")?.createdAt ?? null }))
-    .filter((x): x is { b: (typeof completedBatches)[number]; completedAt: Date } =>
-      x.completedAt !== null && x.completedAt >= start && x.completedAt <= end)
-    .sort((a, b) => a.completedAt.getTime() - b.completedAt.getTime());
+  // 以归档时填写的发货日期为准（未归档批次无发货日期，不纳入统计）
+  const batches = await prisma.batch.findMany({
+    where: { status: "archived", shippedDate: { gte: start, lte: end } },
+    include: batchInclude,
+    orderBy: { shippedDate: "asc" },
+  });
 
-  const customerCodes = [...new Set(
-    [...archivedBatches, ...completedInRange.map((x) => x.b)].map((b) => b.customerCode).filter((code): code is string => !!code),
-  )];
+  const customerCodes = [...new Set(batches.map((b) => b.customerCode).filter((code): code is string => !!code))];
   const customers = customerCodes.length
     ? await prisma.customerCode.findMany({ where: { code: { in: customerCodes } } })
     : [];
   const customerMap = new Map(customers.map((c) => [c.code, c]));
   const DAY = 24 * 60 * 60 * 1000;
 
-  const toRow = (b: (typeof archivedBatches)[number], shippedTime: Date) => {
+  const toRow = (b: (typeof batches)[number], shippedTime: Date) => {
     const mirrorRecord = getLatestStageRecord(b.progressRecords, "in_process_inspection");
     const customer = b.customerCode ? customerMap.get(b.customerCode) : undefined;
     const shipMs = shippedTime.getTime();
@@ -421,10 +411,9 @@ export async function getDeliveryCycleStats(startDate: string, endDate: string) 
     };
   };
 
-  const rows = [
-    ...archivedBatches.map((b) => toRow(b, b.shippedDate as Date)),
-    ...completedInRange.map((x) => toRow(x.b, x.completedAt)),
-  ].sort((a, b) => a.shippedDate.localeCompare(b.shippedDate));
+  const rows = batches
+    .map((b) => toRow(b, b.shippedDate as Date))
+    .sort((a, b) => a.shippedDate.localeCompare(b.shippedDate));
 
   return { startDate, endDate, rows };
 }

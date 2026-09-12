@@ -77,14 +77,14 @@
           <text class="export-title">良率统计</text>
           <text class="export-hint">所内：上月16日-本月15日；所外：上月26日-本月25日</text>
         </view>
-        <!-- #ifdef H5 -->
-        <input type="month" class="month-input" v-model="yieldMonth" />
-        <!-- #endif -->
-        <!-- #ifndef H5 -->
-        <picker mode="month" :value="yieldMonth" @change="onYieldMonthChange">
-          <view class="month-picker">{{ yieldMonth }} ▾</view>
-        </picker>
-        <!-- #endif -->
+        <view class="month-select-group">
+          <picker mode="selector" :range="yearOptions" :value="yieldYearIndex" @change="onYieldYearChange">
+            <view class="month-picker">{{ yieldMonth.slice(0, 4) }}年 ▾</view>
+          </picker>
+          <picker mode="selector" :range="monthNumOptions" :value="yieldMonthIndex" @change="onYieldMonthNumChange">
+            <view class="month-picker">{{ Number(yieldMonth.slice(5, 7)) }}月 ▾</view>
+          </picker>
+        </view>
         <button class="btn-export" @click="onExportYield">导出</button>
       </view>
       <text v-if="yieldSummary" class="yield-summary">共 {{ yieldRows.length }} 个批次，月良率 {{ yieldSummary.monthYield }}（目标 {{ yieldSummary.monthTarget }}）</text>
@@ -186,14 +186,14 @@
           <text class="export-title">发货数量统计</text>
           <text class="export-hint">{{ shipmentData?.windows?.internal || '' }}；{{ shipmentData?.windows?.external || '' }}</text>
         </view>
-        <!-- #ifdef H5 -->
-        <input type="month" class="month-input" v-model="shipmentMonth" />
-        <!-- #endif -->
-        <!-- #ifndef H5 -->
-        <picker mode="month" :value="shipmentMonth" @change="onShipmentMonthChange">
-          <view class="month-picker">{{ shipmentMonth }} ▾</view>
-        </picker>
-        <!-- #endif -->
+        <view class="month-select-group">
+          <picker mode="selector" :range="yearOptions" :value="shipmentYearIndex" @change="onShipmentYearChange">
+            <view class="month-picker">{{ shipmentMonth.slice(0, 4) }}年 ▾</view>
+          </picker>
+          <picker mode="selector" :range="monthNumOptions" :value="shipmentMonthIndex" @change="onShipmentMonthNumChange">
+            <view class="month-picker">{{ Number(shipmentMonth.slice(5, 7)) }}月 ▾</view>
+          </picker>
+        </view>
         <button class="btn-export" @click="onExportShipment">导出</button>
       </view>
 
@@ -366,8 +366,23 @@ const yieldSummary = computed(() => {
   return { monthYield: pct(yieldData.value.monthYield), monthTarget: pct(yieldData.value.monthTarget) };
 });
 
-// 月份切换后自动刷新（H5 原生 month input 走 v-model + watch）
-watch(yieldMonth, () => loadYield());
+// 月份选择：年份 + 月份两个下拉（selector picker 跨端一致）
+const yearOptions = computed(() => {
+  const y = new Date().getFullYear();
+  return [y - 2, y - 1, y, y + 1];
+});
+const monthNumOptions = Array.from({ length: 12 }, (_, i) => i + 1);
+const yieldYearIndex = computed(() => {
+  const idx = yearOptions.value.indexOf(Number(yieldMonth.value.slice(0, 4)));
+  return idx === -1 ? yearOptions.value.indexOf(new Date().getFullYear()) : idx;
+});
+const yieldMonthIndex = computed(() => Number(yieldMonth.value.slice(5, 7)) - 1);
+function onYieldYearChange(event: any) {
+  yieldMonth.value = `${yearOptions.value[Number(event.detail.value)]}-${yieldMonth.value.slice(5, 7)}`;
+}
+function onYieldMonthNumChange(event: any) {
+  yieldMonth.value = `${yieldMonth.value.slice(0, 4)}-${String(Number(event.detail.value) + 1).padStart(2, "0")}`;
+}
 const unclassifiedCount = computed(() => yieldData.value?.unclassified.length ?? 0);
 const unclassifiedReason = computed(() => yieldData.value?.unclassified[0]?.reason ?? "");
 
@@ -384,11 +399,6 @@ async function loadYield() {
   } finally {
     yieldLoading.value = false;
   }
-}
-
-function onYieldMonthChange(event: any) {
-  yieldMonth.value = event.detail.value ?? yieldMonth.value;
-  loadYield();
 }
 
 interface DeliveryCycleRow {
@@ -519,7 +529,6 @@ const shipmentMonth = ref(defaultShipmentMonth());
 const shipmentData = ref<ShipmentStats | null>(null);
 const shipmentRows = computed(() => shipmentData.value?.rows ?? []);
 const shipmentMonths = computed(() => shipmentData.value?.months ?? []);
-watch(shipmentMonth, () => loadShipment());
 const shipmentTotal = computed(() => shipmentData.value?.total ?? 0);
 const shipmentInternalTotal = computed(() => shipmentData.value?.internalTotal ?? 0);
 const shipmentExternalTotal = computed(() => shipmentData.value?.externalTotal ?? 0);
@@ -527,6 +536,17 @@ const shipmentMonthLabel = computed(() => {
   const m = shipmentMonth.value;
   return m ? `${Number(m.slice(5, 7))}月` : "";
 });
+const shipmentYearIndex = computed(() => {
+  const idx = yearOptions.value.indexOf(Number(shipmentMonth.value.slice(0, 4)));
+  return idx === -1 ? yearOptions.value.indexOf(new Date().getFullYear()) : idx;
+});
+const shipmentMonthIndex = computed(() => Number(shipmentMonth.value.slice(5, 7)) - 1);
+function onShipmentYearChange(event: any) {
+  shipmentMonth.value = `${yearOptions.value[Number(event.detail.value)]}-${shipmentMonth.value.slice(5, 7)}`;
+}
+function onShipmentMonthNumChange(event: any) {
+  shipmentMonth.value = `${shipmentMonth.value.slice(0, 4)}-${String(Number(event.detail.value) + 1).padStart(2, "0")}`;
+}
 
 async function loadShipment() {
   try {
@@ -538,11 +558,6 @@ async function loadShipment() {
 
 function switchToShipment() {
   activeSection.value = "shipment";
-  loadShipment();
-}
-
-function onShipmentMonthChange(event: any) {
-  shipmentMonth.value = event.detail.value ?? shipmentMonth.value;
   loadShipment();
 }
 
@@ -784,17 +799,6 @@ onShow(() => {
   color: #172327;
   font-size: 24rpx;
   white-space: nowrap;
-}
-.month-input {
-  display: block;
-  min-height: 60rpx;
-  padding: 10rpx 20rpx;
-  border: 2rpx solid #dfe4e4;
-  border-radius: 8rpx;
-  background: #f5f7f7;
-  color: #172327;
-  font-size: 24rpx;
-  text-align: center;
 }
 .yield-summary {
   display: block;
