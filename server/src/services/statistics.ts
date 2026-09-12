@@ -184,6 +184,7 @@ export async function getYieldStats(month: string): Promise<YieldStats> {
 export interface ShipmentMonthSummary {
   month: string;
   label: string;
+  isCurrent: boolean;
   internalTotal: number;
   externalTotal: number;
   total: number;
@@ -211,8 +212,8 @@ export interface ShipmentStats {
 
 export async function getShipmentStats(month: string): Promise<ShipmentStats> {
   const { year, monthNum } = parseYieldMonth(month);
-  // 概览范围：选中月及前两个月
-  const monthInputs = [0, -1, -2].map((delta) => {
+  // 概览范围：当前月（实时）及前三个月
+  const monthInputs = [0, -1, -2, -3].map((delta) => {
     const zero = year * 12 + (monthNum - 1) + delta;
     return monthWindows(Math.floor(zero / 12), (zero % 12) + 1);
   });
@@ -262,12 +263,14 @@ export async function getShipmentStats(month: string): Promise<ShipmentStats> {
   const currentStats = totalsFor(current);
   const months: ShipmentMonthSummary[] = monthInputs.map((win) => {
     const t = totalsFor(win);
+    const isCurrent = win.year === year && win.monthNum === monthNum;
     return {
       month: `${win.year}-${String(win.monthNum).padStart(2, "0")}`,
       label: `${win.monthNum}月`,
       internalTotal: t.internalTotal,
       externalTotal: t.externalTotal,
       total: t.total,
+      isCurrent,
     };
   });
 
@@ -371,23 +374,35 @@ export async function getDeliveryCycleStats(startDate: string, endDate: string) 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) throw new Error("日期无效");
   if (end < start) throw new Error("结束日期不能早于开始日期");
 
-  const batches = await prisma.batch.findMany({
-    where: { status: "archived", shippedDate: { gte: start, lte: end } },
-    include: { product: true, progressRecords: { include: { stage: true } } },
-    orderBy: { shippedDate: "asc" },
-  });
+  const batchInclude = { product: true, progressRecords: { include: { stage: true } } } as const;
+  // 已归档：用归档时填写的发货日期；已完成未归档：用流转到「已完成」工序的时间近似发货时间
+  const [archivedBatches, completedBatches] = await Promise.all([
+    prisma.batch.findMany({
+      where: { status: "archived", shippedDate: { gte: start, lte: end } },
+      include: batchInclude,
+      orderBy: { shippedDate: "asc" },
+    }),
+    prisma.batch.findMany({ where: { status: "completed" }, include: batchInclude }),
+  ]);
+  const completedInRange = completedBatches
+    .map((b) => ({ b, completedAt: getLatestStageRecord(b.progressRecords, "completed")?.createdAt ?? null }))
+    .filter((x): x is { b: (typeof completedBatches)[number]; completedAt: Date } =>
+      x.completedAt !== null && x.completedAt >= start && x.completedAt <= end)
+    .sort((a, b) => a.completedAt.getTime() - b.completedAt.getTime());
 
-  const customerCodes = [...new Set(batches.map((b) => b.customerCode).filter((code): code is string => !!code))];
+  const customerCodes = [...new Set(
+    [...archivedBatches, ...completedInRange.map((x) => x.b)].map((b) => b.customerCode).filter((code): code is string => !!code),
+  )];
   const customers = customerCodes.length
     ? await prisma.customerCode.findMany({ where: { code: { in: customerCodes } } })
     : [];
   const customerMap = new Map(customers.map((c) => [c.code, c]));
   const DAY = 24 * 60 * 60 * 1000;
 
-  const rows = batches.map((b) => {
+  const toRow = (b: (typeof archivedBatches)[number], shippedTime: Date) => {
     const mirrorRecord = getLatestStageRecord(b.progressRecords, "in_process_inspection");
     const customer = b.customerCode ? customerMap.get(b.customerCode) : undefined;
-    const shipMs = b.shippedDate ? b.shippedDate.getTime() : 0;
+    const shipMs = shippedTime.getTime();
     return {
       customerCode: b.customerCode || "",
       customerName: customer?.name || "",
@@ -397,14 +412,19 @@ export async function getDeliveryCycleStats(startDate: string, endDate: string) 
       quantity: b.quantity,
       startedAt: formatDateCell(b.startedAt),
       mirrorTime: formatDateCell(mirrorRecord?.createdAt),
-      shippedDate: formatDateCell(b.shippedDate),
+      shippedDate: formatDateCell(shippedTime),
       // 发货与镜检/投产都可能存在几小时的时区偏移，四舍五入到整天
       mirrorCycle: mirrorRecord?.createdAt ? Math.round((shipMs - mirrorRecord.createdAt.getTime()) / DAY) : null,
       totalCycle: b.startedAt ? Math.round((shipMs - new Date(b.startedAt).getTime()) / DAY) : null,
       customerType: customer?.type === "internal" ? "所内" : customer?.type === "external" ? "所外" : "",
-      notes: b.notes || "",
+      notes: [b.notes, b.pausedAt ? `暂停：${b.pauseReason || ""}` : ""].filter(Boolean).join("；"),
     };
-  });
+  };
+
+  const rows = [
+    ...archivedBatches.map((b) => toRow(b, b.shippedDate as Date)),
+    ...completedInRange.map((x) => toRow(x.b, x.completedAt)),
+  ].sort((a, b) => a.shippedDate.localeCompare(b.shippedDate));
 
   return { startDate, endDate, rows };
 }

@@ -61,7 +61,7 @@
             <text class="online-col col-type">{{ customerTypeLabel(batch.customerType) }}</text>
             <text class="online-col col-qty">0</text>
             <text class="online-col col-qty">{{ batch.quantity }}</text>
-            <text class="online-col col-notes">{{ batch.notes || '' }}</text>
+            <text class="online-col col-notes">{{ onlineNotes(batch) }}</text>
           </view>
         </view>
       </scroll-view>
@@ -77,9 +77,14 @@
           <text class="export-title">良率统计</text>
           <text class="export-hint">所内：上月16日-本月15日；所外：上月26日-本月25日</text>
         </view>
+        <!-- #ifdef H5 -->
+        <input type="month" class="month-input" v-model="yieldMonth" />
+        <!-- #endif -->
+        <!-- #ifndef H5 -->
         <picker mode="month" :value="yieldMonth" @change="onYieldMonthChange">
           <view class="month-picker">{{ yieldMonth }} ▾</view>
         </picker>
+        <!-- #endif -->
         <button class="btn-export" @click="onExportYield">导出</button>
       </view>
       <text v-if="yieldSummary" class="yield-summary">共 {{ yieldRows.length }} 个批次，月良率 {{ yieldSummary.monthYield }}（目标 {{ yieldSummary.monthTarget }}）</text>
@@ -181,9 +186,14 @@
           <text class="export-title">发货数量统计</text>
           <text class="export-hint">{{ shipmentData?.windows?.internal || '' }}；{{ shipmentData?.windows?.external || '' }}</text>
         </view>
+        <!-- #ifdef H5 -->
+        <input type="month" class="month-input" v-model="shipmentMonth" />
+        <!-- #endif -->
+        <!-- #ifndef H5 -->
         <picker mode="month" :value="shipmentMonth" @change="onShipmentMonthChange">
           <view class="month-picker">{{ shipmentMonth }} ▾</view>
         </picker>
+        <!-- #endif -->
         <button class="btn-export" @click="onExportShipment">导出</button>
       </view>
 
@@ -195,7 +205,7 @@
           :class="{ current: m.month === shipmentMonth }"
           @click="shipmentMonth = m.month; loadShipment()"
         >
-          <text class="shipment-month-label">{{ m.label }}发货</text>
+          <text class="shipment-month-label">{{ m.label }}发货{{ m.isCurrent ? '（实时）' : '' }}</text>
           <text class="shipment-month-total">{{ m.total }}</text>
           <text class="shipment-month-split">所内 {{ m.internalTotal }} · 所外 {{ m.externalTotal }}</text>
         </view>
@@ -247,7 +257,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { onShow } from "@dcloudio/uni-app";
 import { batchApi } from "../../api/modules";
 import { api } from "../../api/index";
@@ -281,6 +291,11 @@ function currentStageName(batch: Batch): string {
   if (batch.status === "pending_card") return "待制卡";
   if (batch.status === "pending") return "待投产";
   return getCurrentStage(batch)?.name || "未开始";
+}
+
+// 备注列：基础备注 + 暂停中的暂停原因
+function onlineNotes(batch: Batch): string {
+  return [batch.notes, batch.pausedAt ? `暂停：${batch.pauseReason || ""}` : ""].filter(Boolean).join("；");
 }
 
 function formatDateCell(value: string | null | undefined): string {
@@ -350,6 +365,10 @@ const yieldSummary = computed(() => {
   if (!yieldData.value?.monthYield) return null;
   return { monthYield: pct(yieldData.value.monthYield), monthTarget: pct(yieldData.value.monthTarget) };
 });
+
+// 月份切换后自动刷新（H5 原生 month input 走 v-model + watch）
+watch(yieldMonth, () => loadYield());
+watch(shipmentMonth, () => loadShipment());
 const unclassifiedCount = computed(() => yieldData.value?.unclassified.length ?? 0);
 const unclassifiedReason = computed(() => yieldData.value?.unclassified[0]?.reason ?? "");
 
@@ -467,6 +486,7 @@ function onExportCycle() {
 interface ShipmentMonthSummary {
   month: string;
   label: string;
+  isCurrent: boolean;
   internalTotal: number;
   externalTotal: number;
   total: number;
@@ -764,6 +784,17 @@ onShow(() => {
   color: #172327;
   font-size: 24rpx;
   white-space: nowrap;
+}
+.month-input {
+  display: block;
+  min-height: 60rpx;
+  padding: 10rpx 20rpx;
+  border: 2rpx solid #dfe4e4;
+  border-radius: 8rpx;
+  background: #f5f7f7;
+  color: #172327;
+  font-size: 24rpx;
+  text-align: center;
 }
 .yield-summary {
   display: block;
