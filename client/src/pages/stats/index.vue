@@ -379,9 +379,11 @@ const yieldYearIndex = computed(() => {
 const yieldMonthIndex = computed(() => Number(yieldMonth.value.slice(5, 7)) - 1);
 function onYieldYearChange(event: any) {
   yieldMonth.value = `${yearOptions.value[Number(event.detail.value)]}-${yieldMonth.value.slice(5, 7)}`;
+  loadYield();
 }
 function onYieldMonthNumChange(event: any) {
   yieldMonth.value = `${yieldMonth.value.slice(0, 4)}-${String(Number(event.detail.value) + 1).padStart(2, "0")}`;
+  loadYield();
 }
 const unclassifiedCount = computed(() => yieldData.value?.unclassified.length ?? 0);
 const unclassifiedReason = computed(() => yieldData.value?.unclassified[0]?.reason ?? "");
@@ -543,9 +545,11 @@ const shipmentYearIndex = computed(() => {
 const shipmentMonthIndex = computed(() => Number(shipmentMonth.value.slice(5, 7)) - 1);
 function onShipmentYearChange(event: any) {
   shipmentMonth.value = `${yearOptions.value[Number(event.detail.value)]}-${shipmentMonth.value.slice(5, 7)}`;
+  loadShipment();
 }
 function onShipmentMonthNumChange(event: any) {
   shipmentMonth.value = `${shipmentMonth.value.slice(0, 4)}-${String(Number(event.detail.value) + 1).padStart(2, "0")}`;
+  loadShipment();
 }
 
 async function loadShipment() {
