@@ -71,7 +71,7 @@
     </view>
 
     <!-- 良率统计 -->
-    <view class="card" v-else>
+    <view class="card" v-else-if="activeSection === 'yield'">
       <view class="yield-bar">
         <view class="export-left">
           <text class="export-title">良率统计</text>
