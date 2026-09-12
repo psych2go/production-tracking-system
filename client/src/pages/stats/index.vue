@@ -368,7 +368,6 @@ const yieldSummary = computed(() => {
 
 // 月份切换后自动刷新（H5 原生 month input 走 v-model + watch）
 watch(yieldMonth, () => loadYield());
-watch(shipmentMonth, () => loadShipment());
 const unclassifiedCount = computed(() => yieldData.value?.unclassified.length ?? 0);
 const unclassifiedReason = computed(() => yieldData.value?.unclassified[0]?.reason ?? "");
 
@@ -520,6 +519,7 @@ const shipmentMonth = ref(defaultShipmentMonth());
 const shipmentData = ref<ShipmentStats | null>(null);
 const shipmentRows = computed(() => shipmentData.value?.rows ?? []);
 const shipmentMonths = computed(() => shipmentData.value?.months ?? []);
+watch(shipmentMonth, () => loadShipment());
 const shipmentTotal = computed(() => shipmentData.value?.total ?? 0);
 const shipmentInternalTotal = computed(() => shipmentData.value?.internalTotal ?? 0);
 const shipmentExternalTotal = computed(() => shipmentData.value?.externalTotal ?? 0);
