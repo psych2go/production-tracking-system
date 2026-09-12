@@ -103,12 +103,24 @@ function parseYieldMonth(month: string) {
   return { year, monthNum, prevYear, prevMonthNum };
 }
 
+function monthWindows(year: number, monthNum: number) {
+  const prevYear = monthNum === 1 ? year - 1 : year;
+  const prevMonthNum = monthNum === 1 ? 12 : monthNum - 1;
+  return {
+    year,
+    monthNum,
+    prevYear,
+    prevMonthNum,
+    internalStart: utcDate(prevYear, prevMonthNum, 16),
+    internalEnd: utcDate(year, monthNum, 15),
+    externalStart: utcDate(prevYear, prevMonthNum, 26),
+    externalEnd: utcDate(year, monthNum, 25),
+  };
+}
+
 export async function getYieldStats(month: string): Promise<YieldStats> {
-  const { year, monthNum, prevYear, prevMonthNum } = parseYieldMonth(month);
-  const internalStart = utcDate(prevYear, prevMonthNum, 16);
-  const internalEnd = utcDate(year, monthNum, 15);
-  const externalStart = utcDate(prevYear, prevMonthNum, 26);
-  const externalEnd = utcDate(year, monthNum, 25);
+  const { year, monthNum } = parseYieldMonth(month);
+  const { internalStart, internalEnd, externalStart, externalEnd, prevMonthNum } = monthWindows(year, monthNum);
 
   const batches = await prisma.batch.findMany({
     where: {
@@ -166,6 +178,141 @@ export async function getYieldStats(month: string): Promise<YieldStats> {
     monthTarget: MONTH_YIELD_TARGET,
     unclassified,
   };
+}
+
+// --- 发货数量统计（同月度窗口规则，含近三月概览与明细） ---
+export interface ShipmentMonthSummary {
+  month: string;
+  label: string;
+  internalTotal: number;
+  externalTotal: number;
+  total: number;
+}
+
+export interface ShipmentStats {
+  month: string;
+  windows: { internal: string; external: string };
+  months: ShipmentMonthSummary[];
+  rows: Array<{
+    shippedDate: string;
+    batchNo: string;
+    customerCode: string;
+    customerName: string;
+    model: string;
+    packageType: string;
+    customerType: string;
+    shippedQuantity: number;
+  }>;
+  internalTotal: number;
+  externalTotal: number;
+  total: number;
+  unclassifiedCount: number;
+}
+
+export async function getShipmentStats(month: string): Promise<ShipmentStats> {
+  const { year, monthNum } = parseYieldMonth(month);
+  // 概览范围：选中月及前两个月
+  const monthInputs = [0, -1, -2].map((delta) => {
+    const zero = year * 12 + (monthNum - 1) + delta;
+    return monthWindows(Math.floor(zero / 12), (zero % 12) + 1);
+  });
+  const current = monthInputs[0];
+  const rangeStart = monthInputs[monthInputs.length - 1].internalStart;
+  const rangeEnd = current.externalEnd;
+
+  const batches = await prisma.batch.findMany({
+    where: { status: "archived", shippedDate: { gte: rangeStart, lte: rangeEnd } },
+    include: { product: true },
+  });
+  const customerCodes = [...new Set(batches.map((b) => b.customerCode).filter((code): code is string => !!code))];
+  const customers = customerCodes.length
+    ? await prisma.customerCode.findMany({ where: { code: { in: customerCodes } } })
+    : [];
+  const customerMap = new Map(customers.map((c) => [c.code, c]));
+
+  function totalsFor(win: ReturnType<typeof monthWindows>) {
+    let internalTotal = 0;
+    let externalTotal = 0;
+    let unclassified = 0;
+    const rows: ShipmentStats["rows"] = [];
+    for (const b of batches) {
+      if (!b.shippedDate) continue;
+      const type = b.customerCode ? customerMap.get(b.customerCode)?.type : undefined;
+      const inInternal = type === "internal" && b.shippedDate >= win.internalStart && b.shippedDate <= win.internalEnd;
+      const inExternal = type === "external" && b.shippedDate >= win.externalStart && b.shippedDate <= win.externalEnd;
+      if (!inInternal && !inExternal) continue;
+      const shippedQuantity = b.shippedQuantity ?? 0;
+      rows.push({
+        shippedDate: b.shippedDate.toISOString().slice(0, 10).replace(/-/g, ""),
+        batchNo: b.batchNo || "",
+        customerCode: b.customerCode || "",
+        customerName: customerMap.get(b.customerCode || "")?.name || "",
+        model: b.product?.model || "",
+        packageType: b.packageType || "",
+        customerType: inInternal ? "所内" : "所外",
+        shippedQuantity,
+      });
+      if (inInternal) internalTotal += shippedQuantity;
+      else externalTotal += shippedQuantity;
+    }
+    rows.sort((a, b) => a.shippedDate.localeCompare(b.shippedDate) || a.batchNo.localeCompare(b.batchNo));
+    return { internalTotal, externalTotal, total: internalTotal + externalTotal, rows, unclassified };
+  }
+
+  const currentStats = totalsFor(current);
+  const months: ShipmentMonthSummary[] = monthInputs.map((win) => {
+    const t = totalsFor(win);
+    return {
+      month: `${win.year}-${String(win.monthNum).padStart(2, "0")}`,
+      label: `${win.monthNum}月`,
+      internalTotal: t.internalTotal,
+      externalTotal: t.externalTotal,
+      total: t.total,
+    };
+  });
+
+  return {
+    month,
+    windows: {
+      internal: `所内${current.prevMonthNum}.16-${current.monthNum}.15`,
+      external: `所外${current.prevMonthNum}.26-${current.monthNum}.25`,
+    },
+    months,
+    rows: currentStats.rows,
+    internalTotal: currentStats.internalTotal,
+    externalTotal: currentStats.externalTotal,
+    total: currentStats.total,
+    unclassifiedCount: currentStats.unclassified,
+  };
+}
+
+export async function exportShipmentExcel(month: string) {
+  const ExcelJS = (await import("exceljs")).default;
+  const stats = await getShipmentStats(month);
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "生产进度追踪系统";
+  const worksheet = workbook.addWorksheet("Sheet1");
+  worksheet.mergeCells(1, 1, 1, 8);
+  worksheet.getCell(1, 1).value = `${monthNumLabel(month)}发货数量统计（${stats.windows.internal}/${stats.windows.external}）`;
+  worksheet.getRow(2).values = ["发货时间", "生产批号", "客户代码", "客户名称", "产品型号", "封装形式", "客户类型", "发货数"];
+  worksheet.getRow(2).font = { bold: true };
+  for (const r of stats.rows) {
+    worksheet.addRow([r.shippedDate, r.batchNo, r.customerCode, r.customerName, r.model, r.packageType, r.customerType, r.shippedQuantity]);
+  }
+  const totalRow = worksheet.addRow(["合计", "", "", "", "", "所内", stats.internalTotal]);
+  totalRow.font = { bold: true };
+  worksheet.addRow(["", "", "", "", "", "所外", stats.externalTotal]);
+  const grandRow = worksheet.addRow(["总计", "", "", "", "", "", stats.total]);
+  grandRow.font = { bold: true };
+  worksheet.columns = [{ width: 12 }, { width: 12 }, { width: 12 }, { width: 14 }, { width: 22 }, { width: 16 }, { width: 10 }, { width: 10 }];
+  const buffer = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buffer);
+}
+
+function monthNumLabel(month: string) {
+  const m = /^(\d{4})-(\d{1,2})$/.exec(month.trim());
+  return m ? `${Number(m[2])}月` : month;
 }
 
 export async function exportYieldExcel(month: string) {

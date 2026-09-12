@@ -14,6 +14,10 @@
         <text class="switch-label">加工交付周期</text>
         <text class="switch-count">{{ cycleRows.length }}</text>
       </view>
+      <view class="switch-option" :class="{ active: activeSection === 'shipment' }" @click="switchToShipment">
+        <text class="switch-label">发货数量统计</text>
+        <text class="switch-count">{{ shipmentRows.length }}</text>
+      </view>
     </view>
 
     <!-- 在线产品加工统计 -->
@@ -173,6 +177,76 @@
         <text class="text-secondary">该时间段内暂无发货批次</text>
       </view>
     </view>
+
+    <!-- 发货数量统计 -->
+    <view class="card" v-else-if="activeSection === 'shipment'">
+      <view class="yield-bar">
+        <view class="export-left">
+          <text class="export-title">发货数量统计</text>
+          <text class="export-hint">{{ shipmentData?.windows?.internal || '' }}；{{ shipmentData?.windows?.external || '' }}</text>
+        </view>
+        <picker mode="month" :value="shipmentMonth" @change="onShipmentMonthChange">
+          <view class="month-picker">{{ shipmentMonth }} ▾</view>
+        </picker>
+        <button class="btn-export" @click="onExportShipment">导出</button>
+      </view>
+
+      <view class="shipment-overview">
+        <view
+          v-for="m in shipmentMonths"
+          :key="m.month"
+          class="shipment-month-block"
+          :class="{ current: m.month === shipmentMonth }"
+          @click="shipmentMonth = m.month; loadShipment()"
+        >
+          <text class="shipment-month-label">{{ m.label }}发货</text>
+          <text class="shipment-month-total">{{ m.total }}</text>
+          <text class="shipment-month-split">所内 {{ m.internalTotal }} · 所外 {{ m.externalTotal }}</text>
+        </view>
+      </view>
+
+      <text v-if="shipmentRows.length" class="yield-summary">
+        {{ shipmentMonthLabel }}共发货 {{ shipmentTotal }} 只（所内 {{ shipmentInternalTotal }} · 所外 {{ shipmentExternalTotal }}），共 {{ shipmentRows.length }} 批
+      </text>
+
+      <scroll-view scroll-x class="mt-sm" v-if="shipmentRows.length">
+        <view class="online-table">
+          <view class="online-header">
+            <text class="online-col col-date">发货时间</text>
+            <text class="online-col col-batch">生产批号</text>
+            <text class="online-col col-customer">客户代码</text>
+            <text class="online-col col-customer-name">客户名称</text>
+            <text class="online-col col-model">产品型号</text>
+            <text class="online-col col-pkg">封装形式</text>
+            <text class="online-col col-type">客户类型</text>
+            <text class="online-col col-qty">发货数</text>
+          </view>
+          <view v-for="(row, i) in shipmentRows" :key="`${row.batchNo}-${row.model}-${i}`" class="online-row">
+            <text class="online-col col-date">{{ row.shippedDate }}</text>
+            <text class="online-col col-batch">{{ row.batchNo }}</text>
+            <text class="online-col col-customer">{{ row.customerCode }}</text>
+            <text class="online-col col-customer-name">{{ row.customerName }}</text>
+            <text class="online-col col-model">{{ row.model }}</text>
+            <text class="online-col col-pkg">{{ row.packageType }}</text>
+            <text class="online-col col-type">{{ row.customerType }}</text>
+            <text class="online-col col-qty">{{ row.shippedQuantity }}</text>
+          </view>
+          <view class="online-row shipment-total-row">
+            <text class="online-col col-date shipment-total-label">合计</text>
+            <text class="online-col col-batch"></text>
+            <text class="online-col col-customer"></text>
+            <text class="online-col col-customer-name"></text>
+            <text class="online-col col-model"></text>
+            <text class="online-col col-pkg"></text>
+            <text class="online-col col-type"></text>
+            <text class="online-col col-qty shipment-total-value">{{ shipmentTotal }}</text>
+          </view>
+        </view>
+      </scroll-view>
+      <view v-else class="empty-chart">
+        <text class="text-secondary">该月暂无发货数据</text>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -192,7 +266,7 @@ const userStore = useUserStore();
 
 const onlineBatches = ref<Batch[]>([]);
 const onlineCount = computed(() => onlineBatches.value.length);
-const activeSection = ref<"online" | "yield" | "cycle">("online");
+const activeSection = ref<"online" | "yield" | "cycle" | "shipment">("online");
 
 const stageOrderMap = computed(() => new Map(appStore.stages.map((stage) => [stage.code, stage.stageOrder])));
 
@@ -394,6 +468,105 @@ function onExportCycle() {
   // #endif
 }
 
+interface ShipmentMonthSummary {
+  month: string;
+  label: string;
+  internalTotal: number;
+  externalTotal: number;
+  total: number;
+}
+interface ShipmentStats {
+  month: string;
+  windows: { internal: string; external: string };
+  months: ShipmentMonthSummary[];
+  rows: Array<{
+    shippedDate: string;
+    batchNo: string;
+    customerCode: string;
+    customerName: string;
+    model: string;
+    packageType: string;
+    customerType: string;
+    shippedQuantity: number;
+  }>;
+  internalTotal: number;
+  externalTotal: number;
+  total: number;
+  unclassifiedCount: number;
+}
+
+function defaultShipmentMonth(): string {
+  const d = new Date();
+  const target = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}`;
+}
+const shipmentMonth = ref(defaultShipmentMonth());
+const shipmentData = ref<ShipmentStats | null>(null);
+const shipmentRows = computed(() => shipmentData.value?.rows ?? []);
+const shipmentMonths = computed(() => shipmentData.value?.months ?? []);
+const shipmentTotal = computed(() => shipmentData.value?.total ?? 0);
+const shipmentInternalTotal = computed(() => shipmentData.value?.internalTotal ?? 0);
+const shipmentExternalTotal = computed(() => shipmentData.value?.externalTotal ?? 0);
+const shipmentMonthLabel = computed(() => {
+  const m = shipmentMonth.value;
+  return m ? `${Number(m.slice(5, 7))}月` : "";
+});
+
+async function loadShipment() {
+  try {
+    shipmentData.value = await api.get<ShipmentStats>(`/api/statistics/shipment?month=${shipmentMonth.value}`);
+  } catch (e: unknown) {
+    uni.showToast({ title: (e as Error).message, icon: "none" });
+  }
+}
+
+function switchToShipment() {
+  activeSection.value = "shipment";
+  loadShipment();
+}
+
+function onShipmentMonthChange(event: any) {
+  shipmentMonth.value = event.detail.value ?? shipmentMonth.value;
+  loadShipment();
+}
+
+function onExportShipment() {
+  const token = userStore.token;
+  const url = `/api/statistics/shipment/export?month=${shipmentMonth.value}`;
+  // #ifdef H5
+  fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    .then((res) => {
+      if (!res.ok) throw new Error("导出失败");
+      return res.blob();
+    })
+    .then((blob) => {
+      const blobUrl = URL.createObjectURL(blob);
+      try {
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `发货数量统计${shipmentMonth.value}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } finally {
+        URL.revokeObjectURL(blobUrl);
+      }
+    })
+    .catch(() => uni.showToast({ title: "导出失败", icon: "none" }));
+  // #endif
+  // #ifndef H5
+  uni.downloadFile({
+    url: `${api.getBaseUrl()}${url}`,
+    header: { Authorization: `Bearer ${token}` },
+    success: (res) => {
+      if (res.statusCode !== 200) { uni.showToast({ title: "导出失败", icon: "none" }); return; }
+      uni.openDocument({ filePath: res.tempFilePath, showMenu: true });
+    },
+    fail: () => uni.showToast({ title: "导出失败", icon: "none" }),
+  });
+  // #endif
+}
+
 function onExportYield() {
   const token = userStore.token;
   const url = `/api/statistics/yield/export?month=${yieldMonth.value}`;
@@ -502,6 +675,7 @@ onShow(() => {
   loadData();
   loadYield();
   loadCycle();
+  loadShipment();
 });
 </script>
 
@@ -611,6 +785,34 @@ onShow(() => {
   font-size: 24rpx;
   font-weight: 600;
 }
+
+/* 发货数量统计 */
+.shipment-overview {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 20rpx;
+}
+.shipment-month-block {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+  padding: 20rpx 12rpx;
+  border: 2rpx solid #dfe4e4;
+  border-radius: 10rpx;
+  background: #f5f7f7;
+}
+.shipment-month-block.current {
+  border-color: #087f8c;
+  background: #e6f4f3;
+}
+.shipment-month-label { color: #657174; font-size: 20rpx; }
+.shipment-month-total { color: #087f8c; font-size: 40rpx; font-weight: 700; line-height: 1.1; }
+.shipment-month-split { color: #a0a8a9; font-size: 18rpx; }
+.shipment-total-row { background: #f5f7f7; }
+.shipment-total-row .online-col { font-weight: 700; color: #172327; }
+.shipment-total-value { color: #087f8c; }
 .yield-unclassified {
   display: block;
   margin-top: 8rpx;

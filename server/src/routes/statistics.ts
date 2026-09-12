@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { exportExcel, exportDeliveryCycleExcel, exportYieldExcel, getDeliveryCycleStats, getYieldStats } from "../services/statistics.js";
+import { exportExcel, exportDeliveryCycleExcel, exportShipmentExcel, exportYieldExcel, getDeliveryCycleStats, getShipmentStats, getYieldStats } from "../services/statistics.js";
 import { authGuard, AuthRequest } from "../middleware/auth.js";
 
 const router = Router();
@@ -19,6 +19,26 @@ router.get("/delivery-cycle/export", authGuard, async (req: AuthRequest, res, ne
     const buffer = await exportDeliveryCycleExcel(start, end);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", `attachment; filename=${encodeURIComponent(`delivery_cycle_${start}_${end}`)}.xlsx`);
+    res.send(buffer);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/shipment", authGuard, async (req: AuthRequest, res, next) => {
+  try {
+    res.json(await getShipmentStats(String(req.query.month || "")));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/shipment/export", authGuard, async (req: AuthRequest, res, next) => {
+  try {
+    const month = String(req.query.month || "");
+    const buffer = await exportShipmentExcel(month);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename=${encodeURIComponent(`shipment_${month}`)}.xlsx`);
     res.send(buffer);
   } catch (err) {
     next(err);
