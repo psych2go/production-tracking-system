@@ -88,7 +88,10 @@
         <button class="btn-export" @click="onExportYield">导出</button>
       </view>
       <text v-if="yieldSummary" class="yield-summary">共 {{ yieldRows.length }} 个批次，月良率 {{ yieldSummary.monthYield }}（目标 {{ yieldSummary.monthTarget }}）</text>
-      <text v-if="unclassifiedCount" class="yield-unclassified">另有 {{ unclassifiedCount }} 条批次未纳入统计（{{ unclassifiedReason }}）</text>
+      <text v-if="unclassifiedCount" class="yield-unclassified" @click="showUnclassifiedDetail = !showUnclassifiedDetail">另有 {{ unclassifiedCount }} 条批次未纳入统计（不属于本统计周期，或客户类型/归档数据待完善），点击展开明细 {{ showUnclassifiedDetail ? '▴' : '▾' }}</text>
+      <view v-if="unclassifiedCount && showUnclassifiedDetail" class="yield-unclassified-list">
+        <text v-for="(u, i) in yieldUnclassified" :key="i" class="yield-unclassified-item">{{ u.batchNo }}（{{ u.model || '无型号' }}）：{{ u.reason }}</text>
+      </view>
       <scroll-view scroll-x class="mt-sm" v-if="yieldRows.length">
         <view class="online-table">
           <view class="online-header">
@@ -386,7 +389,8 @@ function onYieldMonthNumChange(event: any) {
   loadYield();
 }
 const unclassifiedCount = computed(() => yieldData.value?.unclassified.length ?? 0);
-const unclassifiedReason = computed(() => yieldData.value?.unclassified[0]?.reason ?? "");
+const yieldUnclassified = computed(() => yieldData.value?.unclassified ?? []);
+const showUnclassifiedDetail = ref(false);
 
 function pct(value: number | null | undefined): string {
   return value == null ? "—" : `${(value * 100).toFixed(2)}%`;
@@ -844,6 +848,20 @@ onShow(() => {
   margin-top: 8rpx;
   color: #d97706;
   font-size: 20rpx;
+}
+.yield-unclassified-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  margin-top: 8rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 8rpx;
+  background: #fff8ee;
+}
+.yield-unclassified-item {
+  color: #9a5a00;
+  font-size: 20rpx;
+  line-height: 1.5;
 }
 .yield-good { color: #27865f; }
 .yield-bad { color: #c9483f; }
