@@ -348,6 +348,8 @@ interface YieldRow {
 }
 interface YieldStats {
   month: string;
+  period: string;
+  periodType: "month" | "quarter";
   title: string;
   rows: YieldRow[];
   monthYield: number | null;

@@ -75,6 +75,8 @@ const utcDate = (year: number, month: number, day: number) =>
 
 export interface YieldStats {
   month: string;
+  period: string;
+  periodType: "month" | "quarter";
   title: string;
   rows: Array<{
     shippedDate: string;
@@ -103,29 +105,77 @@ function parseYieldMonth(month: string) {
   return { year, monthNum, prevYear, prevMonthNum };
 }
 
-function monthWindows(year: number, monthNum: number) {
+function monthWindows(year: number, monthNum: number): StatWindows {
   const prevYear = monthNum === 1 ? year - 1 : year;
   const prevMonthNum = monthNum === 1 ? 12 : monthNum - 1;
   return {
     year,
     monthNum,
-    prevYear,
+    firstMonthNum: monthNum,
     prevMonthNum,
     internalStart: utcDate(prevYear, prevMonthNum, 16),
     internalEnd: utcDate(year, monthNum, 15),
     externalStart: utcDate(prevYear, prevMonthNum, 26),
     externalEnd: utcDate(year, monthNum, 25),
+    period: `${year}-${String(monthNum).padStart(2, "0")}`,
+    periodType: "month",
+    title: `${monthNum}月（所内${prevMonthNum}.16-${monthNum}.15/所外${prevMonthNum}.26-${monthNum}.25）`,
   };
 }
 
-export async function getYieldStats(month: string): Promise<YieldStats> {
-  const { year, monthNum } = parseYieldMonth(month);
-  const { internalStart, internalEnd, externalStart, externalEnd, prevMonthNum } = monthWindows(year, monthNum);
+interface StatWindows {
+  internalStart: Date;
+  internalEnd: Date;
+  externalStart: Date;
+  externalEnd: Date;
+  period: string;
+  periodType: "month" | "quarter";
+  title: string;
+  year: number;
+  monthNum: number;
+  firstMonthNum: number;
+  prevMonthNum: number;
+}
 
+function windowsForMonth(month: string): StatWindows {
+  const { year, monthNum } = parseYieldMonth(month);
+  return monthWindows(year, monthNum);
+}
+
+function windowsForQuarter(quarter: string): StatWindows {
+  const m = /^(\d{4})-(\d{1})$/.exec(quarter.trim());
+  if (!m) throw new Error("季度格式应为 YYYY-QN，如 2026-Q3");
+  const year = Number(m[1]);
+  const qn = Number(m[2]);
+  if (qn < 1 || qn > 4) throw new Error("季度无效");
+  const firstMonthNum = qn * 3 - 2;
+  const lastMonthNum = qn * 3;
+  const first = monthWindows(year, firstMonthNum);
+  const last = monthWindows(year, lastMonthNum);
+  return {
+    internalStart: first.internalStart,
+    internalEnd: last.internalEnd,
+    externalStart: first.externalStart,
+    externalEnd: last.externalEnd,
+    title: `${year}年${qn}季度（所内${first.prevMonthNum}.16-${lastMonthNum}.15/所外${first.prevMonthNum}.26-${lastMonthNum}.25）`,
+    period: `${year}-Q${qn}`,
+    periodType: "quarter",
+    year,
+    monthNum: lastMonthNum,
+    firstMonthNum,
+    prevMonthNum: first.prevMonthNum,
+  };
+}
+
+function resolveStatWindows(period: string): StatWindows {
+  return period.includes("Q") ? windowsForQuarter(period) : windowsForMonth(period);
+}
+
+async function computeYieldStats(win: StatWindows): Promise<YieldStats> {
   const batches = await prisma.batch.findMany({
     where: {
       status: "archived",
-      shippedDate: { gte: internalStart, lte: externalEnd },
+      shippedDate: { gte: win.internalStart, lte: win.externalEnd },
     },
     include: { product: true },
     orderBy: { shippedDate: "asc" },
@@ -146,8 +196,8 @@ export async function getYieldStats(month: string): Promise<YieldStats> {
     }
     const type = b.customerCode ? customerMap.get(b.customerCode)?.type : undefined;
     const shipped = b.shippedDate;
-    const inInternal = type === "internal" && shipped >= internalStart && shipped <= internalEnd;
-    const inExternal = type === "external" && shipped >= externalStart && shipped <= externalEnd;
+    const inInternal = type === "internal" && shipped >= win.internalStart && shipped <= win.internalEnd;
+    const inExternal = type === "external" && shipped >= win.externalStart && shipped <= win.externalEnd;
     if (!inInternal && !inExternal) {
       unclassified.push({
         batchNo: b.batchNo || "",
@@ -169,15 +219,21 @@ export async function getYieldStats(month: string): Promise<YieldStats> {
     });
   }
 
-  const monthYield = rows.length ? rows.reduce((sum, r) => sum + r.batchYield, 0) / rows.length : null;
+  const periodYield = rows.length ? rows.reduce((sum, r) => sum + r.batchYield, 0) / rows.length : null;
   return {
-    month,
-    title: `${monthNum}月（所内${prevMonthNum}.16-${monthNum}.15/所外${prevMonthNum}.26-${monthNum}.25）`,
+    month: win.period,
+    period: win.period,
+    periodType: win.periodType,
+    title: win.title,
     rows,
-    monthYield,
+    monthYield: periodYield,
     monthTarget: MONTH_YIELD_TARGET,
     unclassified,
   };
+}
+
+export async function getYieldStats(period: string): Promise<YieldStats> {
+  return computeYieldStats(resolveStatWindows(period));
 }
 
 // --- 发货数量统计（同月度窗口规则，含近三月概览与明细） ---
@@ -210,16 +266,39 @@ export interface ShipmentStats {
   unclassifiedCount: number;
 }
 
-export async function getShipmentStats(month: string): Promise<ShipmentStats> {
-  const { year, monthNum } = parseYieldMonth(month);
-  // 概览范围：当前月（实时）及前三个月
-  const monthInputs = [0, -1, -2, -3].map((delta) => {
-    const zero = year * 12 + (monthNum - 1) + delta;
-    return monthWindows(Math.floor(zero / 12), (zero % 12) + 1);
-  });
-  const current = monthInputs[0];
-  const rangeStart = monthInputs[monthInputs.length - 1].internalStart;
-  const rangeEnd = current.externalEnd;
+export interface ShipmentStats {
+  month: string;
+  period: string;
+  periodType: "month" | "quarter";
+  windows: { internal: string; external: string };
+  months: ShipmentMonthSummary[];
+  rows: Array<{
+    shippedDate: string;
+    batchNo: string;
+    customerCode: string;
+    customerName: string;
+    model: string;
+    packageType: string;
+    customerType: string;
+    shippedQuantity: number;
+  }>;
+  internalTotal: number;
+  externalTotal: number;
+  total: number;
+  unclassifiedCount: number;
+}
+
+export async function getShipmentStats(period: string): Promise<ShipmentStats> {
+  const win = resolveStatWindows(period);
+  // 概览：月模式=当前月及前三个月；季度模式=季度内的三个月
+  const overviewWins = win.periodType === "quarter"
+    ? [0, 1, 2].map((i) => monthWindows(win.year, win.firstMonthNum + i))
+    : [0, -1, -2, -3].map((delta) => {
+        const zero = win.year * 12 + (win.monthNum - 1) + delta;
+        return monthWindows(Math.floor(zero / 12), (zero % 12) + 1);
+      });
+  const rangeStart = [...overviewWins.map((w) => w.internalStart), win.internalStart].sort((a, b) => a.getTime() - b.getTime())[0];
+  const rangeEnd = [...overviewWins.map((w) => w.externalEnd), win.externalEnd].sort((a, b) => b.getTime() - a.getTime())[0];
 
   const batches = await prisma.batch.findMany({
     where: { status: "archived", shippedDate: { gte: rangeStart, lte: rangeEnd } },
@@ -231,7 +310,7 @@ export async function getShipmentStats(month: string): Promise<ShipmentStats> {
     : [];
   const customerMap = new Map(customers.map((c) => [c.code, c]));
 
-  function totalsFor(win: ReturnType<typeof monthWindows>) {
+  function totalsFor(win: StatWindows) {
     let internalTotal = 0;
     let externalTotal = 0;
     let unclassified = 0;
@@ -260,13 +339,14 @@ export async function getShipmentStats(month: string): Promise<ShipmentStats> {
     return { internalTotal, externalTotal, total: internalTotal + externalTotal, rows, unclassified };
   }
 
-  const currentStats = totalsFor(current);
-  const months: ShipmentMonthSummary[] = monthInputs.map((win) => {
-    const t = totalsFor(win);
-    const isCurrent = win.year === year && win.monthNum === monthNum;
+  const currentStats = totalsFor(win);
+  const nowPeriod = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  const months: ShipmentMonthSummary[] = overviewWins.map((w) => {
+    const t = totalsFor(w);
+    const isCurrent = w.period === nowPeriod;
     return {
-      month: `${win.year}-${String(win.monthNum).padStart(2, "0")}`,
-      label: `${win.monthNum}月`,
+      month: w.period,
+      label: `${w.monthNum}月`,
       internalTotal: t.internalTotal,
       externalTotal: t.externalTotal,
       total: t.total,
@@ -275,10 +355,12 @@ export async function getShipmentStats(month: string): Promise<ShipmentStats> {
   });
 
   return {
-    month,
+    month: win.period,
+    period: win.period,
+    periodType: win.periodType,
     windows: {
-      internal: `所内${current.prevMonthNum}.16-${current.monthNum}.15`,
-      external: `所外${current.prevMonthNum}.26-${current.monthNum}.25`,
+      internal: `所内${win.prevMonthNum}.16-${win.monthNum}.15`,
+      external: `所外${win.prevMonthNum}.26-${win.monthNum}.25`,
     },
     months,
     rows: currentStats.rows,
