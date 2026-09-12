@@ -133,6 +133,7 @@ const userStore = useUserStore();
 
 const onlineBatches = ref<Batch[]>([]);
 const onlineCount = computed(() => onlineBatches.value.length);
+const activeSection = ref<"online" | "yield">("online");
 
 const stageOrderMap = computed(() => new Map(appStore.stages.map((stage) => [stage.code, stage.stageOrder])));
 
