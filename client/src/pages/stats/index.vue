@@ -4,19 +4,15 @@
     <view class="section-switch">
       <view class="switch-option" :class="{ active: activeSection === 'online' }" @click="activeSection = 'online'">
         <text class="switch-label">在线产品加工统计</text>
-        <text class="switch-count">{{ onlineCount }}</text>
       </view>
       <view class="switch-option" :class="{ active: activeSection === 'yield' }" @click="activeSection = 'yield'">
         <text class="switch-label">良率统计</text>
-        <text class="switch-count">{{ yieldRows.length }}</text>
       </view>
       <view class="switch-option" :class="{ active: activeSection === 'cycle' }" @click="switchToCycle">
         <text class="switch-label">加工交付周期</text>
-        <text class="switch-count">{{ cycleRows.length }}</text>
       </view>
       <view class="switch-option" :class="{ active: activeSection === 'shipment' }" @click="switchToShipment">
         <text class="switch-label">发货数量统计</text>
-        <text class="switch-count">{{ shipmentRows.length }}</text>
       </view>
     </view>
 
@@ -724,15 +720,6 @@ onShow(() => {
   }
 }
 .switch-label { white-space: nowrap; }
-.switch-count {
-  min-width: 34rpx;
-  padding: 0 10rpx;
-  border-radius: 999rpx;
-  background: rgba(23, 35, 39, 0.08);
-  font-size: 20rpx;
-  text-align: center;
-}
-.switch-option.active .switch-count { background: rgba(255, 255, 255, 0.25); }
 .export-left { flex: 1; margin-right: 20rpx; }
 .export-title {
   display: block;
