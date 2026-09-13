@@ -143,7 +143,7 @@ function windowsForMonth(month: string): StatWindows {
 }
 
 function windowsForQuarter(quarter: string): StatWindows {
-  const m = /^(\d{4})-(\d{1})$/.exec(quarter.trim());
+  const m = /^(\d{4})-Q([1-4])$/.exec(quarter.trim());
   if (!m) throw new Error("季度格式应为 YYYY-QN，如 2026-Q3");
   const year = Number(m[1]);
   const qn = Number(m[2]);
