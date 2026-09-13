@@ -4,7 +4,7 @@ import { authGuard, roleGuard } from "../middleware/auth.js";
 import { validate } from "../middleware/validator.js";
 import { auditLog } from "../middleware/audit.js";
 import { parseId } from "../utils/parseId.js";
-import { createStage, updateStage, deleteStage, listPackageTypes, createPackageType, updatePackageType, deletePackageType, listCustomerCodes, createCustomerCode, updateCustomerCode, deleteCustomerCode, getAnomalyThreshold, setAnomalyThreshold } from "../services/settings.js";
+import { createStage, updateStage, deleteStage, listPackageTypes, createPackageType, updatePackageType, deletePackageType, listCustomerCodes, createCustomerCode, updateCustomerCode, deleteCustomerCode, getAnomalyConfig, setAnomalyConfig } from "../services/settings.js";
 import {
   nullableText,
   optionalText,
@@ -234,34 +234,45 @@ settingsRoutes.delete(
   }
 );
 
-const anomalyThresholdSchema = z.object({
-  days: z.number().int("阈值必须为整数").min(1, "阈值至少为1天").max(10, "阈值不能超过10天"),
-});
+const anomalyConfigSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    thresholdDays: z
+      .number()
+      .int("阈值必须为整数")
+      .min(1, "阈值至少为1天")
+      .max(10, "阈值不能超过10天")
+      .optional(),
+  })
+  .refine((d) => d.enabled !== undefined || d.thresholdDays !== undefined, {
+    message: "请提供要保存的设置项",
+  });
 
-// Get anomaly threshold
+// Get anomaly config (switch + threshold)
 settingsRoutes.get(
-  "/anomaly-threshold",
+  "/anomaly-config",
   authGuard,
   roleGuard("admin"),
   async (_req, res, next) => {
     try {
-      res.json({ days: await getAnomalyThreshold() });
+      res.json(await getAnomalyConfig());
     } catch (err) {
       next(err);
     }
   }
 );
 
-// Update anomaly threshold
+// Update anomaly config
 settingsRoutes.put(
-  "/anomaly-threshold",
+  "/anomaly-config",
   authGuard,
   roleGuard("admin"),
   auditLog("update", "system_setting"),
-  validate(anomalyThresholdSchema),
+  validate(anomalyConfigSchema),
   async (req, res, next) => {
     try {
-      res.json({ days: await setAnomalyThreshold(req.body.days) });
+      await setAnomalyConfig(req.body);
+      res.json(await getAnomalyConfig());
     } catch (err) {
       next(err);
     }

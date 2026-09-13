@@ -117,8 +117,9 @@ export const settingsApi = {
   deleteCustomerCode: (id: number) => api.delete(`/api/settings/customer-codes/${id}`),
 
   // System settings
-  getAnomalyThreshold: () => api.get<{ days: number }>("/api/settings/anomaly-threshold"),
-  updateAnomalyThreshold: (days: number) => api.put<{ days: number }>("/api/settings/anomaly-threshold", { days }),
+  getAnomalyConfig: () => api.get<{ enabled: boolean; thresholdDays: number }>("/api/settings/anomaly-config"),
+  updateAnomalyConfig: (data: { enabled: boolean; thresholdDays: number }) =>
+    api.put<{ enabled: boolean; thresholdDays: number }>("/api/settings/anomaly-config", data),
 };
 
 // Audit

@@ -38,7 +38,7 @@
         <UIcon name="chevron-right" :size="28" color="#c0c4cc" />
       </view>
       <view class="list-item" @click="go('/pages-admin/anomaly-threshold/index')">
-        <text>异常预警阈值</text>
+        <text>异常预警设置</text>
         <UIcon name="chevron-right" :size="28" color="#c0c4cc" />
       </view>
       <view class="list-item" @click="go('/pages-admin/archive-import/index')">

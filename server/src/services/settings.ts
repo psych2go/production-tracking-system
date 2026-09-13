@@ -1,4 +1,6 @@
-import { prisma } from "../config/database.js";
+import { Prisma, PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export async function createStage(data: {
   code: string;
@@ -131,21 +133,32 @@ export async function deleteCustomerCode(id: number) {
 
 // --- System settings ---
 
+const ANOMALY_ENABLED_KEY = "anomaly_enabled";
 const ANOMALY_THRESHOLD_KEY = "anomaly_delay_days";
 const ANOMALY_THRESHOLD_DEFAULT = 5;
 
-/** 异常预警阈值：加工中批次超过该天数无进度更新则预警 */
-export async function getAnomalyThreshold(): Promise<number> {
-  const setting = await prisma.systemSetting.findUnique({ where: { key: ANOMALY_THRESHOLD_KEY } });
-  const parsed = Number(setting?.value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : ANOMALY_THRESHOLD_DEFAULT;
+/** 异常预警配置：开关（默认关闭）+ 阈值（默认 5 天） */
+export async function getAnomalyConfig(): Promise<{ enabled: boolean; thresholdDays: number }> {
+  const settings = await prisma.systemSetting.findMany({
+    where: { key: { in: [ANOMALY_ENABLED_KEY, ANOMALY_THRESHOLD_KEY] } },
+  });
+  const map = new Map(settings.map((s) => [s.key, s.value]));
+  const thresholdParsed = Number(map.get(ANOMALY_THRESHOLD_KEY));
+  return {
+    enabled: map.get(ANOMALY_ENABLED_KEY) === "true",
+    thresholdDays: Number.isInteger(thresholdParsed) && thresholdParsed > 0 ? thresholdParsed : ANOMALY_THRESHOLD_DEFAULT,
+  };
 }
 
-export async function setAnomalyThreshold(days: number): Promise<number> {
-  await prisma.systemSetting.upsert({
-    where: { key: ANOMALY_THRESHOLD_KEY },
-    update: { value: String(days) },
-    create: { key: ANOMALY_THRESHOLD_KEY, value: String(days) },
-  });
-  return days;
+export async function setAnomalyConfig(data: { enabled?: boolean; thresholdDays?: number }): Promise<void> {
+  const ops: Prisma.PrismaPromise<unknown>[] = [];
+  if (data.enabled !== undefined) {
+    const value = data.enabled ? "true" : "false";
+    ops.push(prisma.systemSetting.upsert({ where: { key: ANOMALY_ENABLED_KEY }, update: { value }, create: { key: ANOMALY_ENABLED_KEY, value } }));
+  }
+  if (data.thresholdDays !== undefined) {
+    const value = String(data.thresholdDays);
+    ops.push(prisma.systemSetting.upsert({ where: { key: ANOMALY_THRESHOLD_KEY }, update: { value }, create: { key: ANOMALY_THRESHOLD_KEY, value } }));
+  }
+  if (ops.length) await prisma.$transaction(ops);
 }
