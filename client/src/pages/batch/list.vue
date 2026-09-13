@@ -170,8 +170,10 @@ function handleCardAction(batch: Batch) {
     goCard(batch.id);
   } else if (userStore.isAdmin() && batch.status === "pending") {
     startProduction(batch);
+  } else if (userStore.isAdmin() && batch.status === "completed") {
+    // 归档需填写归档数据，直达详情页并自动弹出归档表单
+    uni.navigateTo({ url: `/pages/batch/detail?id=${batch.id}&action=archive` });
   } else {
-    // 归档需填写上芯数/发货数/发货日期，已完成任务也跳转详情页操作
     goDetail(batch.id);
   }
 }

@@ -468,7 +468,10 @@ async function loadBatch(id: number) {
 onLoad(async (query) => {
   openedFromHome.value = query?.from === "home";
   currentBatchId.value = Number(query?.id || 0);
+  const openArchive = query?.action === "archive";
   if (currentBatchId.value) await loadBatch(currentBatchId.value);
+  // 从列表「归档」直达：已完成批次自动打开归档表单
+  if (openArchive && batch.value?.status === "completed" && isAdmin.value) openArchiveSheet();
   tickTimer = setInterval(() => { nowTick.value = Date.now(); }, 30 * 1000);
 });
 onShow(async () => { if (currentBatchId.value) await loadBatch(currentBatchId.value); });
