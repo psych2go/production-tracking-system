@@ -13,16 +13,16 @@
         <view class="status-badge" :class="`status-${batch.status}`">{{ statusLabel }}</view>
       </view>
 
-      <!-- 属性行：客户代码 · 封装形式 · 数量（加工中时右侧带当前工序） -->
+      <!-- 属性行：客户代码 · 封装形式 · 数量 · 当前工序 -->
       <view class="meta-line">
         <view class="meta-left">
           <text v-if="batch.customerCode" class="meta-item">{{ batch.customerCode }}</text>
           <text v-if="batch.packageType" class="meta-item">{{ batch.packageType }}</text>
           <text class="meta-item">{{ batch.quantity }}只</text>
-        </view>
-        <view v-if="batch.status === 'active'" class="stage-inline">
-          <text class="stage-label">当前工序</text>
-          <text class="stage-value">{{ currentStageName }}</text>
+          <view v-if="batch.status === 'active'" class="stage-inline">
+            <text class="stage-label">当前工序</text>
+            <text class="stage-value">{{ currentStageName }}</text>
+          </view>
         </view>
       </view>
 
@@ -140,16 +140,18 @@ onMounted(() => {
 .status-completed { background: #e6f3ec; color: #27865f; }
 .status-cancelled { background: #f1f2f2; color: #7d898b; }
 
-/* 属性行：左侧属性 + 右侧当前工序 */
+/* 属性行：单行左对齐流 */
 .meta-line {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 30rpx;
+  overflow: hidden;
   margin-top: 26rpx;
+  white-space: nowrap;
 }
 .meta-left {
   display: flex;
+  align-items: center;
   gap: 30rpx;
   min-width: 0;
   overflow: hidden;
@@ -161,7 +163,7 @@ onMounted(() => {
   font-size: 20rpx;
   white-space: nowrap;
 }
-.stage-inline { display: flex; align-items: center; gap: 30rpx; flex-shrink: 0; }
+.stage-inline { display: flex; align-items: center; gap: 10rpx; flex-shrink: 0; }
 .stage-label {
   padding: 2rpx 10rpx;
   border-radius: 4rpx;
@@ -220,6 +222,7 @@ onMounted(() => {
   .status-badge { font-size: 22rpx; }
   .risk-tag { font-size: 22rpx; }
   .meta-line { gap: 20rpx; }
+  .meta-left { gap: 20rpx; }
   .meta-item { font-size: 22rpx; }
   .stage-inline { gap: 20rpx; }
   .stage-label { font-size: 22rpx; }
@@ -228,5 +231,13 @@ onMounted(() => {
   .delivery-item { font-size: 22rpx; }
   .card-action { font-size: 22rpx; }
   .paused-line-text { font-size: 22rpx; }
+}
+
+/* 宽屏优化：收紧行距，信息成组靠左，消除大片空白 */
+@media screen and (min-width: 768px) {
+  .batch-card-main { padding: 26rpx 32rpx; }
+  .meta-line { margin-top: 18rpx; }
+  .batch-footer { margin-top: 18rpx; }
+  .delivery-inline { gap: 48rpx; }
 }
 </style>
