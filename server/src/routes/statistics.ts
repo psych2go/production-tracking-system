@@ -27,7 +27,8 @@ router.get("/delivery-cycle/export", authGuard, async (req: AuthRequest, res, ne
 
 router.get("/shipment", authGuard, async (req: AuthRequest, res, next) => {
   try {
-    res.json(await getShipmentStats(String(req.query.month || "")));
+    const period = String(req.query.quarter || req.query.month || "");
+    res.json(await getShipmentStats(period));
   } catch (err) {
     next(err);
   }
@@ -35,10 +36,10 @@ router.get("/shipment", authGuard, async (req: AuthRequest, res, next) => {
 
 router.get("/shipment/export", authGuard, async (req: AuthRequest, res, next) => {
   try {
-    const month = String(req.query.month || "");
-    const buffer = await exportShipmentExcel(month);
+    const period = String(req.query.quarter || req.query.month || "");
+    const buffer = await exportShipmentExcel(period);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename=${encodeURIComponent(`shipment_${month}`)}.xlsx`);
+    res.setHeader("Content-Disposition", `attachment; filename=${encodeURIComponent(`shipment_${period}`)}.xlsx`);
     res.send(buffer);
   } catch (err) {
     next(err);
@@ -47,7 +48,8 @@ router.get("/shipment/export", authGuard, async (req: AuthRequest, res, next) =>
 
 router.get("/yield", authGuard, async (req: AuthRequest, res, next) => {
   try {
-    res.json(await getYieldStats(String(req.query.month || "")));
+    const period = String(req.query.quarter || req.query.month || "");
+    res.json(await getYieldStats(period));
   } catch (err) {
     next(err);
   }
@@ -55,10 +57,10 @@ router.get("/yield", authGuard, async (req: AuthRequest, res, next) => {
 
 router.get("/yield/export", authGuard, async (req: AuthRequest, res, next) => {
   try {
-    const month = String(req.query.month || "");
-    const buffer = await exportYieldExcel(month);
+    const period = String(req.query.quarter || req.query.month || "");
+    const buffer = await exportYieldExcel(period);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename=${encodeURIComponent(`yield_${month}`)}.xlsx`);
+    res.setHeader("Content-Disposition", `attachment; filename=${encodeURIComponent(`yield_${period}`)}.xlsx`);
     res.send(buffer);
   } catch (err) {
     next(err);
