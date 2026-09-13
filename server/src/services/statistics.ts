@@ -290,13 +290,14 @@ export interface ShipmentStats {
 
 export async function getShipmentStats(period: string): Promise<ShipmentStats> {
   const win = resolveStatWindows(period);
-  // 概览：月模式=当前月及前三个月；季度模式=季度内的三个月
-  const overviewWins = win.periodType === "quarter"
-    ? [0, 1, 2].map((i) => monthWindows(win.year, win.firstMonthNum + i))
-    : [0, -1, -2, -3].map((delta) => {
-        const zero = win.year * 12 + (win.monthNum - 1) + delta;
-        return monthWindows(Math.floor(zero / 12), (zero % 12) + 1);
-      });
+  // 概览固定显示最近三个月：当前月（实时）、上月、上上月
+  const now = new Date();
+  const nowYear = now.getFullYear();
+  const nowMonthNum = now.getMonth() + 1;
+  const overviewWins = [0, -1, -2].map((delta) => {
+    const zero = nowYear * 12 + (nowMonthNum - 1) + delta;
+    return monthWindows(Math.floor(zero / 12), (zero % 12) + 1);
+  });
   const rangeStart = [...overviewWins.map((w) => w.internalStart), win.internalStart].sort((a, b) => a.getTime() - b.getTime())[0];
   const rangeEnd = [...overviewWins.map((w) => w.externalEnd), win.externalEnd].sort((a, b) => b.getTime() - a.getTime())[0];
 
