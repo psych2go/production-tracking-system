@@ -484,9 +484,10 @@ const cycleCount = computed(() => cycleRows.value.length);
 
 async function loadCycle() {
   try {
-    cycleRows.value = await api.get<DeliveryCycleRow[]>(
+    const res = await api.get<{ startDate: string; endDate: string; rows: DeliveryCycleRow[] }>(
       `/api/statistics/delivery-cycle?start=${cycleStart.value}&end=${cycleEnd.value}`,
     );
+    cycleRows.value = res.rows;
   } catch (e: unknown) {
     uni.showToast({ title: (e as Error).message, icon: "none" });
   }
