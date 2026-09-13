@@ -77,17 +77,28 @@
           <text class="export-title">良率统计</text>
           <text class="export-hint">所内：上月16日-本月15日；所外：上月26日-本月25日</text>
         </view>
+        <view class="period-toggle">
+          <view class="period-toggle-option" :class="{ active: yieldPeriodType === 'month' }" @click="yieldPeriodType = 'month'">
+            <text>按月</text>
+          </view>
+          <view class="period-toggle-option" :class="{ active: yieldPeriodType === 'quarter' }" @click="yieldPeriodType = 'quarter'">
+            <text>按季度</text>
+          </view>
+        </view>
         <view class="month-select-group">
           <picker mode="selector" :range="yearOptions" :value="yieldYearIndex" @change="onYieldYearChange">
-            <view class="month-picker">{{ yieldMonth.slice(0, 4) }}年 ▾</view>
+            <view class="month-picker">{{ yieldYear }}年 ▾</view>
           </picker>
-          <picker mode="selector" :range="monthNumOptions" :value="yieldMonthIndex" @change="onYieldMonthNumChange">
-            <view class="month-picker">{{ Number(yieldMonth.slice(5, 7)) }}月 ▾</view>
+          <picker v-if="yieldPeriodType === 'month'" mode="selector" :range="monthNumOptions" :value="yieldMonthIndex" @change="onYieldMonthNumChange">
+            <view class="month-picker">{{ yieldMonthNum }}月 ▾</view>
+          </picker>
+          <picker v-else mode="selector" :range="quarterLabels" :value="yieldQuarterIndex" @change="onYieldQuarterChange">
+            <view class="month-picker">第{{ yieldQuarterNum }}季度 ▾</view>
           </picker>
         </view>
         <button class="btn-export" @click="onExportYield">导出</button>
       </view>
-      <text v-if="yieldSummary" class="yield-summary">共 {{ yieldRows.length }} 个批次，月良率 {{ yieldSummary.monthYield }}（目标 {{ yieldSummary.monthTarget }}）</text>
+      <text v-if="yieldSummary" class="yield-summary">共 {{ yieldRows.length }} 个批次，{{ yieldPeriodLabel }}良率 {{ yieldSummary.monthYield }}（目标 {{ yieldSummary.monthTarget }}）</text>
       <text v-if="unclassifiedCount" class="yield-unclassified" @click="showUnclassifiedDetail = !showUnclassifiedDetail">另有 {{ unclassifiedCount }} 条批次未纳入统计（不属于本统计周期，或客户类型/归档数据待完善），点击展开明细 {{ showUnclassifiedDetail ? '▴' : '▾' }}</text>
       <view v-if="unclassifiedCount && showUnclassifiedDetail" class="yield-unclassified-list">
         <text v-for="(u, i) in yieldUnclassified" :key="i" class="yield-unclassified-item">{{ u.batchNo }}（{{ u.model || '无型号' }}）：{{ u.reason }}</text>
@@ -104,8 +115,8 @@
             <text class="online-col col-qty">发货数</text>
             <text class="online-col col-qty">批次良率</text>
             <text class="online-col col-qty">单批次目标良率</text>
-            <text class="online-col col-qty">月良率</text>
-            <text class="online-col col-qty">目标月良率</text>
+            <text class="online-col col-qty">{{ yieldPeriodType === 'quarter' ? '季度良率' : '月良率' }}</text>
+            <text class="online-col col-qty">目标{{ yieldPeriodType === 'quarter' ? '季度' : '月' }}良率</text>
           </view>
           <view v-for="(row, i) in yieldRows" :key="`${row.batchNo}-${row.model}-${i}`" class="online-row">
             <text class="online-col col-date">{{ row.shippedDate }}</text>
@@ -189,12 +200,23 @@
           <text class="export-title">发货数量统计</text>
           <text class="export-hint">{{ shipmentData?.windows?.internal || '' }}；{{ shipmentData?.windows?.external || '' }}</text>
         </view>
+        <view class="period-toggle">
+          <view class="period-toggle-option" :class="{ active: shipmentPeriodType === 'month' }" @click="shipmentPeriodType = 'month'">
+            <text>按月</text>
+          </view>
+          <view class="period-toggle-option" :class="{ active: shipmentPeriodType === 'quarter' }" @click="shipmentPeriodType = 'quarter'">
+            <text>按季度</text>
+          </view>
+        </view>
         <view class="month-select-group">
           <picker mode="selector" :range="yearOptions" :value="shipmentYearIndex" @change="onShipmentYearChange">
-            <view class="month-picker">{{ shipmentMonth.slice(0, 4) }}年 ▾</view>
+            <view class="month-picker">{{ shipmentYear }}年 ▾</view>
           </picker>
-          <picker mode="selector" :range="monthNumOptions" :value="shipmentMonthIndex" @change="onShipmentMonthNumChange">
-            <view class="month-picker">{{ Number(shipmentMonth.slice(5, 7)) }}月 ▾</view>
+          <picker v-if="shipmentPeriodType === 'month'" mode="selector" :range="monthNumOptions" :value="shipmentMonthIndex" @change="onShipmentMonthNumChange">
+            <view class="month-picker">{{ shipmentMonthNum }}月 ▾</view>
+          </picker>
+          <picker v-else mode="selector" :range="quarterLabels" :value="shipmentQuarterIndex" @change="onShipmentQuarterChange">
+            <view class="month-picker">第{{ shipmentQuarterNum }}季度 ▾</view>
           </picker>
         </view>
         <button class="btn-export" @click="onExportShipment">导出</button>
@@ -362,7 +384,17 @@ function defaultYieldMonth(): string {
   const target = new Date(d.getFullYear(), d.getMonth() - 1, 1);
   return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}`;
 }
+const yieldPeriodType = ref<"month" | "quarter">("month");
+const yieldQuarter = ref(`${new Date().getFullYear()}-Q${Math.ceil((new Date().getMonth() + 1) / 3)}`);
 const yieldMonth = ref(defaultYieldMonth());
+const yieldQuarterNum = computed(() => {
+  const m = yieldQuarter.value.match(/Q(\d)$/);
+  return m ? Number(m[1]) : Math.ceil(Number(yieldMonth.value.slice(5, 7)) / 3);
+});
+const yieldQuarterIndex = computed(() => yieldQuarterNum.value - 1);
+const quarterLabels = ["一季度", "二季度", "三季度", "四季度"];
+const yieldYear = computed(() => Number(yieldMonth.value.slice(0, 4)));
+const yieldMonthNum = computed(() => Number(yieldMonth.value.slice(5, 7)));
 const yieldData = ref<YieldStats | null>(null);
 const yieldLoading = ref(false);
 const yieldRows = computed(() => yieldData.value?.rows ?? []);
@@ -371,10 +403,12 @@ const yieldSummary = computed(() => {
   return { monthYield: pct(yieldData.value.monthYield), monthTarget: pct(yieldData.value.monthTarget) };
 });
 
-// 月份选择：年份 + 月份两个下拉（selector picker 跨端一致）
+// 月份选择：年份 + 月份两个下拉（selector picker 跨端一致）；年份动态生成，永不失效
 const yearOptions = computed(() => {
   const y = new Date().getFullYear();
-  return [y - 2, y - 1, y, y + 1];
+  const list: number[] = [];
+  for (let i = y - 5; i <= y + 1; i++) list.push(i);
+  return list;
 });
 const monthNumOptions = Array.from({ length: 12 }, (_, i) => i + 1);
 const yieldYearIndex = computed(() => {
@@ -383,11 +417,20 @@ const yieldYearIndex = computed(() => {
 });
 const yieldMonthIndex = computed(() => Number(yieldMonth.value.slice(5, 7)) - 1);
 function onYieldYearChange(event: any) {
-  yieldMonth.value = `${yearOptions.value[Number(event.detail.value)]}-${yieldMonth.value.slice(5, 7)}`;
+  const y = yearOptions.value[Number(event.detail.value)];
+  if (yieldPeriodType.value === "quarter") {
+    yieldQuarter.value = `${y}-Q${yieldQuarterNum.value}`;
+  } else {
+    yieldMonth.value = `${y}-${yieldMonth.value.slice(5, 7)}`;
+  }
   loadYield();
 }
 function onYieldMonthNumChange(event: any) {
   yieldMonth.value = `${yieldMonth.value.slice(0, 4)}-${String(Number(event.detail.value) + 1).padStart(2, "0")}`;
+  loadYield();
+}
+function onYieldQuarterChange(event: any) {
+  yieldQuarter.value = `${yieldQuarter.value.slice(0, 4)}-Q${Number(event.detail.value) + 1}`;
   loadYield();
 }
 const unclassifiedCount = computed(() => yieldData.value?.unclassified.length ?? 0);
@@ -401,7 +444,8 @@ function pct(value: number | null | undefined): string {
 async function loadYield() {
   yieldLoading.value = true;
   try {
-    yieldData.value = await api.get<YieldStats>(`/api/statistics/yield?month=${yieldMonth.value}`);
+    const query = yieldPeriodType.value === "quarter" ? `quarter=${yieldQuarter.value}` : `month=${yieldMonth.value}`;
+    yieldData.value = await api.get<YieldStats>(`/api/statistics/yield?${query}`);
   } catch (e: unknown) {
     uni.showToast({ title: (e as Error).message, icon: "none" });
   } finally {
@@ -510,6 +554,8 @@ interface ShipmentMonthSummary {
 }
 interface ShipmentStats {
   month: string;
+  period: string;
+  periodType: "month" | "quarter";
   windows: { internal: string; external: string };
   months: ShipmentMonthSummary[];
   rows: Array<{
@@ -533,14 +579,30 @@ function defaultShipmentMonth(): string {
   const target = new Date(d.getFullYear(), d.getMonth() - 1, 1);
   return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, "0")}`;
 }
+const shipmentPeriodType = ref<"month" | "quarter">("month");
+const shipmentQuarter = ref(`${new Date().getFullYear()}-Q${Math.ceil((new Date().getMonth() + 1) / 3)}`);
 const shipmentMonth = ref(defaultShipmentMonth());
+const shipmentQuarterNum = computed(() => {
+  const m = shipmentQuarter.value.match(/Q(\d)$/);
+  return m ? Number(m[1]) : Math.ceil(Number(shipmentMonth.value.slice(5, 7)) / 3);
+});
+const shipmentQuarterIndex = computed(() => shipmentQuarterNum.value - 1);
+const shipmentYear = computed(() => Number(shipmentMonth.value.slice(0, 4)));
+const shipmentMonthNum = computed(() => Number(shipmentMonth.value.slice(5, 7)));
 const shipmentData = ref<ShipmentStats | null>(null);
 const shipmentRows = computed(() => shipmentData.value?.rows ?? []);
 const shipmentMonths = computed(() => shipmentData.value?.months ?? []);
 const shipmentTotal = computed(() => shipmentData.value?.total ?? 0);
 const shipmentInternalTotal = computed(() => shipmentData.value?.internalTotal ?? 0);
 const shipmentExternalTotal = computed(() => shipmentData.value?.externalTotal ?? 0);
+const yieldPeriodLabel = computed(() => (yieldPeriodType.value === "quarter" ? "季度" : "月"));
+const shipmentPeriodLabel = computed(() => (shipmentPeriodType.value === "quarter" ? "季度" : "月"));
 const shipmentMonthLabel = computed(() => {
+  if (shipmentPeriodType.value === "quarter") {
+    const qn = shipmentQuarterNum.value;
+    const months = [qn * 3 - 2, qn * 3 - 1, qn * 3];
+    return `${months[0]}-${months[2]}月`;
+  }
   const m = shipmentMonth.value;
   return m ? `${Number(m.slice(5, 7))}月` : "";
 });
@@ -550,17 +612,27 @@ const shipmentYearIndex = computed(() => {
 });
 const shipmentMonthIndex = computed(() => Number(shipmentMonth.value.slice(5, 7)) - 1);
 function onShipmentYearChange(event: any) {
-  shipmentMonth.value = `${yearOptions.value[Number(event.detail.value)]}-${shipmentMonth.value.slice(5, 7)}`;
+  const y = yearOptions.value[Number(event.detail.value)];
+  if (shipmentPeriodType.value === "quarter") {
+    shipmentQuarter.value = `${y}-Q${shipmentQuarterNum.value}`;
+  } else {
+    shipmentMonth.value = `${y}-${shipmentMonth.value.slice(5, 7)}`;
+  }
   loadShipment();
 }
 function onShipmentMonthNumChange(event: any) {
   shipmentMonth.value = `${shipmentMonth.value.slice(0, 4)}-${String(Number(event.detail.value) + 1).padStart(2, "0")}`;
   loadShipment();
 }
+function onShipmentQuarterChange(event: any) {
+  shipmentQuarter.value = `${shipmentQuarter.value.slice(0, 4)}-Q${Number(event.detail.value) + 1}`;
+  loadShipment();
+}
 
 async function loadShipment() {
   try {
-    shipmentData.value = await api.get<ShipmentStats>(`/api/statistics/shipment?month=${shipmentMonth.value}`);
+    const query = shipmentPeriodType.value === "quarter" ? `quarter=${shipmentQuarter.value}` : `month=${shipmentMonth.value}`;
+    shipmentData.value = await api.get<ShipmentStats>(`/api/statistics/shipment?${query}`);
   } catch (e: unknown) {
     uni.showToast({ title: (e as Error).message, icon: "none" });
   }
@@ -801,6 +873,27 @@ onShow(() => {
   border-left: 6rpx solid #d97706;
   border-bottom: 2rpx solid #edf0f0;
 }
+/* 周期切换（月/季度） */
+.period-toggle {
+  display: flex;
+  padding: 4rpx;
+  gap: 4rpx;
+  border-radius: 8rpx;
+  background: #edf1f1;
+}
+.period-toggle-option {
+  padding: 8rpx 20rpx;
+  border-radius: 6rpx;
+  color: #657174;
+  font-size: 22rpx;
+  white-space: nowrap;
+  &.active {
+    background: #087f8c;
+    color: #fff;
+    font-weight: 600;
+  }
+}
+.month-select-group { display: flex; align-items: center; gap: 12rpx; }
 .month-picker {
   padding: 10rpx 20rpx;
   border: 2rpx solid #dfe4e4;
