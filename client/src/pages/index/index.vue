@@ -262,8 +262,8 @@ const statCards = computed(() => {
   if (!dashboard.value) return [];
   const s = dashboard.value.stats;
   const cards = [
-    { value: s.activeProductBatches, label: "在线产品总批次" },
-    { value: s.activeProductQuantity, label: "在线产品总数量" },
+    { value: s.activeProductBatches, label: "正在加工批次" },
+    { value: s.activeProductQuantity, label: "正在加工总数量" },
   ];
   if (userStore.isAdmin()) {
     cards.push(

@@ -151,4 +151,82 @@ describe("Progress Routes", () => {
       expect(res.body.total).toBeGreaterThanOrEqual(0);
     });
   });
+
+  describe("POST /api/progress/:id/revoke", () => {
+    it("should allow worker to revoke own progress record", async () => {
+      const create = await request(app)
+        .post("/api/progress")
+        .set("Authorization", `Bearer ${workerToken}`)
+        .send({ batchId, stageId });
+      expect(create.status).toBe(201);
+
+      const res = await request(app)
+        .post(`/api/progress/${create.body.id}/revoke`)
+        .set("Authorization", `Bearer ${workerToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.revoked).toBe(true);
+
+      const count = await prisma.progressRecord.count({ where: { batchId } });
+      expect(count).toBe(0);
+    });
+
+    it("should reject worker revoking others' progress record", async () => {
+      const create = await request(app)
+        .post("/api/progress")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ batchId, stageId });
+      expect(create.status).toBe(201);
+
+      const res = await request(app)
+        .post(`/api/progress/${create.body.id}/revoke`)
+        .set("Authorization", `Bearer ${workerToken}`);
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("只能撤销自己");
+    });
+
+    it("should allow admin to revoke others' progress record", async () => {
+      const create = await request(app)
+        .post("/api/progress")
+        .set("Authorization", `Bearer ${workerToken}`)
+        .send({ batchId, stageId });
+
+      const res = await request(app)
+        .post(`/api/progress/${create.body.id}/revoke`)
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(res.status).toBe(200);
+    });
+
+    it("should revert batch to active when revoking the completed-stage flow", async () => {
+      const create = await request(app)
+        .post("/api/progress")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ batchId, stageId: lastStageId });
+      expect(create.status).toBe(201);
+      expect((await prisma.batch.findUniqueOrThrow({ where: { id: batchId } })).status).toBe("completed");
+
+      const res = await request(app)
+        .post(`/api/progress/${create.body.id}/revoke`)
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(res.status).toBe(200);
+      expect((await prisma.batch.findUniqueOrThrow({ where: { id: batchId } })).status).toBe("active");
+    });
+
+    it("should reject revoking a normal-stage flow on a completed batch", async () => {
+      await request(app)
+        .post("/api/progress")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ batchId, stageId });
+      await request(app)
+        .post("/api/progress")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ batchId, stageId: lastStageId });
+
+      const normal = await prisma.progressRecord.findFirstOrThrow({ where: { batchId, stageId } });
+      const res = await request(app)
+        .post(`/api/progress/${normal.id}/revoke`)
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("仅可撤销");
+    });
+  });
 });

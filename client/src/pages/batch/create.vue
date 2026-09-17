@@ -19,14 +19,6 @@
             @input="onOrderNoInput"
           />
         </view>
-        <view class="form-group mt-md">
-          <text class="form-label">客户代码 *</text>
-          <picker :range="customerCodeOptions" @change="onCustomerCodeChange">
-            <view class="form-input picker-value" :class="{ placeholder: !form.customerCode }">
-              {{ form.customerCode || '请选择客户代码' }}
-            </view>
-          </picker>
-        </view>
       </view>
 
       <view class="form-section">
@@ -45,18 +37,19 @@
               v-for="item in productSuggestions"
               :key="item.id"
               class="suggestion-item"
-              @click="selectProductModel(item.model)"
+              @click="selectProductModel(item)"
             >
               <text>{{ item.model }}</text>
             </view>
           </view>
         </view>
         <view class="form-group mt-md">
-          <text class="form-label">订单数量 *</text>
-          <view class="quantity-input-wrap">
-            <input v-model="form.quantity" type="number" placeholder="请输入正整数" class="quantity-input" />
-            <text class="quantity-unit">只</text>
-          </view>
+          <text class="form-label">客户代码 *</text>
+          <picker :range="customerCodeOptions" @change="onCustomerCodeChange">
+            <view class="form-input picker-value" :class="{ placeholder: !form.customerCode }">
+              {{ form.customerCode || '请选择客户代码' }}
+            </view>
+          </picker>
         </view>
         <view class="form-group mt-md">
           <text class="form-label">封装形式 *</text>
@@ -65,6 +58,13 @@
               {{ form.packageType || '请选择封装形式' }}
             </view>
           </picker>
+        </view>
+        <view class="form-group mt-md">
+          <text class="form-label">订单数量 *</text>
+          <view class="quantity-input-wrap">
+            <input v-model="form.quantity" type="number" placeholder="请输入正整数" class="quantity-input" />
+            <text class="quantity-unit">只</text>
+          </view>
         </view>
       </view>
 
@@ -110,7 +110,7 @@ import type { PackageType, CustomerCode } from "../../types";
 
 const packageTypes = ref<PackageType[]>([]);
 const customerCodes = ref<CustomerCode[]>([]);
-const productSuggestions = ref<Array<{ id: number; model: string }>>([]);
+const productSuggestions = ref<Array<{ id: number; model: string; customerCode: string | null; packageType: string | null }>>([]);
 const showSuggestions = ref(false);
 const submitting = ref(false);
 const validationErrors = ref<string[]>([]);
@@ -173,9 +173,21 @@ function onProductModelInput() {
   }, 250);
 }
 
-function selectProductModel(model: string) {
-  form.value.productModel = model;
+function selectProductModel(item: { model: string; customerCode: string | null; packageType: string | null }) {
+  form.value.productModel = item.model;
   showSuggestions.value = false;
+  const filledFields: string[] = [];
+  if (item.customerCode && item.customerCode !== form.value.customerCode) {
+    form.value.customerCode = item.customerCode;
+    filledFields.push("客户代码");
+  }
+  if (item.packageType && item.packageType !== form.value.packageType) {
+    form.value.packageType = item.packageType;
+    filledFields.push("封装形式");
+  }
+  if (filledFields.length) {
+    uni.showToast({ title: `已自动带出${filledFields.join("、")}`, icon: "none" });
+  }
 }
 
 function validate(): boolean {

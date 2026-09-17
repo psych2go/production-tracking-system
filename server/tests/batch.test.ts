@@ -113,7 +113,8 @@ describe("Batch Routes", () => {
       expect(await prisma.product.findFirst({ where: { model: "STM32F103" } })).toBeDefined();
     });
 
-    it("should reject duplicate customerCode + orderNo", async () => {
+    it("should allow duplicate customerCode + orderNo for different models", async () => {
+      // 订单编号不强制唯一：同客户同订单号可对应多个型号
       const res = await request(app)
         .post("/api/batches")
         .set("Authorization", `Bearer ${adminToken}`)
@@ -125,8 +126,8 @@ describe("Batch Routes", () => {
           packageType: "SOP8L",
         });
 
-      expect(res.status).toBe(400);
-      expect(res.body.error).toContain("已存在订单编号");
+      expect(res.status).toBe(201);
+      expect(res.body.orderNo).toBe("10001");
     });
 
     it("should reject missing required fields", async () => {
@@ -201,31 +202,6 @@ describe("Batch Routes", () => {
       expect(res.body.error).toContain("组合已存在");
     });
 
-    it("should enforce customer order identity at database level", async () => {
-      const product = await prisma.product.findFirstOrThrow();
-      const orderIdentity = "CUST001\u000020001";
-      await prisma.batch.create({
-        data: {
-          orderNo: "20001",
-          orderIdentity,
-          customerCode: "CUST001",
-          productId: product.id,
-          quantity: 1,
-          status: "pending_card",
-        },
-      });
-      await expect(prisma.batch.create({
-        data: {
-          orderNo: "20001",
-          orderIdentity,
-          customerCode: "CUST001",
-          productId: product.id,
-          quantity: 1,
-          status: "pending_card",
-        },
-      })).rejects.toMatchObject({ code: "P2002" });
-    });
-
     it("should enforce normalized production identity at database level", async () => {
       const product = await prisma.product.findFirstOrThrow({ where: { model: "GD32F303" } });
       await prisma.batch.create({
@@ -233,6 +209,7 @@ describe("Batch Routes", () => {
           batchNo: "DB-CASE-A",
           batchNoNormalized: "db-case-a",
           productModelNormalized: "gd32f303",
+          batchIdentity: "db-case-a\u0000gd32f303",
           productId: product.id,
           quantity: 1,
           status: "active",
@@ -243,6 +220,7 @@ describe("Batch Routes", () => {
           batchNo: "db-case-a",
           batchNoNormalized: "db-case-a",
           productModelNormalized: "gd32f303",
+          batchIdentity: "db-case-a\u0000gd32f303",
           productId: product.id,
           quantity: 1,
           status: "active",
@@ -270,7 +248,8 @@ describe("Batch Routes", () => {
         .set("Authorization", `Bearer ${workerToken}`);
       const cancelRes = await request(app)
         .post(`/api/batches/${order.id}/cancel`)
-        .set("Authorization", `Bearer ${workerToken}`);
+        .set("Authorization", `Bearer ${workerToken}`)
+        .send({ reason: "测试" });
       expect(confirmRes.status).toBe(403);
       expect(startRes.status).toBe(403);
       expect(cancelRes.status).toBe(403);
@@ -287,11 +266,169 @@ describe("Batch Routes", () => {
           status: "pending_card",
         },
       });
+      const noReasonRes = await request(app)
+        .post(`/api/batches/${order.id}/cancel`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({});
+      expect(noReasonRes.status).toBe(400);
+
       const res = await request(app)
         .post(`/api/batches/${order.id}/cancel`)
-        .set("Authorization", `Bearer ${adminToken}`);
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ reason: "订单信息有误，需重新录入" });
       expect(res.status).toBe(200);
       expect(res.body.status).toBe("cancelled");
+      expect(res.body.cancelReason).toBe("订单信息有误，需重新录入");
+      expect(res.body.batchIdentity).toBeNull();
+    });
+
+    it("should allow re-entering a cancelled order with same orderNo and batch identity", async () => {
+      // 首次录入并制卡
+      const createRes = await request(app)
+        .post("/api/batches")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ productModel: "GD32F303", quantity: 10, packageType: "SOP8L", customerCode: "CUST001", orderNo: "99001" });
+      expect(createRes.status).toBe(201);
+      const cardRes = await request(app)
+        .post(`/api/batches/${createRes.body.id}/confirm-card`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ batchNo: "REUSE-001" });
+      expect(cardRes.status).toBe(200);
+
+      // 取消后重录相同客户代码+订单编号，并用相同批号+型号制卡 → 均应成功
+      const cancelRes = await request(app)
+        .post(`/api/batches/${createRes.body.id}/cancel`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ reason: "客户取消" });
+      expect(cancelRes.status).toBe(200);
+
+      const againRes = await request(app)
+        .post("/api/batches")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ productModel: "GD32F303", quantity: 10, packageType: "SOP8L", customerCode: "CUST001", orderNo: "99001" });
+      expect(againRes.status).toBe(201);
+      const cardAgainRes = await request(app)
+        .post(`/api/batches/${againRes.body.id}/confirm-card`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ batchNo: "REUSE-001" });
+      expect(cardAgainRes.status).toBe(200);
+
+      // 未取消的重复批号+型号（忽略大小写）仍被拦
+      const thirdRes = await request(app)
+        .post("/api/batches")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ productModel: "GD32F303", quantity: 5, packageType: "SOP8L", customerCode: "CUST001", orderNo: "99002" });
+      expect(thirdRes.status).toBe(201);
+      const cardThirdRes = await request(app)
+        .post(`/api/batches/${thirdRes.body.id}/confirm-card`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ batchNo: "reuse-001" });
+      expect(cardThirdRes.status).toBe(400);
+      expect(cardThirdRes.body.error).toContain("组合已存在");
+    });
+  });
+
+  describe("POST /api/batches/:id/revoke-start & revoke-card", () => {
+    it("should revoke start production (active -> pending)", async () => {
+      const order = await prisma.batch.create({
+        data: {
+          orderNo: "98001",
+          customerCode: "CUST001",
+          productId: (await prisma.product.findFirst())!.id,
+          quantity: 10,
+          packageType: "DIP16L",
+          status: "pending",
+        },
+      });
+      const startRes = await request(app)
+        .post(`/api/batches/${order.id}/start-production`)
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(startRes.status).toBe(200);
+
+      const res = await request(app)
+        .post(`/api/batches/${order.id}/revoke-start`)
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe("pending");
+      expect(res.body.startedAt).toBeNull();
+    });
+
+    it("should reject worker revoke-start", async () => {
+      const order = await prisma.batch.create({
+        data: {
+          orderNo: "98002",
+          customerCode: "CUST001",
+          productId: (await prisma.product.findFirst())!.id,
+          quantity: 10,
+          packageType: "DIP16L",
+          status: "pending",
+        },
+      });
+      const res = await request(app)
+        .post(`/api/batches/${order.id}/revoke-start`)
+        .set("Authorization", `Bearer ${workerToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it("should revoke card (pending -> pending_card) and release batch identity", async () => {
+      const product = await prisma.product.findFirstOrThrow({ where: { model: "GD32F303" } });
+      const order = await prisma.batch.create({
+        data: {
+          orderNo: "98003",
+          customerCode: "CUST001",
+          productId: product.id,
+          quantity: 10,
+          packageType: "DIP16L",
+          status: "pending_card",
+        },
+      });
+      const cardRes = await request(app)
+        .post(`/api/batches/${order.id}/confirm-card`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ batchNo: "REVOKE-01" });
+      expect(cardRes.status).toBe(200);
+
+      // 撤销制卡：批号被清空、唯一键释放
+      const revokeRes = await request(app)
+        .post(`/api/batches/${order.id}/revoke-card`)
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(revokeRes.status).toBe(200);
+      expect(revokeRes.body.status).toBe("pending_card");
+      expect(revokeRes.body.batchNo).toBeNull();
+      expect(revokeRes.body.batchIdentity).toBeNull();
+
+      // 重新制卡可用大小写不同的同批号（唯一键已释放）
+      const cardAgain = await request(app)
+        .post(`/api/batches/${order.id}/confirm-card`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ batchNo: "revoke-01" });
+      expect(cardAgain.status).toBe(200);
+      expect(cardAgain.body.batchNo).toBe("revoke-01");
+    });
+
+    it("should reject revoke-start when progress records exist", async () => {
+      const product = await prisma.product.findFirstOrThrow({ where: { model: "GD32F303" } });
+      const order = await prisma.batch.create({
+        data: {
+          orderNo: "98004",
+          customerCode: "CUST001",
+          productId: product.id,
+          quantity: 10,
+          packageType: "DIP16L",
+          status: "active",
+        },
+      });
+      await prisma.progressRecord.create({
+        data: { batchId: order.id, stageId: (await prisma.processStage.findFirst())!.id, operatorId: (await prisma.user.findFirstOrThrow()).id },
+      });
+
+      const res = await request(app)
+        .post(`/api/batches/${order.id}/revoke-start`)
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain("先撤销流转");
+
+      await prisma.progressRecord.deleteMany({ where: { batchId: order.id } });
     });
   });
 
@@ -430,7 +567,8 @@ describe("Batch Routes", () => {
 
       const cancelRes = await request(app)
         .post(`/api/batches/${order.id}/cancel`)
-        .set("Authorization", `Bearer ${adminToken}`);
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ reason: "暂停中取消" });
       expect(cancelRes.status).toBe(200);
       expect(cancelRes.body.status).toBe("cancelled");
       expect(cancelRes.body.pausedAt).toBeNull();

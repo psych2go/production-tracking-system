@@ -5,6 +5,8 @@ import {
   BATCH_STATUSES,
   archiveBatch,
   cancelOrder,
+  revokeBatchStart,
+  revokeBatchCard,
   confirmBatchCard,
   createOrder,
   getBatchCounts,
@@ -195,9 +197,31 @@ router.post("/:id/start-production", authGuard, roleGuard("admin"), auditLog("st
   }
 });
 
-router.post("/:id/cancel", authGuard, roleGuard("admin"), auditLog("cancel", "production"), async (req: AuthRequest, res, next) => {
+const cancelOrderSchema = z.object({
+  reason: requiredText(TEXT_LIMITS.notes, "请填写取消原因"),
+});
+
+router.post("/:id/cancel", authGuard, roleGuard("admin"), auditLog("cancel", "production"), validate(cancelOrderSchema), async (req: AuthRequest, res, next) => {
   try {
-    res.json(await cancelOrder(parseId(req.params.id), req.user!.id));
+    res.json(await cancelOrder(parseId(req.params.id), req.user!.id, req.body.reason));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 撤销误投产：加工中回退到待投产（无工序流转记录时）
+router.post("/:id/revoke-start", authGuard, roleGuard("admin"), auditLog("revoke-start", "production"), async (req: AuthRequest, res, next) => {
+  try {
+    res.json(await revokeBatchStart(parseId(req.params.id)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 撤销误制卡：待投产回退到待制卡，释放批号
+router.post("/:id/revoke-card", authGuard, roleGuard("admin"), auditLog("revoke-card", "production"), async (req: AuthRequest, res, next) => {
+  try {
+    res.json(await revokeBatchCard(parseId(req.params.id)));
   } catch (err) {
     next(err);
   }

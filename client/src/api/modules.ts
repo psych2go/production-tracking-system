@@ -39,7 +39,7 @@ export const batchApi = {
   get: (id: number) => api.get<Batch>(`/api/batches/${id}`),
   counts: () => api.get<Record<string, number>>("/api/batches/counts"),
   productSuggestions: (keyword: string) =>
-    api.get<Array<{ id: number; model: string }>>(`/api/batches/product-suggestions?keyword=${encodeURIComponent(keyword)}`),
+    api.get<Array<{ id: number; model: string; customerCode: string | null; packageType: string | null }>>(`/api/batches/product-suggestions?keyword=${encodeURIComponent(keyword)}`),
   create: (data: Record<string, unknown>) =>
     api.post<Batch>("/api/batches", data),
   confirmCard: (id: number, data: { batchNo: string; productionDelivery?: string | null; notes?: string }) =>
@@ -48,8 +48,12 @@ export const batchApi = {
     api.post<Batch>(`/api/batches/${id}/start-production`, {}),
   archive: (id: number, data: { dieQuantity: number; shippedQuantity: number; shippedDate: string }) =>
     api.post<Batch>(`/api/batches/${id}/archive`, data),
-  cancel: (id: number) =>
-    api.post<Batch>(`/api/batches/${id}/cancel`, {}),
+  cancel: (id: number, reason: string) =>
+    api.post<Batch>(`/api/batches/${id}/cancel`, { reason }),
+  revokeStart: (id: number) =>
+    api.post<Batch>(`/api/batches/${id}/revoke-start`, {}),
+  revokeCard: (id: number) =>
+    api.post<Batch>(`/api/batches/${id}/revoke-card`, {}),
   pause: (id: number, reason: string) =>
     api.post<Batch>(`/api/batches/${id}/pause`, { reason }),
   updatePauseReason: (id: number, reason: string) =>
@@ -78,6 +82,7 @@ export const progressApi = {
     status?: string;
     notes?: string;
   }) => api.post<ProgressRecord>("/api/progress", data),
+  revoke: (id: number) => api.post<ProgressRecord>(`/api/progress/${id}/revoke`, {}),
 };
 
 // Statistics

@@ -48,6 +48,38 @@ export async function upsertProgress(data: {
   });
 }
 
+/**
+ * 撤销误操作的工序流转：删除进度记录。
+ * - 撤销「已完成」工序的流转时，批次从 completed 回退到 active（可重新流转）
+ * - 权限：本人可撤自己的流转，管理员可撤任何人的
+ */
+export async function revokeProgress(recordId: number, operatorId: number, isAdmin: boolean) {
+  return prisma.$transaction(async (tx) => {
+    const record = await tx.progressRecord.findUnique({
+      where: { id: recordId },
+      include: { stage: true, batch: true },
+    });
+    if (!record) throw new Error("流转记录不存在");
+    if (!isAdmin && record.operatorId !== operatorId) {
+      throw new Error("只能撤销自己流转的工序");
+    }
+    const batch = record.batch;
+    if (batch.status === "completed") {
+      if (record.stage.code !== "completed") {
+        throw new Error("批次已完成，仅可撤销「已完成」工序的流转");
+      }
+    } else if (batch.status !== "active") {
+      throw new Error("批次不在加工中，不可撤销流转");
+    }
+
+    await tx.progressRecord.delete({ where: { id: recordId } });
+    if (record.stage.code === "completed" && batch.status === "completed") {
+      await tx.batch.update({ where: { id: batch.id }, data: { status: "active" } });
+    }
+    return { ...record, revoked: true };
+  });
+}
+
 export async function listProgress(filters: {
   batchId?: number;
   stageId?: number;

@@ -13,6 +13,11 @@
       <view class="stage-info">
         <view class="stage-row">
           <text class="stage-name">{{ stage.name }}</text>
+          <text
+            v-if="canRevokeStage(stage.id)"
+            class="stage-revoke"
+            @click.stop="onRevoke(stage.id)"
+          >撤销</text>
         </view>
         <view class="stage-meta">
           <text v-if="getDate(stage.id)" class="stage-date">{{ getDate(stage.id) }}</text>
@@ -27,14 +32,35 @@
 <script setup lang="ts">
 import type { ProcessStage, ProgressRecord } from "../types";
 import { formatTime } from "../utils/format";
+import { useUserStore } from "../store/user";
 
 const props = defineProps<{
   stages: ProcessStage[];
   progressRecords: ProgressRecord[];
+  batchStatus?: string;
 }>();
+
+const emit = defineEmits<{ revoke: [record: ProgressRecord] }>();
+
+const userStore = useUserStore();
 
 function getProgressRecord(stageId: number): ProgressRecord | undefined {
   return props.progressRecords?.find((r) => r.stageId === stageId);
+}
+
+/** 撤销入口：有流转记录，且（批次加工中 或 已完成时撤「已完成」流转），且本人或管理员 */
+function canRevokeStage(stageId: number): boolean {
+  const record = getProgressRecord(stageId);
+  if (!record || !props.batchStatus) return false;
+  const statusOk = props.batchStatus === "active"
+    || (props.batchStatus === "completed" && record.stage?.code === "completed");
+  if (!statusOk) return false;
+  return userStore.isAdmin() || record.operatorId === userStore.userInfo?.id;
+}
+
+function onRevoke(stageId: number) {
+  const record = getProgressRecord(stageId);
+  if (record) emit("revoke", record);
 }
 
 function isStageDone(stageId: number): boolean {
@@ -118,6 +144,14 @@ function getDuration(stageId: number): string {
 .stage-done .stage-line { background: #27865f; }
 .stage-info { display: flex; flex-direction: column; gap: 6rpx; flex: 1; }
 .stage-row { display: flex; align-items: center; gap: 12rpx; }
+.stage-revoke {
+  padding: 2rpx 14rpx;
+  border: 2rpx solid #e5b3ad;
+  border-radius: 999rpx;
+  color: #c9483f;
+  font-size: 20rpx;
+  &:active { background: #fcecea; }
+}
 .stage-name { font-size: 28rpx; color: #172327; font-weight: 600; }
 .stage-meta { display: flex; align-items: center; gap: 16rpx; }
 .stage-date { font-size: 22rpx; color: #7d898b; }

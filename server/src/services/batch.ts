@@ -18,8 +18,9 @@ function normalizeText(value: string): string {
   return value.trim().toLocaleLowerCase("en-US");
 }
 
-function buildOrderIdentity(customerCode: string, orderNo: string): string {
-  return `${customerCode.trim()}\u0000${orderNo.trim()}`;
+/** 仅非取消且已制卡批次持有，用于批号+型号唯一约束；取消时置空释放 */
+function buildBatchIdentity(batchNo: string, productModel: string): string {
+  return `${normalizeText(batchNo)}\u0000${normalizeText(productModel)}`;
 }
 
 function translateUniqueError(error: unknown, message: string): never {
@@ -55,25 +56,6 @@ async function findOrCreateProduct(tx: Prisma.TransactionClient, productModel: s
   });
 }
 
-async function assertOrderUnique(
-  tx: Prisma.TransactionClient,
-  customerCode: string,
-  orderNo: string,
-  excludeId?: number,
-) {
-  const existing = await tx.batch.findFirst({
-    where: {
-      customerCode,
-      orderNo,
-      ...(excludeId ? { id: { not: excludeId } } : {}),
-    },
-    select: { id: true },
-  });
-  if (existing) {
-    throw new Error(`客户「${customerCode}」下已存在订单编号「${orderNo}」，请检查后重新填写`);
-  }
-}
-
 async function assertBatchIdentityUnique(
   tx: Prisma.TransactionClient,
   batchNo: string,
@@ -85,6 +67,7 @@ async function assertBatchIdentityUnique(
   const candidates = await tx.batch.findMany({
     where: {
       batchNo: { not: null },
+      status: { not: "cancelled" },
       ...(excludeId ? { id: { not: excludeId } } : {}),
     },
     select: {
@@ -249,37 +232,32 @@ export async function createOrder(data: {
 }) {
   const customerCode = data.customerCode.trim();
   const orderNo = data.orderNo.trim();
-  try {
-    return await prisma.$transaction(async (tx) => {
-      const packageType = data.packageType.trim();
-      await validatePackageType(tx, packageType);
-      await validateCustomerCode(tx, customerCode);
-      await assertOrderUnique(tx, customerCode, orderNo);
-      const product = await findOrCreateProduct(tx, data.productModel);
+  return prisma.$transaction(async (tx) => {
+    const packageType = data.packageType.trim();
+    await validatePackageType(tx, packageType);
+    await validateCustomerCode(tx, customerCode);
+    const product = await findOrCreateProduct(tx, data.productModel);
 
-      return tx.batch.create({
-        data: {
-          batchNo: null,
-          batchNoNormalized: null,
-          productModelNormalized: normalizeText(product.model),
-          orderIdentity: buildOrderIdentity(customerCode, orderNo),
-          productId: product.id,
-          quantity: data.quantity,
-          status: "pending_card",
-          packageType,
-          customerCode,
-          orderNo,
-          customerDelivery: data.customerDelivery ? new Date(data.customerDelivery) : undefined,
-          priority: data.priority || "normal",
-          notes: data.notes?.trim() || undefined,
-          createdBy: data.createdBy,
-        },
-        include: { product: true },
-      });
+    // 订单编号不强制唯一：同一订单号可对应多个型号/封装形式的订单
+    return tx.batch.create({
+      data: {
+        batchNo: null,
+        batchNoNormalized: null,
+        productModelNormalized: normalizeText(product.model),
+        productId: product.id,
+        quantity: data.quantity,
+        status: "pending_card",
+        packageType,
+        customerCode,
+        orderNo,
+        customerDelivery: data.customerDelivery ? new Date(data.customerDelivery) : undefined,
+        priority: data.priority || "normal",
+        notes: data.notes?.trim() || undefined,
+        createdBy: data.createdBy,
+      },
+      include: { product: true },
     });
-  } catch (error) {
-    translateUniqueError(error, `客户「${customerCode}」下已存在订单编号「${orderNo}」，请检查后重新填写`);
-  }
+  });
 }
 
 export async function confirmBatchCard(id: number, data: {
@@ -306,6 +284,7 @@ export async function confirmBatchCard(id: number, data: {
           batchNo,
           batchNoNormalized: normalizeText(batchNo),
           productModelNormalized: normalizeText(productModel),
+          batchIdentity: buildBatchIdentity(batchNo, productModel),
           productionDelivery: data.productionDelivery !== undefined
             ? (data.productionDelivery ? new Date(data.productionDelivery) : null)
             : undefined,
@@ -336,7 +315,47 @@ export async function startBatchProduction(id: number, operatorId: number) {
   });
 }
 
-export async function cancelOrder(id: number, operatorId: number) {
+/** 撤销误投产：active → pending，仅当无任何工序流转记录 */
+export async function revokeBatchStart(id: number) {
+  return prisma.$transaction(async (tx) => {
+    const batch = await tx.batch.findUnique({ where: { id } });
+    if (!batch) throw new Error("生产任务不存在");
+    if (batch.status !== "active") throw new Error("只有加工中的任务可以撤销投产");
+    const progressCount = await tx.progressRecord.count({ where: { batchId: id } });
+    if (progressCount > 0) {
+      throw new Error("已有工序流转记录，请先撤销流转后再撤销投产");
+    }
+    return tx.batch.update({
+      where: { id },
+      data: { status: "pending", startedBy: null, startedAt: null },
+      include: { product: true },
+    });
+  });
+}
+
+/** 撤销误制卡：pending → pending_card，清空批号并释放批号唯一键，生产预计交期一并清空 */
+export async function revokeBatchCard(id: number) {
+  return prisma.$transaction(async (tx) => {
+    const batch = await tx.batch.findUnique({ where: { id } });
+    if (!batch) throw new Error("生产任务不存在");
+    if (batch.status !== "pending") throw new Error("只有待投产任务可以撤销制卡");
+    return tx.batch.update({
+      where: { id },
+      data: {
+        status: "pending_card",
+        batchNo: null,
+        batchNoNormalized: null,
+        batchIdentity: null,
+        cardCreatedBy: null,
+        cardCreatedAt: null,
+        productionDelivery: null,
+      },
+      include: { product: true },
+    });
+  });
+}
+
+export async function cancelOrder(id: number, operatorId: number, reason: string) {
   return prisma.$transaction(async (tx) => {
     const batch = await tx.batch.findUnique({ where: { id } });
     if (!batch) throw new Error("生产任务不存在");
@@ -356,9 +375,12 @@ export async function cancelOrder(id: number, operatorId: number) {
         status: "cancelled",
         cancelledBy: operatorId,
         cancelledAt: new Date(),
+        cancelReason: reason,
         pausedAt: null,
         pauseReason: null,
         pausedBy: null,
+        // 已取消订单释放占用唯一键：生产批号+产品型号可被新订单复用
+        batchIdentity: null,
       },
       include: { product: true },
     });
@@ -468,10 +490,6 @@ export async function updateBatch(id: number, data: {
         updateData.packageType = finalPackageType;
       }
       if (data.orderNo !== undefined) updateData.orderNo = finalOrderNo;
-      if ((data.customerCode !== undefined || data.orderNo !== undefined) && finalCustomerCode && finalOrderNo) {
-        await assertOrderUnique(tx, finalCustomerCode, finalOrderNo, id);
-        updateData.orderIdentity = buildOrderIdentity(finalCustomerCode, finalOrderNo);
-      }
       if (data.quantity !== undefined) updateData.quantity = data.quantity;
 
       let finalProductId = batch.productId;
@@ -496,6 +514,7 @@ export async function updateBatch(id: number, data: {
         await assertBatchIdentityUnique(tx, finalBatchNo, finalProductModel, id);
         updateData.batchNoNormalized = normalizeText(finalBatchNo);
         updateData.productModelNormalized = normalizeText(finalProductModel);
+        updateData.batchIdentity = buildBatchIdentity(finalBatchNo, finalProductModel);
       }
 
       if (data.status !== undefined && data.status !== batch.status) {
@@ -555,7 +574,7 @@ export async function getProductSuggestions(keyword: string) {
   const uniqueProducts = [...new Map(
     products.map((product) => [normalizeText(product.model), product]),
   ).values()];
-  return uniqueProducts
+  const matched = uniqueProducts
     .filter((product) => normalizeText(product.model).includes(normalized))
     .sort((a, b) => {
       const aPrefix = normalizeText(a.model).startsWith(normalized) ? 0 : 1;
@@ -563,4 +582,31 @@ export async function getProductSuggestions(keyword: string) {
       return aPrefix - bPrefix || a.model.localeCompare(b.model);
     })
     .slice(0, 6);
+
+  // 型号对应客户代码/封装形式固定：取每个型号最近一条非取消批次的值供录入时自动带出
+  const models = matched.map((product) => normalizeText(product.model));
+  const recentBatches = await prisma.batch.findMany({
+    where: { productModelNormalized: { in: models }, status: { not: "cancelled" } },
+    orderBy: { id: "desc" },
+    select: { productModelNormalized: true, customerCode: true, packageType: true },
+  });
+  const latestByModel = new Map<string, { customerCode: string | null; packageType: string | null }>();
+  for (const batch of recentBatches) {
+    if (batch.productModelNormalized && !latestByModel.has(batch.productModelNormalized)) {
+      latestByModel.set(batch.productModelNormalized, {
+        customerCode: batch.customerCode,
+        packageType: batch.packageType,
+      });
+    }
+  }
+
+  return matched.map((product) => {
+    const latest = latestByModel.get(normalizeText(product.model));
+    return {
+      id: product.id,
+      model: product.model,
+      customerCode: latest?.customerCode ?? null,
+      packageType: latest?.packageType ?? null,
+    };
+  });
 }

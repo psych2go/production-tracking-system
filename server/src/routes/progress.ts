@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import {
   upsertProgress,
+  revokeProgress,
   listProgress,
   getDashboardData,
   getStages,
@@ -76,6 +77,15 @@ router.post("/", authGuard, auditLog("upsert", "progress"), validate(progressSch
   try {
     const record = await upsertProgress({ ...req.body, operatorId: req.user!.id });
     res.status(201).json(record);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 撤销误操作的工序流转：本人或管理员
+router.post("/:id/revoke", authGuard, auditLog("revoke", "progress"), async (req: AuthRequest, res, next) => {
+  try {
+    res.json(await revokeProgress(parseId(req.params.id), req.user!.id, req.user!.role === "admin"));
   } catch (err) {
     next(err);
   }

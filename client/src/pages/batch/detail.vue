@@ -112,12 +112,19 @@
         <view class="info-item" :class="{ 'info-item-wide': !showStartedAt }"><text class="info-label">优先级</text><text class="info-value">{{ priorityLabel(batch.priority) }}</text></view>
         <view v-if="showStartedAt" class="info-item"><text class="info-label">投产时间</text><text class="info-value">{{ batch.startedAt ? formatDate(batch.startedAt) : '' }}</text></view>
         <view class="info-item info-item-wide"><text class="info-label">备注</text><text class="info-value info-notes">{{ batch.notes || '' }}</text></view>
+        <view v-if="batch.status === 'cancelled'" class="info-item info-item-wide"><text class="info-label">取消原因</text><text class="info-value info-notes">{{ batch.cancelReason || '' }}</text></view>
       </view>
     </view>
 
     <view v-if="showProgress" class="card progress-card">
       <text class="section-title">工序进度</text>
-      <StageTimeline v-if="appStore.stages.length" :stages="appStore.stages" :progressRecords="batch.progressRecords || []" />
+      <StageTimeline
+        v-if="appStore.stages.length"
+        :stages="appStore.stages"
+        :progressRecords="batch.progressRecords || []"
+        :batchStatus="batch.status"
+        @revoke="onRevokeProgress"
+      />
     </view>
 
     <view v-if="!editing && batch.pauseRecords?.length" class="card pause-history-card">
@@ -139,11 +146,13 @@
         <button v-if="batch.status === 'pending' && isAdmin && !batch.pausedAt" class="btn btn-primary action-bar-primary" @click="startProduction">投入加工</button>
         <button v-if="batch.status === 'active' && !batch.pausedAt" class="btn btn-primary action-bar-primary" @click="goRecordProgress">工序流转</button>
         <button v-if="batch.status === 'completed' && isAdmin" class="btn btn-primary action-bar-primary action-bar-primary-solo" @click="openArchiveSheet">归档</button>
+        <button v-if="canRevokeCard" class="btn btn-cancel-ghost" @click="revokeCard">撤销制卡</button>
+        <button v-if="canRevokeStart" class="btn btn-cancel-ghost" @click="revokeStart">撤销投产</button>
         <button v-if="isPaused" class="btn btn-primary action-bar-primary" @click="resumeBatch">解除暂停</button>
         <view v-if="canPause || canCancel || isPaused" class="action-bar-secondary">
           <button v-if="canPause" class="btn btn-pause-ghost" @click="openPauseSheet(false)">标记暂停</button>
           <button v-if="isPaused" class="btn btn-pause-ghost" @click="openPauseSheet(true)">修改暂停原因</button>
-          <button v-if="canCancel" class="btn btn-cancel-ghost" @click="cancelOrder">取消订单</button>
+          <button v-if="canCancel" class="btn btn-cancel-ghost" @click="openCancelSheet">取消订单</button>
         </view>
       </view>
     </view>
@@ -153,6 +162,14 @@
         <text class="pause-sheet-title">{{ pauseEditMode ? '修改暂停原因' : '标记暂停' }}</text>
         <textarea v-model="pauseReason" class="form-textarea pause-sheet-textarea" maxlength="2000" placeholder="请填写暂停原因（必填），如：订单型号有误 / 原材料未到 / 设备故障" />
         <button class="btn btn-danger btn-block" :loading="pausing" @click="submitPause">{{ pauseEditMode ? '保存修改' : '确认暂停' }}</button>
+      </view>
+    </view>
+    <view v-if="!editing && showCancelSheet" class="sheet-mask" @click="showCancelSheet = false">
+      <view class="pause-sheet" @click.stop>
+        <text class="pause-sheet-title">取消订单</text>
+        <text class="archive-desc">取消订单 {{ batch.orderNo || '' }}（{{ batch.product?.model || '' }}），请填写取消原因</text>
+        <textarea v-model="cancelReason" class="form-textarea pause-sheet-textarea" maxlength="2000" placeholder="请填写取消原因（必填），如：客户取消 / 订单信息有误 / 重复录入" />
+        <button class="btn btn-danger btn-block" :loading="cancelling" @click="submitCancel">确认取消订单</button>
       </view>
     </view>
     <view v-if="!editing && showArchiveSheet" class="sheet-mask" @click="showArchiveSheet = false">
@@ -188,7 +205,7 @@ import { ref, computed, onBeforeUnmount } from "vue";
 import { onLoad, onShow } from "@dcloudio/uni-app";
 import { useAppStore } from "../../store/app";
 import { useUserStore } from "../../store/user";
-import { batchApi, settingsApi } from "../../api/modules";
+import { batchApi, progressApi, settingsApi } from "../../api/modules";
 import { STATUS_LABELS, PRIORITIES } from "../../utils/constants";
 import { formatDate, formatDateShort, formatDuration, isOverdue as checkOverdue, getOverdueDays } from "../../utils/format";
 import type { Batch, PackageType, CustomerCode } from "../../types";
@@ -226,6 +243,9 @@ const showPauseForm = ref(false);
 const pauseEditMode = ref(false);
 const pauseReason = ref("");
 const pausing = ref(false);
+const showCancelSheet = ref(false);
+const cancelReason = ref("");
+const cancelling = ref(false);
 const showArchiveSheet = ref(false);
 const archiving = ref(false);
 const archiveForm = ref({ dieQuantity: "", shippedQuantity: "", shippedDate: "" });
@@ -411,12 +431,55 @@ async function startProduction() {
   try { await batchApi.startProduction(batch.value.id); uni.showToast({ title: "已投入加工", icon: "success" }); await loadBatch(batch.value.id); }
   catch (e: unknown) { uni.showModal({ title: "操作失败", content: (e as Error).message, showCancel: false }); }
 }
-async function cancelOrder() {
+function openCancelSheet() {
+  cancelReason.value = "";
+  showCancelSheet.value = true;
+}
+
+const canRevokeCard = computed(() => isAdmin.value && batch.value?.status === "pending" && !batch.value.pausedAt);
+const canRevokeStart = computed(() => isAdmin.value && batch.value?.status === "active" && !batch.value.pausedAt && !(batch.value.progressRecords?.length));
+
+async function revokeCard() {
   if (!batch.value) return;
-  const result = await uni.showModal({ title: "取消订单", content: `确定取消订单 ${batch.value.orderNo || ''} 吗？` });
+  const result = await uni.showModal({ title: "撤销制卡", content: `将清空生产批号并回退到待制卡，确定撤销吗？` });
   if (result.cancel) return;
-  try { await batchApi.cancel(batch.value.id); uni.showToast({ title: "订单已取消", icon: "success" }); await loadBatch(batch.value.id); }
-  catch (e: unknown) { uni.showModal({ title: "取消失败", content: (e as Error).message, showCancel: false }); }
+  try { await batchApi.revokeCard(batch.value.id); uni.showToast({ title: "已撤销制卡", icon: "success" }); await loadBatch(batch.value.id); }
+  catch (e: unknown) { uni.showModal({ title: "撤销失败", content: (e as Error).message, showCancel: false }); }
+}
+async function revokeStart() {
+  if (!batch.value) return;
+  const result = await uni.showModal({ title: "撤销投产", content: `将回退到待投产状态，确定撤销吗？` });
+  if (result.cancel) return;
+  try { await batchApi.revokeStart(batch.value.id); uni.showToast({ title: "已撤销投产", icon: "success" }); await loadBatch(batch.value.id); }
+  catch (e: unknown) { uni.showModal({ title: "撤销失败", content: (e as Error).message, showCancel: false }); }
+}
+async function onRevokeProgress(record: { id: number; stage?: { name?: string } | null }) {
+  const result = await uni.showModal({ title: "撤销流转", content: `确定撤销「${record.stage?.name || "该工序"}」的流转记录吗？` });
+  if (result.cancel) return;
+  try {
+    await progressApi.revoke(record.id);
+    uni.showToast({ title: "已撤销流转", icon: "success" });
+    await loadBatch(batch.value!.id);
+  } catch (e: unknown) {
+    uni.showModal({ title: "撤销失败", content: (e as Error).message, showCancel: false });
+  }
+}
+async function submitCancel() {
+  if (!batch.value || cancelling.value) return;
+  const reason = cancelReason.value.trim();
+  if (!reason) {
+    uni.showToast({ title: "请填写取消原因", icon: "none" });
+    return;
+  }
+  cancelling.value = true;
+  try {
+    await batchApi.cancel(batch.value.id, reason);
+    showCancelSheet.value = false;
+    uni.showToast({ title: "订单已取消", icon: "success" });
+    await loadBatch(batch.value.id);
+  } catch (e: unknown) {
+    uni.showModal({ title: "取消失败", content: (e as Error).message, showCancel: false });
+  } finally { cancelling.value = false; }
 }
 async function submitPause() {
   if (!batch.value || pausing.value) return;

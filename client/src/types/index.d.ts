@@ -36,6 +36,7 @@ export interface Batch {
   cardCreatedAt: string | null;
   startedAt: string | null;
   cancelledAt: string | null;
+  cancelReason: string | null;
   pausedAt: string | null;
   pauseReason: string | null;
   createdAt: string;

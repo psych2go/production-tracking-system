@@ -51,7 +51,7 @@ model Batch {
   batchNo                String?   @map("batch_no")
   batchNoNormalized      String?   @map("batch_no_normalized")
   productModelNormalized String?   @map("product_model_normalized")
-  orderIdentity          String?   @unique(map: "order_identity_unique") @map("order_identity")
+  batchIdentity          String?   @unique(map: "batch_identity_active_unique") @map("batch_identity")
   productId              Int?      @map("product_id")
   quantity               Int       @default(0)
   status                 String    @default("active") // pending_card, pending, active, completed, archived, cancelled
@@ -72,6 +72,7 @@ model Batch {
   startedAt              DateTime? @map("started_at")
   cancelledBy            Int?      @map("cancelled_by")
   cancelledAt            DateTime? @map("cancelled_at")
+  cancelReason           String?   @map("cancel_reason")
   pausedBy               Int?      @map("paused_by")
   pausedAt               DateTime? @map("paused_at")
   pauseReason            String?   @map("pause_reason")
@@ -87,8 +88,6 @@ model Batch {
   progressRecords ProgressRecord[]
   pauseRecords    BatchPauseRecord[]
 
-  @@unique([batchNo, productId], map: "batch_no_product_unique")
-  @@unique([batchNoNormalized, productModelNormalized], map: "batch_identity_normalized_unique")
   @@index([customerCode, orderNo], map: "customer_order_idx")
   @@map("batches")
 }
