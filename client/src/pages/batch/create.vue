@@ -170,24 +170,15 @@ function onProductModelInput() {
       productSuggestions.value = [];
       showSuggestions.value = false;
     }
-  }, 250);
+  }, 150);
 }
 
 function selectProductModel(item: { model: string; customerCode: string | null; packageType: string | null }) {
   form.value.productModel = item.model;
   showSuggestions.value = false;
-  const filledFields: string[] = [];
-  if (item.customerCode && item.customerCode !== form.value.customerCode) {
-    form.value.customerCode = item.customerCode;
-    filledFields.push("客户代码");
-  }
-  if (item.packageType && item.packageType !== form.value.packageType) {
-    form.value.packageType = item.packageType;
-    filledFields.push("封装形式");
-  }
-  if (filledFields.length) {
-    uni.showToast({ title: `已自动带出${filledFields.join("、")}`, icon: "none" });
-  }
+  // 切换型号即以新型号为准：有历史值立即带出，无历史值清空待手选（不残留上一型号的信息）
+  form.value.customerCode = item.customerCode ?? "";
+  form.value.packageType = item.packageType ?? "";
 }
 
 function validate(): boolean {
