@@ -7,26 +7,91 @@
     <!--preload-links-->
     <!--app-context-->
     <style>
-      /* Keep SPA content from sitting under the fixed ICP bar / tabBar */
+      /* ICP bar sits above uni-app tabBar when present; body padding tracks bar height only */
       body {
         padding-bottom: 36px;
+      }
+      .icp-beian {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        /* Below uni-tabbar (~998+) so tab taps always win if layers briefly overlap */
+        z-index: 900;
+        text-align: center;
+        padding: 8px 16px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #7d898b;
+        background: rgba(241, 244, 243, 0.96);
+        border-top: 1px solid #d7dedc;
+        box-sizing: border-box;
+        pointer-events: none;
+      }
+      .icp-beian a {
+        color: #7d898b;
+        text-decoration: none;
+        pointer-events: auto;
       }
     </style>
   </head>
   <body>
     <div id="app"><!--app-html--></div>
-    <!-- Global ICP footer: outside #app so every H5 route (login + tabs + admin) shows it -->
-    <footer
-      class="icp-beian"
-      style="position:fixed;left:0;right:0;bottom:0;z-index:1000;text-align:center;padding:8px 16px;font-size:12px;line-height:1.5;color:#7d898b;background:rgba(241,244,243,0.96);border-top:1px solid #d7dedc;"
-    >
+    <!-- Global ICP footer: outside #app so every H5 route (login + tabs + admin) shows it.
+         Lifted above .uni-tabbar when visible so bottom tab switches stay tappable. -->
+    <footer id="icp-beian" class="icp-beian">
       <a
         href="https://beian.miit.gov.cn/"
         target="_blank"
         rel="noopener noreferrer"
-        style="color:#7d898b;text-decoration:none;"
       >陕ICP备2026009527号-1</a>
     </footer>
+    <script>
+      (function () {
+        var TAB_SEL = ".uni-tabbar, .uni-tabbar-bottom, uni-tabbar";
+        function tabBarEl() {
+          var nodes = document.querySelectorAll(TAB_SEL);
+          for (var i = 0; i < nodes.length; i++) {
+            var el = nodes[i];
+            var st = window.getComputedStyle(el);
+            if (st.display === "none" || st.visibility === "hidden" || st.opacity === "0") continue;
+            if (el.offsetHeight > 0) return el;
+          }
+          return null;
+        }
+        function adjustIcp() {
+          var footer = document.getElementById("icp-beian");
+          if (!footer) return;
+          var tab = tabBarEl();
+          var tabH = tab ? tab.offsetHeight : 0;
+          footer.style.bottom = tabH > 0 ? tabH + "px" : "0px";
+          var icpH = footer.offsetHeight || 36;
+          document.body.style.paddingBottom = icpH + "px";
+        }
+        function schedule() {
+          adjustIcp();
+          requestAnimationFrame(adjustIcp);
+          setTimeout(adjustIcp, 50);
+          setTimeout(adjustIcp, 300);
+        }
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", schedule);
+        } else {
+          schedule();
+        }
+        window.addEventListener("hashchange", schedule);
+        window.addEventListener("popstate", schedule);
+        window.addEventListener("resize", schedule);
+        window.addEventListener("orientationchange", schedule);
+        var obs = new MutationObserver(schedule);
+        obs.observe(document.documentElement, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ["style", "class"]
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
