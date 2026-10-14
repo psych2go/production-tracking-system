@@ -8,9 +8,10 @@
     <!--app-context-->
     <style>
       /*
-        Layout (bottom → top of stack visually):
-          ICP footer (very bottom) → tabBar (raised) → page content
-        ICP never covers tabBar tap targets.
+        Layout:
+          - All pages: ICP fixed at very bottom
+          - Tab pages (logged in): content → tabBar → ICP
+          - Login / no tabBar: ICP only (tab switcher hidden)
       */
       :root {
         --icp-h: 36px;
@@ -42,17 +43,30 @@
         text-decoration: none;
         pointer-events: auto;
       }
-      /* Keep uni-app tabBar ABOVE the ICP strip (not overlapping it) */
-      .uni-tabbar,
-      .uni-tabbar-bottom,
-      uni-tabbar {
+      /* Only lift tabBar when a real tabBar is present */
+      html.has-uni-tabbar .uni-tabbar,
+      html.has-uni-tabbar .uni-tabbar-bottom,
+      html.has-uni-tabbar uni-tabbar {
         bottom: var(--icp-h) !important;
+      }
+      /* Login gate on pages/index/index: hide native tabBar */
+      html.icp-hide-tabbar .uni-tabbar,
+      html.icp-hide-tabbar .uni-tabbar-bottom,
+      html.icp-hide-tabbar uni-tabbar,
+      html.icp-hide-tabbar .uni-tabbar-border {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        height: 0 !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
       }
     </style>
   </head>
   <body>
     <div id="app"><!--app-html--></div>
-    <!-- Global ICP: always at page bottom; tabBar is lifted above this strip -->
+    <!-- Global ICP: always at page bottom on every route including login -->
     <footer id="icp-beian" class="icp-beian" aria-label="ICP备案">
       <a
         href="https://beian.miit.gov.cn/"
@@ -63,40 +77,107 @@
     <script>
       (function () {
         var TAB_SEL = ".uni-tabbar, .uni-tabbar-bottom, uni-tabbar";
-        function visibleTabs() {
-          var out = [];
-          var nodes = document.querySelectorAll(TAB_SEL);
+        var lastHide = null;
+        var lastHasTab = null;
+        var busy = false;
+        var timer = null;
+
+        function isLoginUi() {
+          var nodes = document.querySelectorAll(".login-section");
           for (var i = 0; i < nodes.length; i++) {
             var el = nodes[i];
+            var st = window.getComputedStyle(el);
+            if (st.display === "none" || st.visibility === "hidden") continue;
+            if (el.offsetHeight > 0 || el.offsetWidth > 0) return true;
+          }
+          return false;
+        }
+
+        function allTabNodes() {
+          return document.querySelectorAll(TAB_SEL);
+        }
+
+        function visibleTabs() {
+          var out = [];
+          var nodes = allTabNodes();
+          for (var i = 0; i < nodes.length; i++) {
+            var el = nodes[i];
+            if (el.getAttribute("data-icp-hidden") === "1") continue;
             var st = window.getComputedStyle(el);
             if (st.display === "none" || st.visibility === "hidden") continue;
             if (el.offsetHeight > 0) out.push(el);
           }
           return out;
         }
-        function adjust() {
-          var footer = document.getElementById("icp-beian");
-          if (!footer) return;
-          // Measure real ICP height and publish as CSS var for tabBar bottom
-          var icpH = Math.ceil(footer.getBoundingClientRect().height) || 36;
-          document.documentElement.style.setProperty("--icp-h", icpH + "px");
-          footer.style.bottom = "0px";
 
-          var tabs = visibleTabs();
-          var tabH = 0;
-          for (var i = 0; i < tabs.length; i++) {
-            tabs[i].style.bottom = icpH + "px";
-            tabH = Math.max(tabH, tabs[i].offsetHeight || 0);
-          }
-          // Reserve space for ICP always; add tabBar when present so content isn't hidden
-          document.body.style.paddingBottom = icpH + tabH + "px";
+        function syncUniApi(hide) {
+          try {
+            if (typeof uni === "undefined") return;
+            if (hide && typeof uni.hideTabBar === "function") {
+              uni.hideTabBar({ animation: false });
+            } else if (!hide && typeof uni.showTabBar === "function") {
+              uni.showTabBar({ animation: false });
+            }
+          } catch (e) {}
         }
+
+        function setLoginMode(hide) {
+          if (lastHide === hide) return;
+          lastHide = hide;
+          document.documentElement.classList.toggle("icp-hide-tabbar", hide);
+          var nodes = allTabNodes();
+          for (var i = 0; i < nodes.length; i++) {
+            if (hide) nodes[i].setAttribute("data-icp-hidden", "1");
+            else nodes[i].removeAttribute("data-icp-hidden");
+          }
+          syncUniApi(hide);
+        }
+
+        function adjust() {
+          if (busy) return;
+          busy = true;
+          try {
+            var footer = document.getElementById("icp-beian");
+            if (!footer) return;
+
+            var icpH = Math.ceil(footer.getBoundingClientRect().height) || 36;
+            document.documentElement.style.setProperty("--icp-h", icpH + "px");
+            footer.style.bottom = "0px";
+
+            var login = isLoginUi();
+            setLoginMode(login);
+
+            var tabs = login ? [] : visibleTabs();
+            var hasTab = tabs.length > 0;
+            if (lastHasTab !== hasTab) {
+              lastHasTab = hasTab;
+              document.documentElement.classList.toggle("has-uni-tabbar", hasTab);
+            }
+
+            var tabH = 0;
+            for (var i = 0; i < tabs.length; i++) {
+              if (tabs[i].style.display === "none") tabs[i].style.display = "";
+              tabs[i].style.bottom = icpH + "px";
+              tabH = Math.max(tabH, tabs[i].offsetHeight || 0);
+            }
+
+            var pad = icpH + (hasTab ? tabH : 0);
+            if (document.body.style.paddingBottom !== pad + "px") {
+              document.body.style.paddingBottom = pad + "px";
+            }
+          } finally {
+            busy = false;
+          }
+        }
+
         function schedule() {
           adjust();
           requestAnimationFrame(adjust);
-          setTimeout(adjust, 50);
+          clearTimeout(timer);
+          timer = setTimeout(adjust, 80);
           setTimeout(adjust, 300);
         }
+
         if (document.readyState === "loading") {
           document.addEventListener("DOMContentLoaded", schedule);
         } else {
@@ -106,7 +187,10 @@
         window.addEventListener("popstate", schedule);
         window.addEventListener("resize", schedule);
         window.addEventListener("orientationchange", schedule);
-        new MutationObserver(schedule).observe(document.documentElement, {
+        new MutationObserver(function () {
+          if (busy) return;
+          schedule();
+        }).observe(document.documentElement, {
           childList: true,
           subtree: true,
           attributes: true,

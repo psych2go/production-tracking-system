@@ -239,7 +239,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { onPullDownRefresh, onShow } from "@dcloudio/uni-app";
 import { useUserStore } from "../../store/user";
 import { useAppStore } from "../../store/app";
@@ -253,6 +253,27 @@ const appStore = useAppStore();
 const dashboard = ref<DashboardData | null>(null);
 const loading = ref(false);
 const loginPassword = ref("");
+
+function syncTabBarVisibility() {
+  try {
+    if (userStore.isLoggedIn) {
+      uni.showTabBar({ animation: false });
+    } else {
+      uni.hideTabBar({ animation: false });
+    }
+  } catch {
+    /* H5 / non-tab context */
+  }
+}
+
+watch(
+  () => userStore.isLoggedIn,
+  () => {
+    syncTabBarVisibility();
+  },
+  { immediate: true },
+);
+
 const collapsed = ref({ alerts: false, pendingCard: false, pendingProduction: false, batches: false });
 const kanbanGroupMode = ref<"stage" | "package">("stage");
 
@@ -324,6 +345,7 @@ async function handleLogin() {
   loading.value = true;
   try {
     await userStore.passwordLogin(loginPassword.value.trim());
+    syncTabBarVisibility();
     await appStore.loadStages();
     await loadData();
   } catch (e: unknown) {
@@ -371,6 +393,7 @@ function goCreateOrder() {
 }
 
 onMounted(async () => {
+  syncTabBarVisibility();
   if (userStore.isLoggedIn) {
     await appStore.loadStages();
     await loadData();
@@ -378,6 +401,7 @@ onMounted(async () => {
 });
 
 onShow(() => {
+  syncTabBarVisibility();
   if (userStore.isLoggedIn) {
     loadData();
   }
