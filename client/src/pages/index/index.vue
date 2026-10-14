@@ -235,7 +235,6 @@
 
     </view>
 
-    <BeianFooter />
   </view>
 </template>
 
@@ -248,7 +247,6 @@ import { batchApi, progressApi } from "../../api/modules";
 import { getCurrentStage } from "../../utils/format";
 import type { Batch, DashboardData } from "../../types";
 import UIcon from "../../components/UIcon.vue";
-import BeianFooter from "../../components/BeianFooter.vue";
 
 const userStore = useUserStore();
 const appStore = useAppStore();

@@ -6,11 +6,26 @@
     <title>生产进度追踪</title>
     <!--preload-links-->
     <!--app-context-->
+    <style>
+      /* Keep SPA content from sitting under the fixed ICP bar / tabBar */
+      body {
+        padding-bottom: 36px;
+      }
+    </style>
   </head>
   <body>
     <div id="app"><!--app-html--></div>
-    <footer class="icp-beian" style="text-align:center;padding:12px 16px 20px;font-size:12px;line-height:1.5;color:#7d898b;">
-      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" style="color:#7d898b;text-decoration:none;">陕ICP备2026009527号-1</a>
+    <!-- Global ICP footer: outside #app so every H5 route (login + tabs + admin) shows it -->
+    <footer
+      class="icp-beian"
+      style="position:fixed;left:0;right:0;bottom:0;z-index:1000;text-align:center;padding:8px 16px;font-size:12px;line-height:1.5;color:#7d898b;background:rgba(241,244,243,0.96);border-top:1px solid #d7dedc;"
+    >
+      <a
+        href="https://beian.miit.gov.cn/"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="color:#7d898b;text-decoration:none;"
+      >陕ICP备2026009527号-1</a>
     </footer>
     <script type="module" src="/src/main.ts"></script>
   </body>
