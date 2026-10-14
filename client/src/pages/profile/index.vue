@@ -56,6 +56,8 @@
     </view>
 
     <button class="logout-btn mt-lg" v-if="userStore.isLoggedIn" @click="handleLogout">退出登录</button>
+
+    <BeianFooter />
   </view>
 </template>
 
@@ -64,6 +66,7 @@ import { computed } from "vue";
 import { useUserStore } from "../../store/user";
 import { ROLE_LABELS } from "../../utils/constants";
 import UIcon from "../../components/UIcon.vue";
+import BeianFooter from "../../components/BeianFooter.vue";
 
 const userStore = useUserStore();
 
