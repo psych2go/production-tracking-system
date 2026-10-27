@@ -24,7 +24,8 @@
         left: 0;
         right: 0;
         bottom: 0;
-        z-index: 901;
+        /* Low z-index: stays under every popup, mask, picker, toast and page-level fixed bar */
+        z-index: 10;
         height: var(--icp-h);
         display: flex;
         align-items: center;
