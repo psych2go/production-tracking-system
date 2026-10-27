@@ -900,7 +900,7 @@ onPullDownRefresh(async () => {
 .fab-create {
   position: fixed;
   right: 36rpx;
-  bottom: 160rpx;
+  bottom: calc(160rpx + var(--icp-h, 0px));
   z-index: 100;
   display: flex;
   flex-direction: column;
